@@ -1,33 +1,90 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs } from "expo-router";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { TabIcon } from "@/components/layout/tab-icon";
+import { colors } from "@/theme";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarHideOnKeyboard: true,
+        tabBarLabelPosition: "below-icon",
+        tabBarLabelStyle: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+        tabBarStyle: {
+          backgroundColor: "#F7F9FC",
+          borderTopColor: colors.border,
+          height: 100,
+          paddingBottom: 20,
+          paddingTop: 6,
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Trang chủ",
+          tabBarAccessibilityLabel: "Trang chủ",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              name={focused ? "home" : "home-outline"}
+            />
+          ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="reels"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Reels",
+          tabBarAccessibilityLabel: "Reels",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              name={focused ? "play-circle" : "play-circle-outline"}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Trò chuyện",
+          tabBarAccessibilityLabel: "Trò chuyện",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              name={focused ? "chatbubble" : "chatbubble-outline"}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="utilities"
+        options={{
+          title: "Tiện ích",
+          tabBarAccessibilityLabel: "Tiện ích",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              name={focused ? "grid" : "grid-outline"}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Hồ sơ",
+          tabBarAccessibilityLabel: "Hồ sơ",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              name={focused ? "person" : "person-outline"}
+            />
+          ),
         }}
       />
     </Tabs>

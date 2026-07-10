@@ -38,6 +38,14 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép Viora truy cập ảnh để bạn chia sẻ trong bài viết.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {
