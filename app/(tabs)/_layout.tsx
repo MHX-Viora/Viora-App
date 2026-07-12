@@ -12,7 +12,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarHideOnKeyboard: true,
         tabBarLabelPosition: "below-icon",
-        tabBarLabelStyle: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 2 },
         tabBarStyle: {
           backgroundColor: "#F7F9FC",
           borderTopColor: colors.border,
@@ -70,6 +70,19 @@ export default function TabLayout() {
             <TabIcon
               focused={focused}
               name={focused ? "grid" : "grid-outline"}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="notification"
+        options={{
+          title: "Thông báo",
+          tabBarAccessibilityLabel: "Thông báo",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              focused={focused}
+              name={focused ? "notifications" : "notifications-outline"}
             />
           ),
         }}

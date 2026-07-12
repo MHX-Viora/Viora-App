@@ -5,7 +5,10 @@ import 'react-native-reanimated';
 export default function RootLayout() {
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}><Stack.Screen name="(tabs)" /></Stack>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="friends" />
+      </Stack>
       <StatusBar style="auto" />
     </>
   );

@@ -41,6 +41,18 @@
       ],
       "expo-video",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Cho phép Viora dùng vị trí để hiển thị thời tiết nơi bạn đang ở."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Cho phép Viora dùng camera để quét mã QR hồ sơ."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Cho phép Viora truy cập ảnh để bạn chia sẻ trong bài viết.",

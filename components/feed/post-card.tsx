@@ -2,8 +2,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { FeedPost } from "@/types/feed";
+import { normalizeFeedImageUri } from "@/features/feed/image-source";
 import { colors, spacing, typography } from "@/theme";
+import type { FeedPost } from "@/types/feed";
 
 function PostAction({
   icon,
@@ -58,7 +59,18 @@ export function PostCard({ post }: { post: FeedPost }) {
       {post.images.length > 0 && (
         <View style={styles.mediaGrid}>
           {post.images.map((uri, index) => (
-            <Image accessibilityLabel={`Ảnh ${index + 1} trong bài viết của ${post.author}`} contentFit="cover" key={uri} source={uri} style={[styles.media, post.images.length === 1 && styles.singleMedia]} transition={200} />
+            <Image
+              accessibilityLabel={`Ảnh ${index + 1} trong bài viết của ${post.author}`}
+              contentFit="cover"
+              key={`${post.id}-${index}`}
+              recyclingKey={`${post.id}-${index}-${uri.length}`}
+              source={{ uri: normalizeFeedImageUri(uri) }}
+              style={[
+                styles.media,
+                post.images.length === 1 && styles.singleMedia,
+              ]}
+              transition={200}
+            />
           ))}
         </View>
       )}

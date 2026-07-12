@@ -1,1 +1,1 @@
-export { ReelsScreen as default } from '@/features/reels/screens/reels-screen';
+export { ReelsScreen as default } from "@/features/reels/reels-screen";

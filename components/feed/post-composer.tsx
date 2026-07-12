@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { FixedTopBar } from "@/components/layout/fixed-top-bar";
 import { colors, spacing } from "@/theme";
 
-export function PostComposer({ avatar, onCreatePress, onImagePress }: { avatar: string; onCreatePress: () => void; onImagePress: () => void }) {
+export function PostComposer({ avatar, onCreatePress, onImagePress, onSearchPress }: { avatar: string; onCreatePress: () => void; onImagePress: () => void; onSearchPress: () => void }) {
   return (
     <FixedTopBar>
       <View style={styles.container}>
@@ -29,6 +29,14 @@ export function PostComposer({ avatar, onCreatePress, onImagePress }: { avatar: 
           onPress={onImagePress}
         >
           <Ionicons color={colors.primary} name="images-outline" size={23} />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Tìm kiếm bài viết"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={onSearchPress}
+        >
+          <Ionicons color={colors.text} name="search-outline" size={24} />
         </Pressable>
       </View>
     </FixedTopBar>
