@@ -17,10 +17,66 @@ import {
   AuthFooterLink,
   AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
+import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
+import { register } from "@/services/auth.service";
 import { colors, spacing } from "@/theme";
 
 export function RegisterScreen() {
+  const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  const handleRegister = async () => {
+    const normalizedIdentifier = identifier.trim();
+    if (!normalizedIdentifier)
+      return showAlert({
+        title: "Thông tin đăng ký không chính xác",
+        message: "Vui lòng kiểm tra lại email hoặc số điện thoại.",
+      });
+    if (password.length < 8 || password.length > 128) {
+      return showAlert({
+        title: "Mật khẩu không hợp lệ",
+        message: "Mật khẩu phải dài từ 8 đến 128 ký tự.",
+      });
+    }
+    if (password !== confirmPassword)
+      return showAlert({
+        title: "Mật khẩu không khớp",
+        message: "Hãy nhập lại mật khẩu.",
+      });
+    if (!termsAccepted)
+      return showAlert({
+        title: "Chưa đồng ý điều khoản",
+        message: "Bạn cần đồng ý điều khoản để đăng ký.",
+      });
+
+    setIsSubmitting(true);
+    try {
+      // Gọi API đăng ký sau khi dữ liệu trên form đã hợp lệ.
+      const result = await register({
+        identifier: normalizedIdentifier,
+        password,
+      });
+      showAlert({
+        title: "Đăng ký thành công",
+        message: result.message,
+        kind: "success",
+        actionLabel: "Đăng nhập",
+        onAction: () => router.replace("/login"),
+      });
+    } catch (error) {
+      showAlert({
+        title: "Đăng ký thất bại",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+        kind: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -51,6 +107,8 @@ export function RegisterScreen() {
                 keyboardType="email-address"
                 label="Email công việc"
                 placeholder="example@domain.com"
+                onChangeText={setIdentifier}
+                value={identifier}
               />
               <AuthField
                 autoCapitalize="none"
@@ -59,6 +117,8 @@ export function RegisterScreen() {
                 label="Mật khẩu"
                 placeholder="••••••••"
                 secure
+                onChangeText={setPassword}
+                value={password}
               />
               <AuthField
                 autoCapitalize="none"
@@ -67,6 +127,8 @@ export function RegisterScreen() {
                 label="Xác nhận mật khẩu"
                 placeholder="••••••••"
                 secure
+                onChangeText={setConfirmPassword}
+                value={confirmPassword}
               />
 
               <View style={styles.termsRow}>
@@ -76,7 +138,10 @@ export function RegisterScreen() {
                   accessibilityState={{ checked: termsAccepted }}
                   hitSlop={8}
                   onPress={() => setTermsAccepted((current) => !current)}
-                  style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}
+                  style={[
+                    styles.checkbox,
+                    termsAccepted && styles.checkboxChecked,
+                  ]}
                 >
                   {termsAccepted && (
                     <Ionicons color={colors.white} name="checkmark" size={14} />
@@ -84,14 +149,17 @@ export function RegisterScreen() {
                 </Pressable>
                 <Text style={styles.termsText}>
                   Tôi đồng ý với {""}
-                  <Text style={styles.linkText}>Điều khoản dịch vụ</Text> và {""}
+                  <Text style={styles.linkText}>
+                    Điều khoản dịch vụ
+                  </Text> và {""}
                   <Text style={styles.linkText}>Chính sách bảo mật</Text>.
                 </Text>
               </View>
 
               <AuthPrimaryButton
+                isLoading={isSubmitting}
                 label="Đăng ký"
-                onPress={() => router.replace("/login")}
+                onPress={handleRegister}
               />
             </View>
 
@@ -103,6 +171,11 @@ export function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <AuthAlert
+        alert={alert}
+        onAction={handleAlertAction}
+        onClose={closeAlert}
+      />
     </SafeAreaView>
   );
 }

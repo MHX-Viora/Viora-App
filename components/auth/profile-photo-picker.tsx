@@ -1,13 +1,20 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, spacing } from "@/theme";
 
-export function ProfilePhotoPicker() {
-  const [avatarUri, setAvatarUri] = useState<string>();
-  const [coverUri, setCoverUri] = useState<string>();
+export function ProfilePhotoPicker({
+  avatarUri,
+  coverUri,
+  onAvatarChange,
+  onCoverChange,
+}: {
+  avatarUri?: string;
+  coverUri?: string;
+  onAvatarChange: (uri: string) => void;
+  onCoverChange: (uri: string) => void;
+}) {
 
   const pickImage = async (
     options: Pick<ImagePicker.ImagePickerOptions, "allowsEditing" | "aspect">,
@@ -33,9 +40,9 @@ export function ProfilePhotoPicker() {
   };
 
   const pickAvatar = () =>
-    pickImage({ allowsEditing: true, aspect: [1, 1] }, setAvatarUri);
+    pickImage({ allowsEditing: true, aspect: [1, 1] }, onAvatarChange);
   const pickCover = () =>
-    pickImage({ allowsEditing: false }, setCoverUri);
+    pickImage({ allowsEditing: false }, onCoverChange);
 
   return (
     <View style={styles.section}>

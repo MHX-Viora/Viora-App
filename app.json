@@ -58,7 +58,8 @@
           "photosPermission": "Cho phép Viora truy cập ảnh để bạn chia sẻ trong bài viết.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

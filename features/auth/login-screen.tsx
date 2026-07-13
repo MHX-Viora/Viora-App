@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
+import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,9 +17,49 @@ import {
   AuthFooterLink,
   AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
+import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
+import { login } from "@/services/auth.service";
+import { sessionStore } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
 
 export function LoginScreen() {
+  const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLogin = async () => {
+    const normalizedIdentifier = identifier.trim();
+    if (!normalizedIdentifier || !password) {
+      return showAlert({
+        title: "Thông tin đăng nhập không chính xác",
+        message: "Vui lòng kiểm tra lại email/số điện thoại và mật khẩu.",
+      });
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Gọi API đăng nhập bằng email hoặc số điện thoại người dùng đã nhập.
+      const session = await login({
+        identifier: normalizedIdentifier,
+        password,
+      });
+
+      // Lưu token và user trước khi chuyển trang để phiên đăng nhập không bị mất.
+      await sessionStore.saveSession(session);
+
+      // Chưa có user thì hoàn thiện hồ sơ; đã có user thì vào trang chủ.
+      router.replace(session.user === null ? "/complete-profile" : "/");
+    } catch (error) {
+      showAlert({
+        title: "Đăng nhập thất bại",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+        kind: "error",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <SafeAreaView style={styles.screen}>
       <View pointerEvents="none" style={styles.blueGlow} />
@@ -50,6 +91,8 @@ export function LoginScreen() {
                 keyboardType="email-address"
                 label="Email hoặc Tên đăng nhập"
                 placeholder="example@email.com"
+                onChangeText={setIdentifier}
+                value={identifier}
               />
               <AuthField
                 autoCapitalize="none"
@@ -58,6 +101,8 @@ export function LoginScreen() {
                 label="Mật khẩu"
                 placeholder="••••••••"
                 secure
+                onChangeText={setPassword}
+                value={password}
               />
               <Pressable
                 accessibilityRole="link"
@@ -67,8 +112,9 @@ export function LoginScreen() {
                 <Text style={styles.forgotText}>Quên mật khẩu?</Text>
               </Pressable>
               <AuthPrimaryButton
+                isLoading={isSubmitting}
                 label="Đăng nhập"
-                onPress={() => router.replace("/complete-profile")}
+                onPress={handleLogin}
               />
 
               <View style={styles.separator}>
@@ -79,7 +125,12 @@ export function LoginScreen() {
 
               <Pressable
                 accessibilityRole="button"
-                onPress={() => router.replace("/complete-profile")}
+                onPress={() =>
+                  showAlert({
+                    title: "Chưa hỗ trợ",
+                    message: "API đăng nhập Google chưa được cung cấp.",
+                  })
+                }
                 style={({ pressed }) => [
                   styles.googleButton,
                   pressed && styles.pressed,
@@ -98,6 +149,11 @@ export function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <AuthAlert
+        alert={alert}
+        onAction={handleAlertAction}
+        onClose={closeAlert}
+      />
     </SafeAreaView>
   );
 }

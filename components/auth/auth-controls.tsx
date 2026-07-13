@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -63,20 +64,36 @@ export function AuthField({
 }
 
 export function AuthPrimaryButton({
+  disabled = false,
+  isLoading = false,
   label,
   onPress,
 }: {
+  disabled?: boolean;
+  isLoading?: boolean;
   label: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ busy: isLoading, disabled: disabled || isLoading }}
+      disabled={disabled || isLoading}
       onPress={onPress}
-      style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.primaryButton,
+        (disabled || isLoading) && styles.disabled,
+        pressed && styles.pressed,
+      ]}
     >
-      <Text style={styles.primaryButtonText}>{label}</Text>
-      <Ionicons color={colors.white} name="arrow-forward" size={22} />
+      {isLoading ? (
+        <ActivityIndicator color={colors.white} />
+      ) : (
+        <>
+          <Text style={styles.primaryButtonText}>{label}</Text>
+          <Ionicons color={colors.white} name="arrow-forward" size={22} />
+        </>
+      )}
     </Pressable>
   );
 }
@@ -101,6 +118,7 @@ export function AuthFooterLink({
 }
 
 const styles = StyleSheet.create({
+  disabled: { opacity: 0.58 },
   field: {
     alignItems: "center",
     backgroundColor: colors.surface,
