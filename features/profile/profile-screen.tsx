@@ -43,6 +43,10 @@ export function ProfileScreen() {
       />
       <ProfileSettingsSheet
         onClose={() => setShowSettings(false)}
+        onLogout={() => {
+          setShowSettings(false);
+          router.push("/login");
+        }}
         visible={showSettings}
       />
     </View>

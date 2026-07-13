@@ -22,9 +22,11 @@ const SETTINGS = [
 
 export function ProfileSettingsSheet({
   onClose,
+  onLogout,
   visible,
 }: {
   onClose: () => void;
+  onLogout: () => void;
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -85,6 +87,7 @@ export function ProfileSettingsSheet({
             <View style={styles.divider} />
             <Pressable
               accessibilityRole="button"
+              onPress={onLogout}
               style={({ pressed }) => [
                 styles.row,
                 pressed && styles.rowPressed,
