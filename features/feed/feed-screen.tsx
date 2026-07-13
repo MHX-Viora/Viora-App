@@ -19,6 +19,9 @@ export function FeedScreen() {
   const [draftImages, setDraftImages] = useState<string[]>([]);
 
   const pickImages = async (): Promise<string[] | null> => {
+    const remainingSlots = 4 - draftImages.length;
+    if (remainingSlots === 0) return null;
+
     if (Platform.OS !== "web") {
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -35,14 +38,22 @@ export function FeedScreen() {
       base64: true,
       mediaTypes: ["images"],
       quality: 0.75,
-      selectionLimit: 4,
+      selectionLimit: remainingSlots,
     });
     if (result.canceled) return null;
     const selectedUris = result.assets
-      .slice(0, 4)
+      .slice(0, remainingSlots)
       .map((asset) => createPickedImageUri(asset.base64, asset.uri));
-    setDraftImages(selectedUris);
+    setDraftImages((current) =>
+      [...current, ...selectedUris].slice(0, 4),
+    );
     return selectedUris;
+  };
+
+  const removeDraftImage = (indexToRemove: number) => {
+    setDraftImages((current) =>
+      current.filter((_, index) => index !== indexToRemove),
+    );
   };
 
   const closeModal = () => {
@@ -89,6 +100,7 @@ export function FeedScreen() {
         imageUris={draftImages}
         onClose={closeModal}
         onPickImage={pickImages}
+        onRemoveImage={removeDraftImage}
         onSubmit={createPost}
         visible={modalVisible}
       />

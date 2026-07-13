@@ -1,8 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { normalizeFeedImageUri } from "@/features/feed/image-source";
 import { colors, spacing, typography } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 
@@ -33,9 +31,8 @@ export function PostCard({ post }: { post: FeedPost }) {
       <View style={styles.header}>
         <Image
           accessibilityLabel={`Ảnh đại diện của ${post.author}`}
-          source={post.avatar}
+          source={{ uri: post.avatar }}
           style={styles.avatar}
-          transition={150}
         />
         <View style={styles.authorBlock}>
           <Text style={styles.author}>{post.author}</Text>
@@ -61,15 +58,12 @@ export function PostCard({ post }: { post: FeedPost }) {
           {post.images.map((uri, index) => (
             <Image
               accessibilityLabel={`Ảnh ${index + 1} trong bài viết của ${post.author}`}
-              contentFit="cover"
               key={`${post.id}-${index}`}
-              recyclingKey={`${post.id}-${index}-${uri.length}`}
-              source={{ uri: normalizeFeedImageUri(uri) }}
+              source={{ uri: uri }}
               style={[
                 styles.media,
                 post.images.length === 1 && styles.singleMedia,
               ]}
-              transition={200}
             />
           ))}
         </View>
@@ -134,9 +128,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
   },
-  media: { aspectRatio: 1, backgroundColor: colors.border, width: "49.5%" },
-  mediaGrid: { flexDirection: "row", flexWrap: "wrap", gap: 2 },
+  media: { backgroundColor: colors.border, height: 180, width: "49.5%" },
+  mediaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 2,
+    width: "100%",
+  },
   meta: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
   spacer: { flex: 1 },
-  singleMedia: { aspectRatio: 16 / 10, width: "100%" },
+  singleMedia: { height: 240, width: "100%" },
 });

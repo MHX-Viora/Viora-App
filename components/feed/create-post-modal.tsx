@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { useEffect, useRef, useState } from "react";
 import {
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -22,6 +22,7 @@ type Props = {
   imageUris: string[];
   onClose: () => void;
   onPickImage: () => void;
+  onRemoveImage: (index: number) => void;
   onSubmit: (body: string) => void;
   visible: boolean;
 };
@@ -30,6 +31,7 @@ export function CreatePostModal({
   imageUris,
   onClose,
   onPickImage,
+  onRemoveImage,
   onSubmit,
   visible,
 }: Props) {
@@ -101,38 +103,67 @@ export function CreatePostModal({
 
             {imageUris.length > 0 && (
               <View style={styles.previewGrid}>
-                {imageUris.map((uri, index) => (
-                  <Image
-                    accessibilityLabel={`Ảnh đã chọn ${index + 1}`}
-                    cachePolicy="none"
-                    contentFit="cover"
-                    key={`${index}-${uri.length}`}
-                    recyclingKey={`draft-${index}-${uri.length}`}
-                    source={{ uri: normalizeFeedImageUri(uri) }}
-                    style={[
-                      styles.preview,
-                      imageUris.length === 1 && styles.singlePreview,
-                    ]}
-                  />
-                ))}
+                {imageUris.map((uri, index) => {
+                  const isWideTile =
+                    imageUris.length === 1 ||
+                    (imageUris.length === 3 && index === 0);
+
+                  return (
+                    <View
+                      key={`${index}-${uri.length}`}
+                      style={[
+                        styles.previewTile,
+                        isWideTile ? styles.wideTile : styles.halfTile,
+                        imageUris.length === 1 && styles.singleTile,
+                        imageUris.length === 3 &&
+                          index > 0 &&
+                          styles.compactTile,
+                      ]}
+                    >
+                      <Image
+                        accessibilityLabel={`Ảnh đã chọn ${index + 1}`}
+                        resizeMode="cover"
+                        source={{ uri: normalizeFeedImageUri(uri) }}
+                        style={styles.preview}
+                      />
+                      <Pressable
+                        accessibilityLabel={`Bỏ ảnh đã chọn ${index + 1}`}
+                        accessibilityRole="button"
+                        hitSlop={8}
+                        onPress={() => onRemoveImage(index)}
+                        style={styles.removeImageButton}
+                      >
+                        <Ionicons color="#ffffff" name="close" size={18} />
+                      </Pressable>
+                    </View>
+                  );
+                })}
               </View>
             )}
 
             <Pressable
               accessibilityRole="button"
+              disabled={imageUris.length >= 4}
               onPress={() => {
                 inputRef.current?.blur();
                 Keyboard.dismiss();
                 onPickImage();
               }}
-              style={styles.imageButton}
+              style={[
+                styles.imageButton,
+                imageUris.length >= 4 && styles.imageButtonDisabled,
+              ]}
             >
               <View style={styles.imageIcon}>
                 <Ionicons color={colors.primary} name="images" size={25} />
               </View>
               <View style={styles.imageCopy}>
                 <Text style={styles.imageButtonText}>
-                  {imageUris.length > 0 ? "Thay đổi ảnh đã chọn" : "Thêm ảnh vào bài viết"}
+                  {imageUris.length >= 4
+                    ? "Đã chọn tối đa 4 ảnh"
+                    : imageUris.length > 0
+                      ? "Thêm ảnh khác"
+                      : "Thêm ảnh vào bài viết"}
                 </Text>
                 <Text style={styles.imageHint}>Chọn tối đa 4 ảnh từ thư viện</Text>
               </View>
@@ -178,6 +209,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   imageButtonText: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  imageButtonDisabled: { opacity: 0.55 },
   imageCopy: { flex: 1, gap: 2 },
   imageHint: { color: colors.textMuted, fontSize: 13 },
   imageIcon: {
@@ -195,11 +227,30 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     textAlignVertical: "top",
   },
-  preview: { aspectRatio: 1, borderRadius: 10, width: "48.5%" },
+  compactTile: { height: 136 },
+  halfTile: { height: 160, width: "48.5%" },
+  preview: { height: "100%", width: "100%" },
   previewGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
+    width: "100%",
+  },
+  previewTile: {
+    borderRadius: 10,
+    overflow: "hidden",
+    position: "relative",
+  },
+  removeImageButton: {
+    alignItems: "center",
+    backgroundColor: "rgba(15,23,42,0.72)",
+    borderRadius: 14,
+    height: 28,
+    justifyContent: "center",
+    position: "absolute",
+    right: spacing.xs,
+    top: spacing.xs,
+    width: 28,
   },
   scrollContent: { padding: spacing.lg },
   sheet: {
@@ -209,8 +260,9 @@ const styles = StyleSheet.create({
     height: "88%",
     overflow: "hidden",
   },
-  singlePreview: { aspectRatio: 16 / 10, width: "100%" },
+  singleTile: { height: 220 },
   submit: { color: colors.primary, fontSize: 16, fontWeight: "700" },
   submitDisabled: { opacity: 0.4 },
   title: { ...typography.title, color: colors.text },
+  wideTile: { height: 190, width: "100%" },
 });
