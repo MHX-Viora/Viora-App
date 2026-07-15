@@ -2,11 +2,28 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, spacing } from "@/theme";
+import type { ReelSort } from "@/types/reel";
 
 const REELS_HEADER_HEIGHT = 90;
-const REELS_HEADER_PADDING_TOP = 50;
+const REELS_HEADER_PADDING_TOP = 40;
 
-export function ReelsHeader({ onCreatePress, onSearchPress }: { onCreatePress: () => void; onSearchPress: () => void }) {
+const SORT_TABS: { label: string; value: ReelSort }[] = [
+  { label: "Bạn bè", value: "friends" },
+  { label: "Theo dõi", value: "following" },
+  { label: "Đề xuất", value: "popular" },
+];
+
+export function ReelsHeader({
+  activeSort,
+  onCreatePress,
+  onSearchPress,
+  onSortChange,
+}: {
+  activeSort: ReelSort;
+  onCreatePress: () => void;
+  onSearchPress: () => void;
+  onSortChange: (sort: ReelSort) => void;
+}) {
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -22,12 +39,24 @@ export function ReelsHeader({ onCreatePress, onSearchPress }: { onCreatePress: (
         >
           <Ionicons color={colors.white} name="add" size={22} />
         </Pressable>
-        <Text style={styles.inactive}>Bạn bè</Text>
-        <Text style={styles.inactive}>Theo dõi</Text>
-        <View style={styles.activeWrap}>
-          <Text style={styles.active}>Đề xuất</Text>
-          <View style={styles.underline} />
-        </View>
+        {SORT_TABS.map((tab) => {
+          const active = activeSort === tab.value;
+          return (
+            <Pressable
+              accessibilityLabel={`Xem reels ${tab.label}`}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              key={tab.value}
+              onPress={() => onSortChange(tab.value)}
+              style={styles.tab}
+            >
+              <Text style={active ? styles.active : styles.inactive}>
+                {tab.label}
+              </Text>
+              {active && <View style={styles.underline} />}
+            </Pressable>
+          );
+        })}
         <Pressable
           accessibilityLabel="Tìm kiếm reels"
           accessibilityRole="button"
@@ -43,7 +72,6 @@ export function ReelsHeader({ onCreatePress, onSearchPress }: { onCreatePress: (
 
 const styles = StyleSheet.create({
   active: { color: colors.white, fontSize: 14, fontWeight: "700" },
-  activeWrap: { alignItems: "center", gap: 6 },
   container: {
     height: REELS_HEADER_HEIGHT,
     justifyContent: "flex-end",
@@ -73,7 +101,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.72)",
     fontSize: 14,
     textAlign: "center",
-    width: 58,
   },
   row: {
     alignItems: "flex-start",
@@ -83,6 +110,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md,
   },
+  tab: { alignItems: "center", gap: 6, minWidth: 58 },
   underline: {
     backgroundColor: colors.white,
     borderRadius: 1,

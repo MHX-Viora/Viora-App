@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PostCard } from "@/components/feed/post-card";
-import { getPosts } from "@/services/post.service";
+import { getPosts } from "@/services/feed.service";
 import { colors, spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 

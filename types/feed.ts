@@ -1,7 +1,10 @@
 export type FeedPost = {
   id: string;
   author: string;
+  authorId: string | null;
   avatar: string;
+  isAuthorVerified: boolean;
+  isMine: boolean;
   location: string | null;
   publishedAt: string;
   body: string;
@@ -39,6 +42,7 @@ export type ApiPost = {
     displayName: string;
     avatarUrl: string;
     isVerified: boolean;
+    isFollowing?: boolean;
   } | null;
   media?: {
     id: string;

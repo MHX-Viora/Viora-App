@@ -2,21 +2,47 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useEvent } from "expo";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
+import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Easing,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import { deletePost, reportPost } from "@/services/post.service";
 import { colors, spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 
 const PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const;
+const VIDEO_TOP_OFFSET = 30;
+
+const REPORT_REASONS = [
+  { description: "Nội dung spam hoặc gây hiểu nhầm", label: "Spam", value: 0 },
+  {
+    description: "Nội dung quấy rối hoặc công kích",
+    label: "Quấy rối",
+    value: 1,
+  },
+  {
+    description: "Nội dung bạo lực hoặc nguy hiểm",
+    label: "Bạo lực",
+    value: 2,
+  },
+  {
+    description: "Nội dung người lớn hoặc phản cảm",
+    label: "Nhạy cảm",
+    value: 3,
+  },
+  { description: "Lý do khác", label: "Khác", value: 4 },
+];
 
 function ReelAction({
   icon,
@@ -31,6 +57,8 @@ function ReelAction({
   selected?: boolean;
   value?: string;
 }) {
+  const selectedColor = icon === "heart" ? colors.danger : colors.primary;
+
   return (
     <View style={styles.actionGroup}>
       <Pressable
@@ -41,9 +69,9 @@ function ReelAction({
         style={styles.circleAction}
       >
         <Ionicons
-          color={selected ? colors.primary : colors.white}
+          color={selected ? selectedColor : colors.white}
           name={icon}
-          size={27}
+          size={31}
         />
       </Pressable>
       {value && <Text style={styles.actionValue}>{value}</Text>}
@@ -62,20 +90,34 @@ function formatTime(seconds: number) {
 export function ReelCard({
   active,
   height,
+  onComment,
+  onDelete,
+  onReact,
   onInteractionLockChange,
+  onSave,
+  onShare,
   reel,
+  videoTopOffset = VIDEO_TOP_OFFSET,
 }: {
   active: boolean;
   height: number;
+  onComment?: (reelId: string) => void;
+  onDelete?: (reelId: string) => void;
+  onReact?: (reelId: string) => void;
   onInteractionLockChange?: (locked: boolean) => void;
+  onSave?: (reelId: string) => void;
+  onShare?: (reel: Reel) => void;
   reel: Reel;
+  videoTopOffset?: number;
 }) {
   const wasActive = useRef(false);
   const detailsTranslateY = useRef(new Animated.Value(420)).current;
   const [isMuted, setIsMuted] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [showControls, setShowControls] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [reportingReason, setReportingReason] = useState<number | null>(null);
   const [showPlayButton, setShowPlayButton] = useState(false);
   const [seekWidth, setSeekWidth] = useState(0);
   const [seekingTime, setSeekingTime] = useState<number | null>(null);
@@ -167,6 +209,81 @@ export function ReelCard({
     setPlaybackRate(rate);
   };
 
+  const deleteReel = async () => {
+    if (isDeleting) return;
+
+    setIsDeleting(true);
+    try {
+      await deletePost(reel.id);
+      setShowControls(false);
+      onDelete?.(reel.id);
+    } catch (error) {
+      Alert.alert(
+        "Không thể xóa video",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (isDeleting) return;
+
+    Alert.alert(
+      "Xóa video?",
+      "Video này sẽ bị xóa khỏi Viora. Bạn có chắc muốn tiếp tục không?",
+      [
+        { style: "cancel", text: "Hủy" },
+        {
+          onPress: deleteReel,
+          style: "destructive",
+          text: "Xóa",
+        },
+      ],
+    );
+  };
+
+  const openReport = () => {
+    setShowControls(false);
+    setReportVisible(true);
+  };
+
+  const handleDownload = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(reel.videoUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+      });
+    } catch (error) {
+      Alert.alert(
+        "Không thể tải video",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    }
+  };
+
+  const handleReport = async (reason: (typeof REPORT_REASONS)[number]) => {
+    if (reportingReason !== null) return;
+
+    setReportingReason(reason.value);
+    try {
+      await reportPost({
+        description: reason.description,
+        postId: reel.id,
+        reason: reason.value,
+      });
+      setReportVisible(false);
+      Alert.alert("Đã gửi báo cáo", "Cảm ơn bạn đã giúp Viora an toàn hơn.");
+    } catch (error) {
+      Alert.alert(
+        "Không thể báo cáo",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setReportingReason(null);
+    }
+  };
+
   const openDetails = () => {
     setShowDetails(true);
     detailsTranslateY.setValue(420);
@@ -191,20 +308,27 @@ export function ReelCard({
 
   return (
     <View style={[styles.background, { height }]}>
-      <VideoView
-        contentFit="contain"
-        nativeControls={false}
-        player={player}
-        style={StyleSheet.absoluteFill}
-        surfaceType="textureView"
+      <View style={[styles.videoLayer, { top: videoTopOffset }]}>
+        <View style={styles.videoFrame}>
+          <VideoView
+            contentFit="contain"
+            nativeControls={false}
+            player={player}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+        <View style={styles.tint} />
+      </View>
+      <View
+        pointerEvents="none"
+        style={[styles.topMask, { height: videoTopOffset }]}
       />
-      <View style={styles.tint} />
       <Pressable
         accessibilityHint="Nhấn giữ để mở điều khiển video"
-        accessibilityLabel="Video của reel"
+        accessibilityLabel="Video cá»§a reel"
         delayLongPress={450}
         onLongPress={() => setShowControls(true)}
-        style={styles.videoGestureArea}
+        style={[styles.videoGestureArea, { top: videoTopOffset }]}
       />
 
       {status === "error" && (
@@ -231,7 +355,19 @@ export function ReelCard({
       <View style={styles.safeContent} pointerEvents="box-none">
         <View pointerEvents="box-none" style={styles.bottomContent}>
           <View style={styles.copy}>
-            <Text style={styles.author}>{reel.author}</Text>
+            <View style={styles.authorLine}>
+              <Text numberOfLines={1} style={styles.author}>
+                {reel.author}
+              </Text>
+              {reel.isAuthorVerified && (
+                <Ionicons
+                  accessibilityLabel="Tài khoản đã xác minh"
+                  color={colors.primary}
+                  name="checkmark-circle"
+                  size={16}
+                />
+              )}
+            </View>
             <Text numberOfLines={2} style={styles.caption}>
               {reel.caption}
             </Text>
@@ -255,22 +391,35 @@ export function ReelCard({
                 source={reel.avatar}
                 style={styles.avatar}
               />
-              <View style={styles.follow}>
-                <Ionicons color={colors.white} name="add" size={14} />
-              </View>
+              {!reel.isFollowing && !reel.isMine && (
+                <View style={styles.follow}>
+                  <Ionicons color={colors.white} name="add" size={14} />
+                </View>
+              )}
             </View>
-            <ReelAction icon="heart" label="Thích reels" value={reel.likes} />
+            <ReelAction
+              icon="heart"
+              label="Thích reels"
+              onPress={() => onReact?.(reel.id)}
+              selected={reel.isReacted}
+              value={reel.likes}
+            />
             <ReelAction
               icon="chatbubble"
               label="Bình luận reels"
+              onPress={() => onComment?.(reel.id)}
               value={reel.comments}
             />
-            <ReelAction icon="paper-plane-outline" label="Chia sẻ reels" />
             <ReelAction
-              icon={isSaved ? "bookmark" : "bookmark-outline"}
-              label={isSaved ? "Bỏ lưu reels" : "Lưu reels"}
-              onPress={() => setIsSaved((saved) => !saved)}
-              selected={isSaved}
+              icon="paper-plane-outline"
+              label="Chia sẻ reels"
+              onPress={() => onShare?.(reel)}
+            />
+            <ReelAction
+              icon={reel.isSaved ? "bookmark" : "bookmark-outline"}
+              label={reel.isSaved ? "Bỏ lưu reels" : "Lưu reels"}
+              onPress={() => onSave?.(reel.id)}
+              selected={reel.isSaved}
             />
           </View>
         </View>
@@ -289,6 +438,43 @@ export function ReelCard({
             accessibilityViewIsModal
             style={styles.controlsPanel}
           >
+            <View style={styles.moderationGroup}>
+              <Pressable onPress={openReport} style={styles.moderationAction}>
+                <Ionicons color={colors.white} name="flag-outline" size={21} />
+                <Text style={styles.moderationText}>Báo cáo video</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleDownload}
+                style={styles.moderationAction}
+              >
+                <Ionicons
+                  color={colors.white}
+                  name="download-outline"
+                  size={21}
+                />
+                <Text style={styles.moderationText}>Tải xuống video</Text>
+              </Pressable>
+              {reel.isMine && (
+                <Pressable
+                  disabled={isDeleting}
+                  onPress={handleDelete}
+                  style={styles.moderationAction}
+                >
+                  {isDeleting ? (
+                    <ActivityIndicator color={colors.danger} size="small" />
+                  ) : (
+                    <Ionicons
+                      color={colors.danger}
+                      name="trash-outline"
+                      size={21}
+                    />
+                  )}
+                  <Text style={[styles.moderationText, styles.deleteText]}>
+                    Xóa video
+                  </Text>
+                </Pressable>
+              )}
+            </View>
             <View style={styles.controlsHeader}>
               <Text style={styles.controlsTitle}>Cài đặt video</Text>
               <Pressable
@@ -413,6 +599,49 @@ export function ReelCard({
           </Animated.View>
         </View>
       )}
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setReportVisible(false)}
+        transparent
+        visible={reportVisible}
+      >
+        <Pressable
+          onPress={() => setReportVisible(false)}
+          style={styles.reportBackdrop}
+        >
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            style={styles.reportSheet}
+          >
+            <View style={styles.sheetHandle} />
+            <Text style={styles.reportSheetTitle}>Báo cáo video</Text>
+            {REPORT_REASONS.map((reason) => (
+              <Pressable
+                disabled={reportingReason !== null}
+                key={reason.value}
+                onPress={() => handleReport(reason)}
+                style={styles.reportReason}
+              >
+                <View>
+                  <Text style={styles.reportTitle}>{reason.label}</Text>
+                  <Text style={styles.reportDescription}>
+                    {reason.description}
+                  </Text>
+                </View>
+                {reportingReason === reason.value ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  <Ionicons
+                    color={colors.textMuted}
+                    name="chevron-forward"
+                    size={20}
+                  />
+                )}
+              </Pressable>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -426,6 +655,11 @@ const styles = StyleSheet.create({
     marginTop: -1,
   },
   author: { color: colors.white, fontSize: 18, fontWeight: "800" },
+  authorLine: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
   avatar: {
     borderColor: colors.white,
     borderRadius: 24,
@@ -459,10 +693,10 @@ const styles = StyleSheet.create({
   },
   circleAction: {
     alignItems: "center",
-    borderRadius: 24,
-    height: 48,
+    borderRadius: 28,
+    height: 56,
     justifyContent: "center",
-    width: 48,
+    width: 56,
   },
   controlsBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -535,6 +769,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   detailsTitle: { color: colors.white, fontSize: 17, fontWeight: "700" },
+  deleteText: { color: colors.danger },
   hashtags: {
     color: "#61D3F2",
     fontSize: 14,
@@ -547,6 +782,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 2,
   },
+  moderationAction: {
+    alignItems: "center",
+    borderTopColor: "rgba(255,255,255,0.12)",
+    borderTopWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 50,
+  },
+  moderationGroup: {
+    borderBottomColor: "rgba(255,255,255,0.16)",
+    borderBottomWidth: 1,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  moderationText: { color: colors.white, fontSize: 15, fontWeight: "800" },
   playButton: {
     alignItems: "center",
     alignSelf: "center",
@@ -559,7 +809,42 @@ const styles = StyleSheet.create({
     width: 68,
     zIndex: 3,
   },
-  rail: { alignItems: "center", gap: spacing.sm, width: 52 },
+  rail: { alignItems: "center", gap: spacing.sm, width: 60 },
+  reportBackdrop: {
+    backgroundColor: "rgba(0,0,0,0.42)",
+    flex: 1,
+    justifyContent: "flex-end",
+    zIndex: 10,
+  },
+  reportDescription: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  reportReason: {
+    alignItems: "center",
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 62,
+    paddingVertical: spacing.sm,
+  },
+  reportSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  reportSheetTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "900",
+    paddingBottom: spacing.md,
+  },
+  reportTitle: { color: colors.text, fontSize: 15, fontWeight: "800" },
   safeContent: { flex: 1, paddingBottom: 10, zIndex: 2 },
   sheetHandle: {
     alignSelf: "center",
@@ -629,6 +914,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.reelOverlay,
   },
+  topMask: {
+    backgroundColor: colors.reelBackground,
+    height: VIDEO_TOP_OFFSET,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
   utilityButton: {
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.12)",
@@ -638,5 +931,26 @@ const styles = StyleSheet.create({
     width: 44,
   },
   utilityRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
-  videoGestureArea: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  videoGestureArea: {
+    ...StyleSheet.absoluteFillObject,
+    top: VIDEO_TOP_OFFSET,
+    zIndex: 1,
+  },
+  videoLayer: {
+    alignItems: "center",
+    backgroundColor: colors.reelBackground,
+    bottom: 0,
+    justifyContent: "center",
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: VIDEO_TOP_OFFSET,
+  },
+  videoFrame: {
+    aspectRatio: 9 / 16,
+    backgroundColor: colors.reelBackground,
+    maxHeight: "100%",
+    overflow: "hidden",
+    width: "100%",
+  },
 });

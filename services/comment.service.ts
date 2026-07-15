@@ -1,0 +1,161 @@
+import { authenticatedFetch } from "@/services/authenticated-fetch";
+import type { Comment, CommentsResponse, RepliesResponse, Reply } from "@/types/comment";
+
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const parseResponseText = (text: string) => {
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
+const getApiErrorMessage = (data: unknown, fallback: string) => {
+  if (typeof data === "string" && data.trim()) return data;
+
+  if (
+    isRecord(data) &&
+    typeof data.message === "string" &&
+    data.message.trim()
+  ) {
+    return data.message;
+  }
+
+  if (isRecord(data) && typeof data.title === "string" && data.title.trim()) {
+    return data.title;
+  }
+
+  return fallback;
+};
+
+export const getComments = async ({
+  page,
+  pageSize,
+  postId,
+  sort = "newest",
+}: {
+  page: number;
+  pageSize: number;
+  postId: string;
+  sort?: "newest";
+}): Promise<{ comments: Comment[]; totalPages: number }> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    sort,
+  });
+
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/posts/${postId}/comments?${params}`,
+  );
+  const text = await response.text();
+  const data = parseResponseText(text);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, "Không thể tải bình luận."));
+  }
+
+  const commentsResponse = data as CommentsResponse;
+
+  return {
+    comments: commentsResponse.items,
+    totalPages: commentsResponse.totalPages,
+  };
+};
+
+export const createComment = async ({
+  content,
+  postId,
+}: {
+  content: string;
+  postId: string;
+}): Promise<Comment> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/posts/${postId}/comments`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content }),
+    },
+  );
+  const text = await response.text();
+  const data = parseResponseText(text);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, "Không thể gửi bình luận."));
+  }
+
+  return data as Comment;
+};
+
+export const getReplies = async ({
+  commentId,
+  page,
+  pageSize,
+  sort = "oldest",
+}: {
+  commentId: string;
+  page: number;
+  pageSize: number;
+  sort?: "oldest";
+}): Promise<{ replies: Reply[]; totalPages: number }> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+    sort,
+  });
+
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/comments/${commentId}/replies?${params}`,
+  );
+  const text = await response.text();
+  const data = parseResponseText(text);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, "Không thể tải trả lời."));
+  }
+
+  const repliesResponse = data as RepliesResponse;
+
+  return {
+    replies: repliesResponse.items,
+    totalPages: repliesResponse.totalPages,
+  };
+};
+
+export const createReply = async ({
+  commentId,
+  content,
+}: {
+  commentId: string;
+  content: string;
+}): Promise<Reply> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/comments/${commentId}/replies`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content }),
+    },
+  );
+  const text = await response.text();
+  const data = parseResponseText(text);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, "Không thể gửi trả lời."));
+  }
+
+  return data as Reply;
+};

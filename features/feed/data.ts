@@ -4,11 +4,13 @@ export const feedPosts: FeedPost[] = [
   {
     id: "viora-office",
     author: "Lê Thị Hà",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160",
+    authorId: "mock-viora-office",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160",
+    isAuthorVerified: true,
+    isMine: false,
     location: "Sài Gòn, Việt Nam",
     publishedAt: "2 giờ trước",
-    body: "Văn phòng dành cho trải nghiệm sáng tạo và kết nối. Một không gian mới, nơi mọi ý tưởng đều có thể cất cánh ✨",
+    body: "Văn phòng dành cho trải nghiệm sáng tạo và kết nối. Một không gian mới, nơi mọi ý tưởng đều có thể cất cánh.",
     images: [
       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160",
     ],
@@ -24,11 +26,13 @@ export const feedPosts: FeedPost[] = [
   {
     id: "coffee-workday",
     author: "Minh Anh",
-    avatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160",
+    authorId: "mock-coffee-workday",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160",
+    isAuthorVerified: false,
+    isMine: false,
     location: "Đà Nẵng, Việt Nam",
     publishedAt: "4 giờ trước",
-    body: "Một buổi sáng chậm rãi bên góc làm việc yêu thích. Cà phê ngon, nhạc vừa đủ và danh sách công việc đang ngắn dần ☕",
+    body: "Một buổi sáng chậm rãi bên góc làm việc yêu thích. Cà phê ngon, nhạc vừa đủ và danh sách công việc đang ngắn dần.",
     images: [
       "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200",
     ],
@@ -44,8 +48,10 @@ export const feedPosts: FeedPost[] = [
   {
     id: "weekend-trip",
     author: "Quang Huy",
-    avatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160",
+    authorId: "mock-weekend-trip",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160",
+    isAuthorVerified: false,
+    isMine: false,
     location: "Đà Lạt, Việt Nam",
     publishedAt: "Hôm qua",
     body: "Cuối tuần đổi không khí một chút. Đà Lạt vẫn lạnh, nhiều sương và luôn khiến mình muốn quay lại.",
@@ -64,8 +70,10 @@ export const feedPosts: FeedPost[] = [
   {
     id: "creative-team",
     author: "Viora Creative",
-    avatar:
-      "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=160",
+    authorId: "mock-creative-team",
+    avatar: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=160",
+    isAuthorVerified: true,
+    isMine: false,
     location: "Hà Nội, Việt Nam",
     publishedAt: "2 ngày trước",
     body: "Buổi brainstorming đầu tuần: nhiều ý tưởng, nhiều tiếng cười và một sản phẩm mới đang dần thành hình.",

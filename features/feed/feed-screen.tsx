@@ -11,15 +11,15 @@ import {
   View
 } from "react-native";
 
+import { CommentsModal } from "@/components/comments/comments-modal";
 import { CreatePostModal } from "@/components/feed/create-post-modal";
 import { FeedSearchModal } from "@/components/feed/feed-search-modal";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { FIXED_TOP_BAR_HEIGHT } from "@/components/layout/fixed-top-bar";
 import { feedPosts as initialPosts } from "@/features/feed/data";
+import { createPost, getPosts } from "@/services/feed.service";
 import {
-  createPost,
-  getPosts,
   reactPost,
   savePost,
 } from "@/services/post.service";
@@ -39,6 +39,7 @@ export function FeedScreen() {
   const [myAvatar, setMyAvatar] = useState(initialPosts[0].avatar);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [draftImages, setDraftImages] = useState<string[]>([]);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
 
@@ -63,9 +64,7 @@ export function FeedScreen() {
       setTotalPages(result.totalPages);
     } catch (error) {
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "KhÃ´ng thá»ƒ táº£i bÃ i viáº¿t.",
+        error instanceof Error ? error.message : "Không thể tải bài viết.",
       );
     } finally {
       setIsLoading(false);
@@ -99,8 +98,8 @@ export function FeedScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(
-          "Cáº§n quyá»n truy cáº­p",
-          "HÃ£y cho phÃ©p Viora truy cáº­p thÆ° viá»‡n áº£nh Ä‘á»ƒ chá»n áº£nh Ä‘Äƒng bÃ i.",
+          "Cần quyền truy cập",
+          "Hãy cho phép Viora truy cập thư viện ảnh để chọn ảnh đăng bài.",
         );
         return null;
       }
@@ -140,8 +139,8 @@ export function FeedScreen() {
       closeModal();
     } catch (error) {
       Alert.alert(
-        "KhÃ´ng thá»ƒ táº¡o bÃ i viáº¿t",
-        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+        "Không thể tạo bài viết",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     } finally {
       setIsCreatingPost(false);
@@ -165,8 +164,8 @@ export function FeedScreen() {
       );
     } catch (error) {
       Alert.alert(
-        "KhÃ´ng thá»ƒ tháº£ cáº£m xÃºc",
-        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+        "Không thể thả cảm xúc",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
   };
@@ -183,8 +182,8 @@ export function FeedScreen() {
       );
     } catch (error) {
       Alert.alert(
-        "KhÃ´ng thá»ƒ lÆ°u bÃ i viáº¿t",
-        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+        "Không thể lưu bài viết",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
   };
@@ -204,6 +203,18 @@ export function FeedScreen() {
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
+  };
+
+  const handleCommentCreated = (postId: string) => {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === postId ? { ...post, comments: post.comments + 1 } : post,
+      ),
+    );
+  };
+
+  const handleDeletedPost = (postId: string) => {
+    setPosts((current) => current.filter((post) => post.id !== postId));
   };
   const openWithImagePicker = async () => {
     const selectedUris = await pickImages();
@@ -229,10 +240,10 @@ export function FeedScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>
-                {errorMessage || "ChÆ°a cÃ³ bÃ i viáº¿t"}
+                {errorMessage || "Chưa có bài viết"}
               </Text>
               <Text style={styles.emptyText}>
-                KÃ©o xuá»‘ng Ä‘á»ƒ thá»­ táº£i láº¡i.
+                Kéo xuống để thử tải lại.
               </Text>
             </View>
           }
@@ -243,6 +254,8 @@ export function FeedScreen() {
           refreshing={isLoading}
           renderItem={({ item }) => (
             <PostCard
+              onComment={setCommentsPostId}
+              onDeleted={handleDeletedPost}
               onReact={handleReactPost}
               onSave={handleSavePost}
               onShare={handleSharePost}
@@ -270,6 +283,12 @@ export function FeedScreen() {
       <FeedSearchModal
         onClose={() => setSearchVisible(false)}
         visible={searchVisible}
+      />
+      <CommentsModal
+        onClose={() => setCommentsPostId(null)}
+        onCommentCreated={handleCommentCreated}
+        postId={commentsPostId}
+        visible={commentsPostId !== null}
       />
     </View>
   );
