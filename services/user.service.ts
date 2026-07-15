@@ -13,8 +13,34 @@ type ApiError = {
   status?: unknown;
 };
 
+export type UserStatistics = {
+  postCount: number;
+  followerCount: number;
+  followingCount: number;
+  friendCount: number;
+};
+
+export type FollowUserResponse = {
+  isFollowing: boolean;
+  followerCount: number;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const toCount = (value: unknown) => (typeof value === "number" ? value : 0);
+
+const getErrorMessage = (data: unknown, fallback: string) => {
+  if (isRecord(data) && typeof data.message === "string" && data.message.trim()) {
+    return data.message;
+  }
+
+  if (isRecord(data) && typeof data.title === "string" && data.title.trim()) {
+    return data.title;
+  }
+
+  return fallback;
+};
 
 const isUser = (value: unknown): value is User => {
   if (!isRecord(value)) return false;
@@ -90,6 +116,47 @@ export const createProfile = async (payload: ProfileInput): Promise<User> => {
   }
 
   return data;
+};
+
+export const getMyStatistics = async (): Promise<UserStatistics> => {
+  const response = await authenticatedFetch(`${BASE_URL}/api/users/me/statistics`);
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể tải thống kê hồ sơ."));
+  }
+
+  if (!isRecord(data)) {
+    throw new Error("Phản hồi thống kê hồ sơ không hợp lệ.");
+  }
+
+  return {
+    followerCount: toCount(data.followerCount),
+    followingCount: toCount(data.followingCount),
+    friendCount: toCount(data.friendCount),
+    postCount: toCount(data.postCount),
+  };
+};
+
+export const followUser = async (userId: string): Promise<FollowUserResponse> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/users/${userId}/follow`,
+    { method: "POST" },
+  );
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể theo dõi người dùng."));
+  }
+
+  if (!isRecord(data)) {
+    throw new Error("Phản hồi theo dõi không hợp lệ.");
+  }
+
+  return {
+    followerCount: toCount(data.followerCount),
+    isFollowing: data.isFollowing === true,
+  };
 };
 
 export const updateProfile = async (

@@ -104,10 +104,12 @@ export const getPosts = async ({
   keyword = "",
   page,
   pageSize,
+  userId,
 }: {
   keyword?: string;
   page: number;
   pageSize: number;
+  userId?: string;
 }): Promise<{ posts: FeedPost[]; totalPages: number }> => {
   const params = new URLSearchParams({
     page: String(page),
@@ -115,6 +117,7 @@ export const getPosts = async ({
   });
 
   if (keyword.trim()) params.append("keyword", keyword.trim());
+  if (userId?.trim()) params.append("userId", userId.trim());
 
   const response = await authenticatedFetch(`${BASE_URL}/api/feed?${params}`);
   const text = await response.text();

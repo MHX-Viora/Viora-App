@@ -18,6 +18,7 @@ import {
 } from "react-native";
 
 import { deletePost, reportPost } from "@/services/post.service";
+import { followUser } from "@/services/user.service";
 import { colors, spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 
@@ -117,6 +118,9 @@ export function ReelCard({
   const [showControls, setShowControls] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(reel.isFollowing);
+  const [isFollowingAuthorBusy, setIsFollowingAuthorBusy] = useState(false);
+  const [showFollowSuccess, setShowFollowSuccess] = useState(false);
   const [reportingReason, setReportingReason] = useState<number | null>(null);
   const [showPlayButton, setShowPlayButton] = useState(false);
   const [seekWidth, setSeekWidth] = useState(0);
@@ -139,6 +143,16 @@ export function ReelCard({
     currentOffsetFromLive: null,
     currentTime: player.currentTime,
   });
+
+  useEffect(() => {
+    setIsFollowingAuthor(reel.isFollowing);
+  }, [reel.id, reel.isFollowing]);
+
+  useEffect(() => {
+    if (!showFollowSuccess) return;
+    const timer = setTimeout(() => setShowFollowSuccess(false), 2000);
+    return () => clearTimeout(timer);
+  }, [showFollowSuccess]);
 
   useEffect(() => {
     if (active && !wasActive.current) {
@@ -259,6 +273,24 @@ export function ReelCard({
         "Không thể tải video",
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
+    }
+  };
+
+  const handleFollowAuthor = async () => {
+    if (!reel.authorId || isFollowingAuthorBusy) return;
+
+    setIsFollowingAuthorBusy(true);
+    try {
+      const result = await followUser(reel.authorId);
+      setIsFollowingAuthor(result.isFollowing);
+      if (result.isFollowing) setShowFollowSuccess(true);
+    } catch (error) {
+      Alert.alert(
+        "Không thể theo dõi",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setIsFollowingAuthorBusy(false);
     }
   };
 
@@ -391,9 +423,24 @@ export function ReelCard({
                 source={reel.avatar}
                 style={styles.avatar}
               />
-              {!reel.isFollowing && !reel.isMine && (
-                <View style={styles.follow}>
-                  <Ionicons color={colors.white} name="add" size={14} />
+              {!isFollowingAuthor && !reel.isMine && (
+                <Pressable
+                  accessibilityLabel="Theo dõi người đăng"
+                  accessibilityRole="button"
+                  disabled={isFollowingAuthorBusy}
+                  onPress={handleFollowAuthor}
+                  style={styles.follow}
+                >
+                  {isFollowingAuthorBusy ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Ionicons color={colors.white} name="add" size={14} />
+                  )}
+                </Pressable>
+              )}
+              {showFollowSuccess && (
+                <View style={styles.followSuccess}>
+                  <Ionicons color={colors.white} name="checkmark" size={16} />
                 </View>
               )}
             </View>
@@ -727,6 +774,17 @@ const styles = StyleSheet.create({
     left: 14,
     position: "absolute",
     width: 20,
+  },
+  followSuccess: {
+    alignItems: "center",
+    backgroundColor: colors.danger,
+    borderRadius: 14,
+    bottom: -8,
+    height: 28,
+    justifyContent: "center",
+    left: 10,
+    position: "absolute",
+    width: 28,
   },
   detailsAuthor: {
     color: colors.white,
