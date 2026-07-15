@@ -21,6 +21,7 @@ import { formatReelCount, getReels } from "@/services/reel.service";
 import {
   followUser,
   getUserProfile,
+  sendFriendRequest,
   type UserProfile,
 } from "@/services/user.service";
 import { colors, spacing } from "@/theme";
@@ -127,11 +128,38 @@ export function UserProfileScreen() {
     }
   };
 
-  const handleFriendAction = () => {
-    Alert.alert(
-      "Chưa có API kết bạn",
-      "Frontend đã sẵn sàng hiển thị trạng thái kết bạn, nhưng dự án chưa có endpoint gửi lời mời kết bạn.",
-    );
+  const handleFriendAction = async () => {
+    if (!profile || isActionLoading) return;
+
+    const friendshipStatus = profile.friendship?.status?.toLowerCase();
+    if (friendshipStatus === "pending" || friendshipStatus === "accepted") return;
+
+    setIsActionLoading(true);
+    try {
+      const result = await sendFriendRequest(profile.id);
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              friendship: {
+                isRequester: true,
+                status: result.status || "pending",
+              },
+            }
+          : current,
+      );
+
+      if (result.message) {
+        Alert.alert("Đã gửi lời mời", result.message);
+      }
+    } catch (error) {
+      Alert.alert(
+        "Không thể gửi lời mời kết bạn",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   const handleChat = () => {
@@ -330,6 +358,7 @@ export function UserProfileScreen() {
           <ProfileActions
             canMessage={profile.canMessage}
             friendLabel={getFriendLabel(profile.friendship?.status)}
+            friendshipStatus={profile.friendship?.status ?? null}
             isActionLoading={isActionLoading}
             isFollowing={profile.isFollowing}
             onChat={handleChat}
@@ -372,6 +401,7 @@ export function UserProfileScreen() {
 function ProfileActions({
   canMessage,
   friendLabel,
+  friendshipStatus,
   isActionLoading,
   isFollowing,
   onChat,
@@ -380,15 +410,30 @@ function ProfileActions({
 }: {
   canMessage: boolean;
   friendLabel: string;
+  friendshipStatus: string | null;
   isActionLoading: boolean;
   isFollowing: boolean;
   onChat: () => void;
   onFollow: () => void;
   onFriend: () => void;
 }) {
+  const normalizedFriendshipStatus = friendshipStatus?.toLowerCase();
+  const isFriendActionDisabled =
+    isActionLoading ||
+    normalizedFriendshipStatus === "pending" ||
+    normalizedFriendshipStatus === "accepted";
+  const isFriendAccepted = normalizedFriendshipStatus === "accepted";
+  const isFriendPending = normalizedFriendshipStatus === "pending";
+
   return (
     <View style={styles.actions}>
-      <ActionButton icon="person-add-outline" label={friendLabel} onPress={onFriend} />
+      <ActionButton
+        disabled={isFriendActionDisabled}
+        icon={isFriendAccepted ? "checkmark" : "person-add-outline"}
+        label={friendLabel}
+        onPress={onFriend}
+        primary={!isFriendAccepted && !isFriendPending}
+      />
       <ActionButton
         disabled={isActionLoading}
         icon={isFollowing ? "checkmark" : "add"}

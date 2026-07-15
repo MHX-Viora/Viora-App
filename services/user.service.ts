@@ -25,6 +25,13 @@ export type FollowUserResponse = {
   followerCount: number;
 };
 
+export type SendFriendRequestResponse = {
+  success: boolean;
+  message: string;
+  friendshipId: string;
+  status: string;
+};
+
 export type UserProfile = {
   id: string;
   displayName: string;
@@ -185,6 +192,43 @@ export const followUser = async (userId: string): Promise<FollowUserResponse> =>
   return {
     followerCount: toCount(data.followerCount),
     isFollowing: data.isFollowing === true,
+  };
+};
+
+export const sendFriendRequest = async (
+  userId: string,
+): Promise<SendFriendRequestResponse> => {
+  const response = await authenticatedFetch(`${BASE_URL}/api/friends/request`, {
+    body: JSON.stringify({ userId }),
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+  const data = parseResponseText(await response.text());
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể gửi lời mời kết bạn."));
+  }
+
+  if (!isRecord(data)) {
+    throw new Error("Phản hồi gửi lời mời kết bạn không hợp lệ.");
+  }
+
+  const responseData = isRecord(data.data) ? data.data : null;
+
+  return {
+    friendshipId:
+      responseData && typeof responseData.friendshipId === "string"
+        ? responseData.friendshipId
+        : "",
+    message: typeof data.message === "string" ? data.message : "",
+    status:
+      responseData && typeof responseData.status === "string"
+        ? responseData.status
+        : "pending",
+    success: data.success === true,
   };
 };
 

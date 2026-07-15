@@ -1,4 +1,5 @@
-import { PlaceholderScreen } from "@/components/common/placeholder-screen";
+import { NotificationsScreen } from "@/features/notifications/notifications-screen";
+
 export default function NotificationRoute() {
-  return <PlaceholderScreen icon="notifications-outline" title="Thông báo" />;
+  return <NotificationsScreen />;
 }
