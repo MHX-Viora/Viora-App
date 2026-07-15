@@ -20,6 +20,7 @@ export function ReelsSearchModal({
   onComment,
   onCommentCreated,
   onDelete,
+  onOpenAuthor,
   onReact,
   onSave,
   onSearch,
@@ -32,6 +33,7 @@ export function ReelsSearchModal({
   onComment?: (reelId: string) => void;
   onCommentCreated?: { id: string; nonce: number } | null;
   onDelete?: (reelId: string) => void;
+  onOpenAuthor?: (userId: string) => void;
   onReact?: (reelId: string) => void;
   onSave?: (reelId: string) => void;
   onSearch: (keyword: string) => Promise<Reel[]>;
@@ -168,6 +170,7 @@ export function ReelsSearchModal({
               onComment={onComment}
               onCommentCreated={onCommentCreated}
               onDelete={onDelete}
+              onOpenAuthor={onOpenAuthor}
               onReact={onReact}
               onSave={onSave}
               onShare={onShare}

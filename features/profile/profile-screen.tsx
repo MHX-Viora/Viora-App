@@ -215,6 +215,11 @@ export function ProfileScreen() {
     setProfilePosts((current) => current.filter((post) => post.id !== postId));
   };
 
+  const openUserProfile = (userId: string) => {
+    if (userId === user.id) return;
+    router.push({ pathname: "/users/[userId]", params: { userId } });
+  };
+
   const openPostComments = (postId: string) => {
     setCommentTargetType("post");
     setCommentsPostId(postId);
@@ -302,6 +307,7 @@ export function ProfileScreen() {
           handle={profileHandle}
           name={profileName}
           onEdit={() => router.push("/edit-profile")}
+          showEditButton
         />
         <ProfileContent
           isLoading={isProfileContentLoading}
@@ -309,6 +315,7 @@ export function ProfileScreen() {
           onCommentReel={openReelComments}
           onDeletePost={handleDeletedPost}
           onDeleteReel={handleDeletedReel}
+          onOpenAuthor={openUserProfile}
           onReactPost={handleReactPost}
           onReactReel={handleReactReel}
           onSavePost={handleSavePost}
@@ -328,6 +335,7 @@ export function ProfileScreen() {
           setCommentTargetType(null);
         }}
         onCommentCreated={handleCommentCreated}
+        onOpenUser={openUserProfile}
         postId={commentsPostId}
         visible={commentsPostId !== null}
       />
@@ -336,6 +344,12 @@ export function ProfileScreen() {
         handle={profileHandle}
         name={profileName}
         onClose={() => setShowQr(false)}
+        onOpenProfile={(nextUserId) =>
+          router.push({
+            pathname: "/users/[userId]",
+            params: { userId: nextUserId },
+          })
+        }
         qrValue={`viora://profile/${user.id}`}
         visible={showQr}
       />

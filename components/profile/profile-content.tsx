@@ -22,6 +22,7 @@ export function ProfileContent({
   onCommentPost,
   onDeleteReel,
   onDeletePost,
+  onOpenAuthor,
   onReactPost,
   onReactReel,
   onSavePost,
@@ -39,6 +40,7 @@ export function ProfileContent({
   onCommentPost?: (postId: string) => void;
   onDeleteReel?: (reelId: string) => void;
   onDeletePost?: (postId: string) => void;
+  onOpenAuthor?: (userId: string) => void;
   onReactPost?: (postId: string, reactionType: number) => void;
   onReactReel?: (reelId: string) => void;
   onSavePost?: (postId: string) => void;
@@ -91,6 +93,7 @@ export function ProfileContent({
               key={post.id}
               onComment={onCommentPost}
               onDeleted={onDeletePost}
+              onOpenAuthor={onOpenAuthor}
               onReact={onReactPost}
               onSave={onSavePost}
               onShare={onSharePost}
@@ -103,6 +106,7 @@ export function ProfileContent({
           onComment={onCommentReel}
           onCommentCreated={reelCommentEvent}
           onDelete={onDeleteReel}
+          onOpenAuthor={onOpenAuthor}
           onReact={onReactReel}
           onSave={onSaveReel}
           onShare={onShareReel}

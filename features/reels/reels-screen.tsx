@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import {
@@ -360,6 +361,10 @@ export function ReelsScreen() {
     setReelItems((current) => current.filter((reel) => reel.id !== reelId));
   };
 
+  const openUserProfile = (userId: string) => {
+    router.push({ pathname: "/users/[userId]", params: { userId } });
+  };
+
   return (
     <View onLayout={handleLayout} style={styles.container}>
       {isLoadingReels ? (
@@ -412,6 +417,7 @@ export function ReelsScreen() {
                   }
                   onComment={setCommentsPostId}
                   onDelete={handleDeletedReel}
+                  onOpenAuthor={openUserProfile}
                   onReact={handleReactReel}
                   onSave={handleSaveReel}
                   onShare={handleShareReel}
@@ -436,6 +442,7 @@ export function ReelsScreen() {
         onComment={setCommentsPostId}
         onCommentCreated={searchCommentEvent}
         onDelete={handleDeletedReel}
+        onOpenAuthor={openUserProfile}
         onReact={handleReactReel}
         onSearch={searchReels}
         onSave={handleSaveReel}
@@ -455,6 +462,7 @@ export function ReelsScreen() {
       <CommentsModal
         onClose={() => setCommentsPostId(null)}
         onCommentCreated={handleCommentCreated}
+        onOpenUser={openUserProfile}
         postId={commentsPostId}
         visible={commentsPostId !== null}
       />

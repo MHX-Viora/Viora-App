@@ -27,11 +27,13 @@ const QUICK_EMOJIS = ["❤️", "😂", "😍", "🔥", "👏", "👍"];
 export function CommentsModal({
   onClose,
   onCommentCreated,
+  onOpenUser,
   postId,
   visible,
 }: {
   onClose: () => void;
   onCommentCreated?: (postId: string) => void;
+  onOpenUser?: (userId: string) => void;
   postId: string | null;
   visible: boolean;
 }) {
@@ -111,6 +113,7 @@ export function CommentsModal({
                     )
                   }
                   onReply={() => setReplyTarget(item)}
+                  onOpenUser={onOpenUser}
                   onToggleReplies={() => loadReplies(item.id, 1)}
                   replyState={replyStateByComment[item.id]}
                 />
@@ -172,6 +175,7 @@ function CommentItem({
   comment,
   onHideReplies,
   onLoadMoreReplies,
+  onOpenUser,
   onReply,
   onToggleReplies,
   replyState,
@@ -179,6 +183,7 @@ function CommentItem({
   comment: UiComment;
   onHideReplies: () => void;
   onLoadMoreReplies: () => void;
+  onOpenUser?: (userId: string) => void;
   onReply: () => void;
   onToggleReplies: () => void;
   replyState?: ReplyState;
@@ -189,10 +194,12 @@ function CommentItem({
         content={comment.content}
         isVerified={comment.user.isVerified}
         likeCount={comment.likeCount}
+        onOpenUser={onOpenUser}
         onReply={onReply}
         sendStatus={comment.sendStatus}
         userAvatar={comment.user.avatarUrl}
         userName={comment.user.displayName}
+        userId={comment.user.id}
       />
       {comment.replyCount > 0 && !replyState && (
         <Pressable onPress={onToggleReplies} style={styles.repliesButton}>
@@ -215,11 +222,13 @@ function CommentItem({
             content={reply.content}
             isVerified={reply.user.isVerified}
             likeCount={reply.likeCount}
+            onOpenUser={onOpenUser}
             onReply={onReply}
             replyToUser={reply.replyToUser.displayName}
             sendStatus={reply.sendStatus}
             userAvatar={reply.user.avatarUrl}
             userName={reply.user.displayName}
+            userId={reply.user.id}
           />
         </View>
       ))}
@@ -238,19 +247,23 @@ function CommentContent({
   content,
   isVerified,
   likeCount,
+  onOpenUser,
   onReply,
   replyToUser,
   sendStatus,
   userAvatar,
+  userId,
   userName,
 }: {
   content: string;
   isVerified: boolean;
   likeCount: number;
+  onOpenUser?: (userId: string) => void;
   onReply: () => void;
   replyToUser?: string;
   sendStatus?: SendStatus;
   userAvatar: string;
+  userId: string;
   userName: string;
 }) {
   const isPending = sendStatus === "sending";
@@ -258,17 +271,30 @@ function CommentContent({
 
   return (
     <View style={styles.commentRow}>
-      <Image
-        accessibilityLabel={`Ảnh đại diện của ${userName}`}
-        source={userAvatar}
-        style={styles.avatar}
-      />
+      <Pressable
+        accessibilityRole="button"
+        disabled={!onOpenUser}
+        onPress={() => onOpenUser?.(userId)}
+      >
+        <Image
+          accessibilityLabel={`Ảnh đại diện của ${userName}`}
+          source={userAvatar}
+          style={styles.avatar}
+        />
+      </Pressable>
       <View style={styles.commentBody}>
         <View style={styles.commentBubble}>
           <View style={styles.authorRow}>
-            <Text numberOfLines={1} style={styles.author}>
-              {userName}
-            </Text>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!onOpenUser}
+              onPress={() => onOpenUser?.(userId)}
+              style={styles.authorPressable}
+            >
+              <Text numberOfLines={1} style={styles.author}>
+                {userName}
+              </Text>
+            </Pressable>
             {isVerified && (
               <Ionicons color={colors.primary} name="checkmark-circle" size={16} />
             )}
@@ -330,6 +356,7 @@ const AVATAR_SIZE = 42;
 
 const styles = StyleSheet.create({
   author: { color: colors.text, flexShrink: 1, fontSize: 15, fontWeight: "800" },
+  authorPressable: { flexShrink: 1 },
   authorRow: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
   avatar: {
     backgroundColor: colors.border,

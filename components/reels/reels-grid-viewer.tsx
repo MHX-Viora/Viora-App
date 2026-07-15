@@ -27,6 +27,7 @@ export function ReelsGridViewer({
   onComment,
   onCommentCreated,
   onDelete,
+  onOpenAuthor,
   onReact,
   onSave,
   onShare,
@@ -38,6 +39,7 @@ export function ReelsGridViewer({
   onComment?: (reelId: string) => void;
   onCommentCreated?: { id: string; nonce: number } | null;
   onDelete?: (reelId: string) => void;
+  onOpenAuthor?: (userId: string) => void;
   onReact?: (reelId: string) => void;
   onSave?: (reelId: string) => void;
   onShare?: (reel: Reel) => void;
@@ -228,6 +230,7 @@ export function ReelsGridViewer({
                   onInteractionLockChange={
                     index === viewerIndex ? setIsViewerLocked : undefined
                   }
+                  onOpenAuthor={onOpenAuthor}
                   onReact={handleReact}
                   onSave={handleSave}
                   onShare={onShare}

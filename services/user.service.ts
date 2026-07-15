@@ -25,12 +25,44 @@ export type FollowUserResponse = {
   followerCount: number;
 };
 
+export type UserProfile = {
+  id: string;
+  displayName: string;
+  avatarUrl: string;
+  coverUrl: string;
+  gender: number;
+  isVerified: boolean;
+  postCount: number;
+  followerCount: number;
+  followingCount: number;
+  friendCount: number;
+  isFollowing: boolean;
+  friendship: {
+    status: string | null;
+    isRequester: boolean;
+  } | null;
+  canMessage: boolean;
+  conversationId: string | null;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 const toCount = (value: unknown) => (typeof value === "number" ? value : 0);
 
+const parseResponseText = (text: string) => {
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+};
+
 const getErrorMessage = (data: unknown, fallback: string) => {
+  if (typeof data === "string" && data.trim()) return data;
+
   if (isRecord(data) && typeof data.message === "string" && data.message.trim()) {
     return data.message;
   }
@@ -87,7 +119,6 @@ export const createProfile = async (payload: ProfileInput): Promise<User> => {
   appendImage(formData, "Avatar", payload.avatarUrl);
   appendImage(formData, "Cover", payload.coverUrl);
 
-  // Gọi API tạo hồ sơ bằng multipart/form-data để upload avatar và cover.
   const response = await authenticatedFetch(`${BASE_URL}/api/users/profile`, {
     method: "POST",
     headers: FORM_HEADERS,
@@ -96,7 +127,6 @@ export const createProfile = async (payload: ProfileInput): Promise<User> => {
 
   const data = await response.json();
 
-  // API lỗi thì throw message cho màn hình hiển thị.
   if (!response.ok || (isRecord(data) && data.status === 0)) {
     const error = data as ApiError;
     let message = "Không thể lưu hồ sơ.";
@@ -110,7 +140,6 @@ export const createProfile = async (payload: ProfileInput): Promise<User> => {
     throw new Error(message);
   }
 
-  //  API tạo hồ sơ phải trả về user.
   if (!isUser(data)) {
     throw new Error("Phản hồi hồ sơ không hợp lệ.");
   }
@@ -120,7 +149,7 @@ export const createProfile = async (payload: ProfileInput): Promise<User> => {
 
 export const getMyStatistics = async (): Promise<UserStatistics> => {
   const response = await authenticatedFetch(`${BASE_URL}/api/users/me/statistics`);
-  const data = await response.json();
+  const data = parseResponseText(await response.text());
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Không thể tải thống kê hồ sơ."));
@@ -143,7 +172,7 @@ export const followUser = async (userId: string): Promise<FollowUserResponse> =>
     `${BASE_URL}/api/users/${userId}/follow`,
     { method: "POST" },
   );
-  const data = await response.json();
+  const data = parseResponseText(await response.text());
 
   if (!response.ok) {
     throw new Error(getErrorMessage(data, "Không thể theo dõi người dùng."));
@@ -156,6 +185,54 @@ export const followUser = async (userId: string): Promise<FollowUserResponse> =>
   return {
     followerCount: toCount(data.followerCount),
     isFollowing: data.isFollowing === true,
+  };
+};
+
+export const getUserProfile = async (userId: string): Promise<UserProfile> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/users/${userId}/profile`,
+  );
+  const data = parseResponseText(await response.text());
+
+  if (response.status === 404) {
+    throw new Error("Không tìm thấy người dùng này.");
+  }
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể tải hồ sơ."));
+  }
+
+  if (!isRecord(data) || typeof data.id !== "string") {
+    throw new Error("Phản hồi hồ sơ không hợp lệ.");
+  }
+
+  const friendship = isRecord(data.friendship)
+    ? {
+        isRequester: data.friendship.isRequester === true,
+        status:
+          typeof data.friendship.status === "string"
+            ? data.friendship.status
+            : null,
+      }
+    : null;
+
+  return {
+    avatarUrl: typeof data.avatarUrl === "string" ? data.avatarUrl : "",
+    canMessage: data.canMessage === true,
+    conversationId:
+      typeof data.conversationId === "string" ? data.conversationId : null,
+    coverUrl: typeof data.coverUrl === "string" ? data.coverUrl : "",
+    displayName:
+      typeof data.displayName === "string" ? data.displayName : "Người dùng",
+    followerCount: toCount(data.followerCount),
+    followingCount: toCount(data.followingCount),
+    friendCount: toCount(data.friendCount),
+    friendship,
+    gender: typeof data.gender === "number" ? data.gender : 0,
+    id: data.id,
+    isFollowing: data.isFollowing === true,
+    isVerified: data.isVerified === true,
+    postCount: toCount(data.postCount),
   };
 };
 
@@ -174,7 +251,6 @@ export const updateProfile = async (
     appendImage(formData, "Cover", payload.coverUrl);
   }
 
-  // Gọi API cập nhật hồ sơ bằng multipart/form-data để upload avatar và cover.
   const response = await authenticatedFetch(`${BASE_URL}/api/users/profile`, {
     method: "PATCH",
     headers: FORM_HEADERS,
@@ -183,7 +259,6 @@ export const updateProfile = async (
 
   const data = await response.json();
 
-  // API lỗi thì throw message cho màn hình hiển thị.
   if (!response.ok || (isRecord(data) && data.status === 0)) {
     const error = data as ApiError;
     let message = "Không thể cập nhật hồ sơ.";
@@ -197,7 +272,6 @@ export const updateProfile = async (
     throw new Error(message);
   }
 
-  // API cập nhật hồ sơ phải trả về user.
   if (!isUser(data)) {
     throw new Error("Phản hồi hồ sơ không hợp lệ.");
   }

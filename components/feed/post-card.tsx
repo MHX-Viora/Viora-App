@@ -119,6 +119,7 @@ function ReactionIcon({
 type Props = {
   onComment?: (postId: string) => void;
   onDeleted?: (postId: string) => void;
+  onOpenAuthor?: (userId: string) => void;
   onReact?: (postId: string, reactionType: number) => void;
   onSave?: (postId: string) => void;
   onShare?: (postId: string) => void;
@@ -128,6 +129,7 @@ type Props = {
 export function PostCard({
   onComment,
   onDeleted,
+  onOpenAuthor,
   onReact,
   onSave,
   onShare,
@@ -246,16 +248,29 @@ export function PostCard({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          disabled={!post.authorId || !onOpenAuthor}
+          onPress={() => post.authorId && onOpenAuthor?.(post.authorId)}
+        >
         <Image
           accessibilityLabel={`Ảnh đại diện của ${post.author}`}
           source={{ uri: post.avatar }}
           style={styles.avatar}
         />
+        </Pressable>
         <View style={styles.authorBlock}>
           <View style={styles.authorRow}>
+            <Pressable
+              accessibilityRole="button"
+              disabled={!post.authorId || !onOpenAuthor}
+              onPress={() => post.authorId && onOpenAuthor?.(post.authorId)}
+              style={styles.authorPressable}
+            >
             <Text numberOfLines={1} style={styles.author}>
               {post.author}
             </Text>
+            </Pressable>
             {post.isAuthorVerified && (
               <Ionicons
                 accessibilityLabel="Tài khoản đã xác minh"
@@ -524,6 +539,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   authorBlock: { flex: 1 },
+  authorPressable: { flexShrink: 1 },
   authorRow: {
     alignItems: "center",
     flexDirection: "row",

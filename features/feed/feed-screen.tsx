@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -216,6 +217,9 @@ export function FeedScreen() {
   const handleDeletedPost = (postId: string) => {
     setPosts((current) => current.filter((post) => post.id !== postId));
   };
+  const openUserProfile = (userId: string) => {
+    router.push({ pathname: "/users/[userId]", params: { userId } });
+  };
   const openWithImagePicker = async () => {
     const selectedUris = await pickImages();
     if (selectedUris) setModalVisible(true);
@@ -256,6 +260,7 @@ export function FeedScreen() {
             <PostCard
               onComment={setCommentsPostId}
               onDeleted={handleDeletedPost}
+              onOpenAuthor={openUserProfile}
               onReact={handleReactPost}
               onSave={handleSavePost}
               onShare={handleSharePost}
@@ -287,6 +292,7 @@ export function FeedScreen() {
       <CommentsModal
         onClose={() => setCommentsPostId(null)}
         onCommentCreated={handleCommentCreated}
+        onOpenUser={openUserProfile}
         postId={commentsPostId}
         visible={commentsPostId !== null}
       />

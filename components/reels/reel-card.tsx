@@ -93,6 +93,7 @@ export function ReelCard({
   height,
   onComment,
   onDelete,
+  onOpenAuthor,
   onReact,
   onInteractionLockChange,
   onSave,
@@ -104,6 +105,7 @@ export function ReelCard({
   height: number;
   onComment?: (reelId: string) => void;
   onDelete?: (reelId: string) => void;
+  onOpenAuthor?: (userId: string) => void;
   onReact?: (reelId: string) => void;
   onInteractionLockChange?: (locked: boolean) => void;
   onSave?: (reelId: string) => void;
@@ -388,9 +390,16 @@ export function ReelCard({
         <View pointerEvents="box-none" style={styles.bottomContent}>
           <View style={styles.copy}>
             <View style={styles.authorLine}>
-              <Text numberOfLines={1} style={styles.author}>
-                {reel.author}
-              </Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!reel.authorId || !onOpenAuthor}
+                onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
+                style={styles.authorPressable}
+              >
+                <Text numberOfLines={1} style={styles.author}>
+                  {reel.author}
+                </Text>
+              </Pressable>
               {reel.isAuthorVerified && (
                 <Ionicons
                   accessibilityLabel="Tài khoản đã xác minh"
@@ -418,11 +427,17 @@ export function ReelCard({
           </View>
           <View style={styles.rail}>
             <View style={styles.avatarWrap}>
-              <Image
-                accessibilityLabel={`Ảnh đại diện của ${reel.author}`}
-                source={reel.avatar}
-                style={styles.avatar}
-              />
+              <Pressable
+                accessibilityRole="button"
+                disabled={!reel.authorId || !onOpenAuthor}
+                onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
+              >
+                <Image
+                  accessibilityLabel={`Ảnh đại diện của ${reel.author}`}
+                  source={reel.avatar}
+                  style={styles.avatar}
+                />
+              </Pressable>
               {!isFollowingAuthor && !reel.isMine && (
                 <Pressable
                   accessibilityLabel="Theo dõi người đăng"
@@ -707,6 +722,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
   },
+  authorPressable: { flexShrink: 1 },
   avatar: {
     borderColor: colors.white,
     borderRadius: 24,

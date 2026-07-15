@@ -14,6 +14,7 @@ export function ProfileQrModal({
   handle,
   name,
   onClose,
+  onOpenProfile,
   qrValue,
   visible,
 }: {
@@ -21,6 +22,7 @@ export function ProfileQrModal({
   handle: string;
   name: string;
   onClose: () => void;
+  onOpenProfile?: (userId: string) => void;
   qrValue: string;
   visible: boolean;
 }) {
@@ -48,9 +50,15 @@ export function ProfileQrModal({
   const handleScanned = ({ data }: { data: string }) => {
     if (!scanning) return;
     setScanning(false);
-    const isProfile =
-      data.startsWith("viora://profile/") ||
-      data.startsWith("https://viora.app/profile/");
+    const profileId = getProfileIdFromQr(data);
+    const isProfile = profileId !== null;
+
+    if (profileId) {
+      setTimeout(() => {
+        closeModal();
+        onOpenProfile?.(profileId);
+      }, 450);
+    }
     setScanMessage(
       isProfile
         ? "Đã tìm thấy hồ sơ Viora"
@@ -159,6 +167,25 @@ export function ProfileQrModal({
     </Modal>
   );
 }
+
+const getProfileIdFromQr = (data: string) => {
+  const trimmed = data.trim();
+  const prefixes = [
+    "viora://profile/",
+    "https://viora.app/profile/",
+    "https://viora.app/users/",
+  ];
+  const prefix = prefixes.find((item) => trimmed.startsWith(item));
+
+  if (!prefix) return null;
+
+  const userId = trimmed
+    .slice(prefix.length)
+    .split(/[/?#]/)[0]
+    .trim();
+
+  return userId || null;
+};
 
 function Scanner({
   onRequestPermission,

@@ -1,33 +1,42 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
 import { colors, spacing } from "@/theme";
 
 export function ProfileOverview({
+  actionSlot,
   avatar,
+  bio,
   cover,
   handle,
+  isVerified,
   name,
   onEdit,
+  showEditButton = false,
 }: {
+  actionSlot?: ReactNode;
   avatar: string;
+  bio?: string;
   cover: string;
   handle: string;
+  isVerified?: boolean;
   name: string;
   onEdit?: () => void;
+  showEditButton?: boolean;
 }) {
   return (
     <>
       <View style={styles.hero}>
         <ViewableImage
-          accessibilityLabel={`Ảnh bìa của ${name}`}
+          accessibilityLabel={`Anh bia cua ${name}`}
           contentFit="cover"
           source={cover}
           style={styles.cover}
         />
         <ViewableImage
-          accessibilityLabel={`Ảnh đại diện của ${name}`}
+          accessibilityLabel={`Anh dai dien cua ${name}`}
           contentFit="cover"
           source={avatar}
           style={styles.avatar}
@@ -38,20 +47,32 @@ export function ProfileOverview({
           <Text numberOfLines={1} style={styles.name}>
             {name}
           </Text>
-          <Pressable
-            accessibilityLabel="Chỉnh sửa hồ sơ"
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={onEdit}
-            style={({ pressed }) => [
-              styles.editButton,
-              pressed && styles.editButtonPressed,
-            ]}
-          >
-            <Ionicons color={colors.white} name="pencil" size={14} />
-          </Pressable>
+          {isVerified && (
+            <Ionicons
+              accessibilityLabel="Tai khoan da xac minh"
+              color={colors.primary}
+              name="checkmark-circle"
+              size={20}
+            />
+          )}
+          {showEditButton && onEdit && (
+            <Pressable
+              accessibilityLabel="Chinh sua ho so"
+              accessibilityRole="button"
+              hitSlop={8}
+              onPress={onEdit}
+              style={({ pressed }) => [
+                styles.editButton,
+                pressed && styles.editButtonPressed,
+              ]}
+            >
+              <Ionicons color={colors.white} name="pencil" size={14} />
+            </Pressable>
+          )}
         </View>
         <Text style={styles.handle}>{handle}</Text>
+        {!!bio?.trim() && <Text style={styles.bio}>{bio.trim()}</Text>}
+        {actionSlot}
       </View>
     </>
   );
@@ -67,6 +88,12 @@ const styles = StyleSheet.create({
     left: spacing.md,
     position: "absolute",
     width: 86,
+  },
+  bio: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.sm,
   },
   cover: { height: 170, width: "100%" },
   editButton: {
