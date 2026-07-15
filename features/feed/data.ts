@@ -12,9 +12,14 @@ export const feedPosts: FeedPost[] = [
     images: [
       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160",
     ],
+    isReacted: false,
+    isSaved: false,
+    reactionType: 0,
     reactions: 128,
+    saveCount: 0,
     comments: 46,
     shares: 12,
+    visibility: 0,
   },
   {
     id: "coffee-workday",
@@ -27,9 +32,14 @@ export const feedPosts: FeedPost[] = [
     images: [
       "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200",
     ],
+    isReacted: false,
+    isSaved: false,
+    reactionType: 0,
     reactions: 264,
+    saveCount: 0,
     comments: 38,
     shares: 19,
+    visibility: 0,
   },
   {
     id: "weekend-trip",
@@ -42,9 +52,14 @@ export const feedPosts: FeedPost[] = [
     images: [
       "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1200",
     ],
+    isReacted: false,
+    isSaved: false,
+    reactionType: 0,
     reactions: 842,
+    saveCount: 0,
     comments: 97,
     shares: 44,
+    visibility: 0,
   },
   {
     id: "creative-team",
@@ -57,8 +72,13 @@ export const feedPosts: FeedPost[] = [
     images: [
       "https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=1200",
     ],
+    isReacted: false,
+    isSaved: false,
+    reactionType: 0,
     reactions: 531,
+    saveCount: 0,
     comments: 72,
     shares: 31,
+    visibility: 0,
   },
 ];

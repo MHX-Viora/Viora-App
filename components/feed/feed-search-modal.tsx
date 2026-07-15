@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   FlatList,
   Modal,
   Pressable,
@@ -12,34 +13,92 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PostCard } from "@/components/feed/post-card";
+import { getPosts } from "@/services/post.service";
 import { colors, spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 
+const PAGE_SIZE = 10;
+
 export function FeedSearchModal({
   onClose,
-  posts,
   visible,
 }: {
   onClose: () => void;
-  posts: readonly FeedPost[];
   visible: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const normalizedQuery = query.trim().toLocaleLowerCase("vi");
-  const results = useMemo(
-    () =>
-      normalizedQuery
-        ? posts.filter((post) =>
-            [post.author, post.body, post.location].some((value) =>
-              value.toLocaleLowerCase("vi").includes(normalizedQuery),
-            ),
-          )
-        : [],
-    [normalizedQuery, posts],
-  );
+  const [results, setResults] = useState<FeedPost[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const normalizedQuery = query.trim();
+
+  const searchPosts = async (keyword: string, nextPage: number) => {
+    if (!keyword) return;
+
+    if (nextPage === 1) {
+      setIsSearching(true);
+      setErrorMessage("");
+    } else {
+      setIsLoadingMore(true);
+    }
+
+    try {
+      const result = await getPosts({
+        keyword,
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+
+      setResults((current) =>
+        nextPage === 1 ? result.posts : [...current, ...result.posts],
+      );
+      setPage(nextPage);
+      setTotalPages(result.totalPages);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Không thể tìm kiếm bài viết.",
+      );
+    } finally {
+      setIsSearching(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!visible) return;
+
+    if (!normalizedQuery) {
+      setResults([]);
+      setPage(1);
+      setTotalPages(1);
+      setErrorMessage("");
+      setIsSearching(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      searchPosts(normalizedQuery, 1);
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [normalizedQuery, visible]);
+
+  const loadMoreResults = () => {
+    if (!normalizedQuery || isSearching || isLoadingMore || page >= totalPages) {
+      return;
+    }
+
+    searchPosts(normalizedQuery, page + 1);
+  };
 
   const close = () => {
     setQuery("");
+    setResults([]);
+    setErrorMessage("");
     onClose();
   };
 
@@ -91,11 +150,22 @@ export function FeedSearchModal({
             data={results}
             keyExtractor={(item) => item.id}
             ListEmptyComponent={
-              <EmptySearch
-                title="Không tìm thấy bài viết"
-                description="Thử tìm bằng từ khóa khác"
-              />
+              isSearching ? (
+                <>
+                  <SearchSkeleton />
+                  <SearchSkeleton />
+                  <SearchSkeleton />
+                </>
+              ) : (
+                <EmptySearch
+                  title={errorMessage || "Không tìm thấy bài viết"}
+                  description="Thử tìm bằng từ khóa khác"
+                />
+              )
             }
+            ListFooterComponent={isLoadingMore ? <SearchSkeleton /> : null}
+            onEndReached={loadMoreResults}
+            onEndReachedThreshold={0.35}
             renderItem={({ item }) => <PostCard post={item} />}
             showsVerticalScrollIndicator={false}
           />
@@ -107,6 +177,44 @@ export function FeedSearchModal({
         )}
       </SafeAreaView>
     </Modal>
+  );
+}
+
+function SearchSkeleton() {
+  const opacity = useRef(new Animated.Value(0.45)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          duration: 650,
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          duration: 650,
+          toValue: 0.45,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [opacity]);
+
+  return (
+    <View style={styles.skeletonCard}>
+      <View style={styles.skeletonHeader}>
+        <Animated.View style={[styles.skeletonAvatar, { opacity }]} />
+        <View style={styles.skeletonTextBlock}>
+          <Animated.View style={[styles.skeletonLineLarge, { opacity }]} />
+          <Animated.View style={[styles.skeletonLineSmall, { opacity }]} />
+        </View>
+      </View>
+      <Animated.View style={[styles.skeletonBodyLine, { opacity }]} />
+      <Animated.View style={[styles.skeletonMedia, { opacity }]} />
+    </View>
   );
 }
 
@@ -179,4 +287,52 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
   },
+  skeletonAvatar: {
+    backgroundColor: colors.border,
+    borderRadius: 20,
+    height: 40,
+    width: 40,
+  },
+  skeletonBodyLine: {
+    backgroundColor: colors.border,
+    borderRadius: 6,
+    height: 12,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    width: "75%",
+  },
+  skeletonCard: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    borderTopWidth: 1,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  skeletonHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  skeletonLineLarge: {
+    backgroundColor: colors.border,
+    borderRadius: 6,
+    height: 13,
+    width: 130,
+  },
+  skeletonLineSmall: {
+    backgroundColor: colors.border,
+    borderRadius: 6,
+    height: 11,
+    marginTop: spacing.sm,
+    width: 90,
+  },
+  skeletonMedia: {
+    backgroundColor: colors.border,
+    height: 180,
+    marginTop: spacing.md,
+    width: "100%",
+  },
+  skeletonTextBlock: { flex: 1 },
 });

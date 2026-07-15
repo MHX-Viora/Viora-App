@@ -1,12 +1,12 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Image } from "expo-image";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ViewableImage } from "@/components/common/viewable-image";
 import { colors, spacing } from "@/theme";
 
 export function ProfileQrModal({
@@ -118,7 +118,7 @@ export function ProfileQrModal({
             </View>
 
             <View style={styles.qrCard}>
-              <Image
+              <ViewableImage
                 accessibilityLabel={`Ảnh đại diện của ${name}`}
                 source={avatar}
                 style={styles.avatar}

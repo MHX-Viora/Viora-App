@@ -41,6 +41,13 @@ export type ProfileInput = {
   gender: Gender;
 };
 
+export type UpdateProfileInput = {
+  displayName: string;
+  avatarUrl?: string;
+  coverUrl?: string;
+  gender: Gender;
+};
+
 export type RegisterResponse = { message: string };
 
 export type LoginResponse = {

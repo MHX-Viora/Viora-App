@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { ViewableImage } from "@/components/common/viewable-image";
 import { colors, spacing } from "@/theme";
 
 export function ProfileOverview({
@@ -9,22 +9,24 @@ export function ProfileOverview({
   cover,
   handle,
   name,
+  onEdit,
 }: {
   avatar: string;
   cover: string;
   handle: string;
   name: string;
+  onEdit?: () => void;
 }) {
   return (
     <>
       <View style={styles.hero}>
-        <Image
+        <ViewableImage
           accessibilityLabel={`Ảnh bìa của ${name}`}
           contentFit="cover"
           source={cover}
           style={styles.cover}
         />
-        <Image
+        <ViewableImage
           accessibilityLabel={`Ảnh đại diện của ${name}`}
           contentFit="cover"
           source={avatar}
@@ -40,12 +42,13 @@ export function ProfileOverview({
             accessibilityLabel="Chỉnh sửa hồ sơ"
             accessibilityRole="button"
             hitSlop={8}
+            onPress={onEdit}
             style={({ pressed }) => [
               styles.editButton,
               pressed && styles.editButtonPressed,
             ]}
           >
-            <Ionicons color={colors.white} name="pencil" size={18} />
+            <Ionicons color={colors.white} name="pencil" size={14} />
           </Pressable>
         </View>
         <Text style={styles.handle}>{handle}</Text>
@@ -69,10 +72,10 @@ const styles = StyleSheet.create({
   editButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
-    borderRadius: 18,
-    height: 36,
+    borderRadius: 14,
+    height: 28,
     justifyContent: "center",
-    width: 36,
+    width: 28,
   },
   editButtonPressed: { opacity: 0.82, transform: [{ scale: 0.95 }] },
   handle: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
@@ -81,8 +84,9 @@ const styles = StyleSheet.create({
   name: { color: colors.text, flexShrink: 1, fontSize: 24, fontWeight: "800" },
   nameRow: {
     alignItems: "center",
+    alignSelf: "flex-start",
     flexDirection: "row",
     gap: spacing.sm,
-    justifyContent: "space-between",
+    maxWidth: "100%",
   },
 });

@@ -1,7 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
 import {
-  Image,
+  ActivityIndicator,
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -15,20 +17,24 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ViewableImage } from "@/components/common/viewable-image";
 import { colors, spacing, typography } from "@/theme";
 import { normalizeFeedImageUri } from "@/features/feed/image-source";
+import type { CreatePostInput } from "@/types/feed";
 
 type Props = {
   imageUris: string[];
+  isSubmitting: boolean;
   onClose: () => void;
   onPickImage: () => void;
   onRemoveImage: (index: number) => void;
-  onSubmit: (body: string) => void;
+  onSubmit: (payload: CreatePostInput) => void;
   visible: boolean;
 };
 
 export function CreatePostModal({
   imageUris,
+  isSubmitting,
   onClose,
   onPickImage,
   onRemoveImage,
@@ -38,12 +44,103 @@ export function CreatePostModal({
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [body, setBody] = useState("");
+  const [link, setLink] = useState("");
+  const [locationName, setLocationName] = useState("");
+  const [latitude, setLatitude] = useState<number>();
+  const [longitude, setLongitude] = useState<number>();
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [showLocationInput, setShowLocationInput] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [visibility, setVisibility] = useState(0);
 
   useEffect(() => {
-    if (!visible) setBody("");
+    if (!visible) {
+      setBody("");
+      setLink("");
+      setLocationName("");
+      setLatitude(undefined);
+      setLongitude(undefined);
+      setShowLinkInput(false);
+      setShowLocationInput(false);
+      setIsGettingLocation(false);
+      setVisibility(0);
+    }
   }, [visible]);
 
-  const canSubmit = body.trim().length > 0 || imageUris.length > 0;
+  const canSubmit =
+    !isSubmitting && (body.trim().length > 0 || imageUris.length > 0);
+
+  const formatAddress = (address: Location.LocationGeocodedAddress) => {
+    const city = address.city || address.region;
+    return city?.trim() || address.name?.trim() || "";
+  };
+
+  const addCurrentLocation = async () => {
+    setIsGettingLocation(true);
+
+    try {
+      if (Platform.OS !== "web") {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert(
+            "Cần quyền truy cập",
+            "Hãy cho phép Viora truy cập vị trí để gắn vị trí vào bài viết.",
+          );
+          return;
+        }
+      }
+
+      const position = await Location.getCurrentPositionAsync({});
+      const addresses = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      const currentAddress = addresses[0];
+      const nextLocationName = currentAddress
+        ? formatAddress(currentAddress)
+        : "";
+
+      setLatitude(position.coords.latitude);
+      setLongitude(position.coords.longitude);
+      setLocationName(nextLocationName || "Vị trí hiện tại");
+      setShowLocationInput(true);
+    } catch {
+      Alert.alert(
+        "Không thể lấy vị trí",
+        "Vui lòng thử lại hoặc nhập vị trí thủ công.",
+      );
+      setShowLocationInput(true);
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  const removeLink = () => {
+    setLink("");
+    setShowLinkInput(false);
+  };
+
+  const removeLocation = () => {
+    setLocationName("");
+    setLatitude(undefined);
+    setLongitude(undefined);
+    setShowLocationInput(false);
+  };
+
+  const submitPost = () => {
+    if (!canSubmit) return;
+
+    onSubmit({
+      content: body.trim(),
+      files: imageUris,
+      latitude,
+      link,
+      locationName,
+      longitude,
+      post: "",
+      visibility,
+    });
+  };
 
   return (
     <Modal
@@ -62,29 +159,71 @@ export function CreatePostModal({
       >
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Pressable
-              accessibilityLabel="Đóng hộp tạo bài viết"
-              accessibilityRole="button"
-              onPress={onClose}
-            >
-              <Ionicons color={colors.text} name="close" size={28} />
-            </Pressable>
-            <Text style={styles.title}>Tạo bài viết</Text>
-            <Pressable
-              accessibilityRole="button"
-              disabled={!canSubmit}
-              onPress={() => onSubmit(body.trim())}
-            >
-              <Text style={[styles.submit, !canSubmit && styles.submitDisabled]}>
-                Đăng
-              </Text>
-            </Pressable>
+            <View style={styles.headerTop}>
+              <Pressable
+                accessibilityLabel="Đóng hộp tạo bài viết"
+                accessibilityRole="button"
+                onPress={onClose}
+              >
+                <Ionicons color={colors.text} name="close" size={28} />
+              </Pressable>
+              <Text style={styles.title}>Tạo bài viết</Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={!canSubmit}
+                onPress={submitPost}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  <Text
+                    style={[styles.submit, !canSubmit && styles.submitDisabled]}
+                  >
+                    Đăng
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+
+            <View style={styles.visibilityRow}>
+              {[
+                { icon: "earth-outline", label: "Công khai", value: 0 },
+                { icon: "people-outline", label: "Theo dõi", value: 1 },
+                { icon: "lock-closed-outline", label: "Riêng tư", value: 2 },
+              ].map((item) => {
+                const selected = visibility === item.value;
+
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    key={item.value}
+                    onPress={() => setVisibility(item.value)}
+                    style={[
+                      styles.visibilityButton,
+                      selected && styles.visibilityButtonActive,
+                    ]}
+                  >
+                    <Ionicons
+                      color={selected ? colors.primary : colors.textMuted}
+                      name={item.icon as React.ComponentProps<typeof Ionicons>["name"]}
+                      size={14}
+                    />
+                    <Text
+                      style={[
+                        styles.visibilityText,
+                        selected && styles.visibilityTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
           <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              { paddingBottom: Math.max(insets.bottom, 40) },
-            ]}
+            contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -100,6 +239,55 @@ export function CreatePostModal({
               style={styles.input}
               value={body}
             />
+
+            {showLinkInput && (
+              <View style={styles.attachmentCard}>
+                <View style={styles.attachmentIcon}>
+                  <Ionicons color={colors.primary} name="link" size={18} />
+                </View>
+                <TextInput
+                  accessibilityLabel="Link"
+                  autoCapitalize="none"
+                  onChangeText={setLink}
+                  placeholder="Dán link vào đây"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.attachmentInput}
+                  value={link}
+                />
+                <Pressable
+                  accessibilityLabel="Xóa link"
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={removeLink}
+                  style={styles.removeAttachmentButton}
+                >
+                  <Ionicons color={colors.textMuted} name="close" size={18} />
+                </Pressable>
+              </View>
+            )}
+
+            {showLocationInput && locationName.trim().length > 0 && (
+              <View style={styles.attachmentCard}>
+                <View style={styles.attachmentIcon}>
+                  <Ionicons color={colors.primary} name="location" size={18} />
+                </View>
+                <View style={styles.attachmentContent}>
+                  <Text style={styles.attachmentLabel}>Vị trí</Text>
+                  <Text numberOfLines={2} style={styles.attachmentText}>
+                    {locationName}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityLabel="Xóa vị trí"
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={removeLocation}
+                  style={styles.removeAttachmentButton}
+                >
+                  <Ionicons color={colors.textMuted} name="close" size={18} />
+                </Pressable>
+              </View>
+            )}
 
             {imageUris.length > 0 && (
               <View style={styles.previewGrid}>
@@ -120,9 +308,9 @@ export function CreatePostModal({
                           styles.compactTile,
                       ]}
                     >
-                      <Image
+                      <ViewableImage
                         accessibilityLabel={`Ảnh đã chọn ${index + 1}`}
-                        resizeMode="cover"
+                        contentFit="cover"
                         source={{ uri: normalizeFeedImageUri(uri) }}
                         style={styles.preview}
                       />
@@ -141,37 +329,58 @@ export function CreatePostModal({
               </View>
             )}
 
+          </ScrollView>
+          <View
+            style={[
+              styles.footer,
+              { paddingBottom: Math.max(insets.bottom + spacing.md, spacing.xl) },
+            ]}
+          >
             <Pressable
               accessibilityRole="button"
-              disabled={imageUris.length >= 4}
+              disabled={isSubmitting || imageUris.length >= 4}
               onPress={() => {
                 inputRef.current?.blur();
                 Keyboard.dismiss();
                 onPickImage();
               }}
               style={[
-                styles.imageButton,
-                imageUris.length >= 4 && styles.imageButtonDisabled,
+                styles.footerButton,
+                (isSubmitting || imageUris.length >= 4) &&
+                  styles.footerButtonDisabled,
               ]}
             >
-              <View style={styles.imageIcon}>
-                <Ionicons color={colors.primary} name="images" size={25} />
-              </View>
-              <View style={styles.imageCopy}>
-                <Text style={styles.imageButtonText}>
-                  {imageUris.length >= 4
-                    ? "Đã chọn tối đa 4 ảnh"
-                    : imageUris.length > 0
-                      ? "Thêm ảnh khác"
-                      : "Thêm ảnh vào bài viết"}
-                </Text>
-                <Text style={styles.imageHint}>Chọn tối đa 4 ảnh từ thư viện</Text>
-              </View>
-              <View style={styles.countBadge}>
-                <Text style={styles.countText}>{imageUris.length}/4</Text>
-              </View>
+              <Ionicons color={colors.primary} name="images" size={22} />
+              <Text style={styles.footerButtonText}>Ảnh {imageUris.length}/4</Text>
             </Pressable>
-          </ScrollView>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSubmitting}
+              onPress={() => setShowLinkInput((current) => !current)}
+              style={[
+                styles.footerButton,
+                isSubmitting && styles.footerButtonDisabled,
+              ]}
+            >
+              <Ionicons color={colors.primary} name="link" size={22} />
+              <Text style={styles.footerButtonText}>Link</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={isSubmitting || isGettingLocation}
+              onPress={addCurrentLocation}
+              style={[
+                styles.footerButton,
+                (isSubmitting || isGettingLocation) &&
+                  styles.footerButtonDisabled,
+              ]}
+            >
+              <Ionicons color={colors.primary} name="location" size={22} />
+              <Text style={styles.footerButtonText}>
+                {isGettingLocation ? "Đang lấy..." : "Vị trí"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -184,41 +393,76 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
-  countBadge: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  countText: { color: colors.primary, fontSize: 13, fontWeight: "700" },
-  header: {
+  attachmentCard: {
     alignItems: "center",
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
     flexDirection: "row",
-    justifyContent: "space-between",
-    padding: spacing.lg,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    minHeight: 50,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  imageButton: {
+  attachmentContent: { flex: 1 },
+  attachmentIcon: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
-    borderRadius: 14,
+    borderRadius: 16,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  attachmentInput: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 15,
+    minHeight: 36,
+    padding: 0,
+  },
+  attachmentLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  attachmentText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  footer: {
+    alignItems: "center",
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     flexDirection: "row",
-    gap: spacing.md,
-    marginTop: spacing.md,
+    gap: spacing.sm,
     padding: spacing.md,
   },
-  imageButtonText: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  imageButtonDisabled: { opacity: 0.55 },
-  imageCopy: { flex: 1, gap: 2 },
-  imageHint: { color: colors.textMuted, fontSize: 13 },
-  imageIcon: {
+  footerButton: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderRadius: 22,
-    height: 44,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 12,
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
     justifyContent: "center",
-    width: 44,
+    minHeight: 42,
+  },
+  footerButtonDisabled: { opacity: 0.55 },
+  footerButtonText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
+  header: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  headerTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
   input: {
     color: colors.text,
@@ -252,6 +496,13 @@ const styles = StyleSheet.create({
     top: spacing.xs,
     width: 28,
   },
+  removeAttachmentButton: {
+    alignItems: "center",
+    borderRadius: 15,
+    height: 30,
+    justifyContent: "center",
+    width: 30,
+  },
   scrollContent: { padding: spacing.lg },
   sheet: {
     backgroundColor: colors.surface,
@@ -264,5 +515,28 @@ const styles = StyleSheet.create({
   submit: { color: colors.primary, fontSize: 16, fontWeight: "700" },
   submitDisabled: { opacity: 0.4 },
   title: { ...typography.title, color: colors.text },
+  visibilityButton: {
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 4,
+    minHeight: 30,
+    justifyContent: "center",
+    paddingHorizontal: spacing.md,
+  },
+  visibilityButtonActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  visibilityRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  visibilityText: { color: colors.textMuted, fontSize: 11, fontWeight: "700" },
+  visibilityTextActive: { color: colors.primary },
   wideTile: { height: 190, width: "100%" },
 });

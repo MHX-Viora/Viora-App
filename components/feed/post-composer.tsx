@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { ViewableImage } from "@/components/common/viewable-image";
 import { FixedTopBar } from "@/components/layout/fixed-top-bar";
 import { colors, spacing } from "@/theme";
 
@@ -9,7 +9,7 @@ export function PostComposer({ avatar, onCreatePress, onImagePress, onSearchPres
   return (
     <FixedTopBar>
       <View style={styles.container}>
-        <Image
+        <ViewableImage
           accessibilityLabel="Ảnh đại diện của bạn"
           source={avatar}
           style={styles.avatar}

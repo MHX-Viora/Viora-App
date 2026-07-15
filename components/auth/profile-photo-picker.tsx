@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { ViewableImage } from "@/components/common/viewable-image";
 import { colors, spacing } from "@/theme";
 
 export function ProfilePhotoPicker({
@@ -53,8 +54,9 @@ export function ProfilePhotoPicker({
         style={styles.coverPlaceholder}
       >
         {coverUri ? (
-          <Image
-            resizeMode="cover"
+          <ViewableImage
+            accessibilityLabel="Ảnh bìa đã chọn"
+            contentFit="cover"
             source={{ uri: coverUri }}
             style={styles.coverImage}
           />
@@ -75,7 +77,11 @@ export function ProfilePhotoPicker({
         style={styles.avatarButton}
       >
         {avatarUri ? (
-          <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+          <ViewableImage
+            accessibilityLabel="Ảnh đại diện đã chọn"
+            source={{ uri: avatarUri }}
+            style={styles.avatarImage}
+          />
         ) : (
           <Ionicons color="#60758B" name="person-outline" size={56} />
         )}

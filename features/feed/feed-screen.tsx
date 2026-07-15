@@ -1,6 +1,15 @@
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
-import { Alert, FlatList, Platform, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Animated,
+  FlatList,
+  Platform,
+  Share,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
 
 import { CreatePostModal } from "@/components/feed/create-post-modal";
 import { FeedSearchModal } from "@/components/feed/feed-search-modal";
@@ -8,15 +17,78 @@ import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { FIXED_TOP_BAR_HEIGHT } from "@/components/layout/fixed-top-bar";
 import { feedPosts as initialPosts } from "@/features/feed/data";
-import { createPickedImageUri } from "@/features/feed/image-source";
-import { colors } from "@/theme";
-import type { FeedPost } from "@/types/feed";
+import {
+  createPost,
+  getPosts,
+  reactPost,
+  savePost,
+} from "@/services/post.service";
+import { getSession } from "@/stores/session-store";
+import { colors, spacing } from "@/theme";
+import type { CreatePostInput, FeedPost } from "@/types/feed";
+
+const PAGE_SIZE = 10;
 
 export function FeedScreen() {
-  const [posts, setPosts] = useState(initialPosts);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [myAvatar, setMyAvatar] = useState(initialPosts[0].avatar);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [draftImages, setDraftImages] = useState<string[]>([]);
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
+
+  const loadPosts = async (nextPage: number) => {
+    if (nextPage === 1) {
+      setIsLoading(true);
+      setErrorMessage("");
+    } else {
+      setIsLoadingMore(true);
+    }
+
+    try {
+      const result = await getPosts({
+        page: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+
+      setPosts((current) =>
+        nextPage === 1 ? result.posts : [...current, ...result.posts],
+      );
+      setPage(nextPage);
+      setTotalPages(result.totalPages);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "KhÃ´ng thá»ƒ táº£i bÃ i viáº¿t.",
+      );
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      const session = await getSession();
+      if (session?.user?.avatarUrl) {
+        setMyAvatar(session.user.avatarUrl);
+      }
+    };
+
+    loadCurrentUser();
+    loadPosts(1);
+  }, []);
+
+  const loadMorePosts = () => {
+    if (isLoading || isLoadingMore || page >= totalPages) return;
+    loadPosts(page + 1);
+  };
 
   const pickImages = async (): Promise<string[] | null> => {
     const remainingSlots = 4 - draftImages.length;
@@ -27,15 +99,14 @@ export function FeedScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(
-          "Cần quyền truy cập",
-          "Hãy cho phép Viora truy cập thư viện ảnh để chọn ảnh đăng bài.",
+          "Cáº§n quyá»n truy cáº­p",
+          "HÃ£y cho phÃ©p Viora truy cáº­p thÆ° viá»‡n áº£nh Ä‘á»ƒ chá»n áº£nh Ä‘Äƒng bÃ i.",
         );
         return null;
       }
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: true,
-      base64: true,
       mediaTypes: ["images"],
       quality: 0.75,
       selectionLimit: remainingSlots,
@@ -43,10 +114,8 @@ export function FeedScreen() {
     if (result.canceled) return null;
     const selectedUris = result.assets
       .slice(0, remainingSlots)
-      .map((asset) => createPickedImageUri(asset.base64, asset.uri));
-    setDraftImages((current) =>
-      [...current, ...selectedUris].slice(0, 4),
-    );
+      .map((asset) => asset.uri);
+    setDraftImages((current) => [...current, ...selectedUris].slice(0, 4));
     return selectedUris;
   };
 
@@ -60,21 +129,81 @@ export function FeedScreen() {
     setModalVisible(false);
     setDraftImages([]);
   };
-  const createPost = (body: string) => {
-    const post: FeedPost = {
-      id: `local-${Date.now()}`,
-      author: "Bạn",
-      avatar: initialPosts[0].avatar,
-      location: "Việt Nam",
-      publishedAt: "Vừa xong",
-      body,
-      images: draftImages,
-      reactions: 0,
-      comments: 0,
-      shares: 0,
-    };
-    setPosts((current) => [post, ...current]);
-    closeModal();
+  const submitPost = async (payload: CreatePostInput) => {
+    if (isCreatingPost) return;
+
+    setIsCreatingPost(true);
+
+    try {
+      const newPost = await createPost(payload);
+      setPosts((current) => [newPost, ...current]);
+      closeModal();
+    } catch (error) {
+      Alert.alert(
+        "KhÃ´ng thá»ƒ táº¡o bÃ i viáº¿t",
+        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+      );
+    } finally {
+      setIsCreatingPost(false);
+    }
+  };
+
+  const handleReactPost = async (postId: string, reactionType: number) => {
+    try {
+      const result = await reactPost(postId, reactionType);
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                isReacted: result.isReacted,
+                reactionType: result.reactionType,
+                reactions: result.reactionCount,
+              }
+            : post,
+        ),
+      );
+    } catch (error) {
+      Alert.alert(
+        "KhÃ´ng thá»ƒ tháº£ cáº£m xÃºc",
+        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+      );
+    }
+  };
+
+  const handleSavePost = async (postId: string) => {
+    try {
+      const result = await savePost(postId);
+      setPosts((current) =>
+        current.map((post) =>
+          post.id === postId
+            ? { ...post, isSaved: result.isSaved, saveCount: result.saveCount }
+            : post,
+        ),
+      );
+    } catch (error) {
+      Alert.alert(
+        "KhÃ´ng thá»ƒ lÆ°u bÃ i viáº¿t",
+        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+      );
+    }
+  };
+
+  const handleSharePost = async (postId: string) => {
+    const link = `${process.env.EXPO_PUBLIC_API_URL}/posts/${postId}`;
+
+    try {
+      await Share.share({
+        title: "Viora",
+        message: `Xem bài viết này trên Viora\n${link}`,
+        url: link,
+      });
+    } catch (error) {
+      Alert.alert(
+        "Không thể chia sẻ",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    }
   };
   const openWithImagePicker = async () => {
     const selectedUris = await pickImages();
@@ -83,37 +212,230 @@ export function FeedScreen() {
 
   return (
     <View style={styles.screen}>
-      <FlatList
-        contentContainerStyle={styles.content}
-        data={posts}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PostCard post={item} />}
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <View style={styles.skeletonList}>
+          <PostSkeleton />
+          <PostSkeleton />
+          <PostSkeleton />
+        </View>
+      ) : (
+        <FlatList
+          contentContainerStyle={[
+            styles.content,
+            posts.length === 0 && styles.emptyContent,
+          ]}
+          data={posts}
+          keyExtractor={(item) => item.id}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>
+                {errorMessage || "ChÆ°a cÃ³ bÃ i viáº¿t"}
+              </Text>
+              <Text style={styles.emptyText}>
+                KÃ©o xuá»‘ng Ä‘á»ƒ thá»­ táº£i láº¡i.
+              </Text>
+            </View>
+          }
+          ListFooterComponent={isLoadingMore ? <PostSkeleton /> : null}
+          onEndReached={loadMorePosts}
+          onEndReachedThreshold={0.35}
+          onRefresh={() => loadPosts(1)}
+          refreshing={isLoading}
+          renderItem={({ item }) => (
+            <PostCard
+              onReact={handleReactPost}
+              onSave={handleSavePost}
+              onShare={handleSharePost}
+              post={item}
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
       <PostComposer
-        avatar={initialPosts[0].avatar}
+        avatar={myAvatar}
         onCreatePress={() => setModalVisible(true)}
         onImagePress={openWithImagePicker}
         onSearchPress={() => setSearchVisible(true)}
       />
       <CreatePostModal
         imageUris={draftImages}
+        isSubmitting={isCreatingPost}
         onClose={closeModal}
         onPickImage={pickImages}
         onRemoveImage={removeDraftImage}
-        onSubmit={createPost}
+        onSubmit={submitPost}
         visible={modalVisible}
       />
       <FeedSearchModal
         onClose={() => setSearchVisible(false)}
-        posts={posts}
         visible={searchVisible}
       />
     </View>
   );
 }
 
+function PostSkeleton() {
+  const opacity = useRef(new Animated.Value(0.45)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          duration: 650,
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          duration: 650,
+          toValue: 0.45,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [opacity]);
+
+  return (
+    <View style={styles.skeletonCard}>
+      <View style={styles.skeletonHeader}>
+        <Animated.View style={[styles.skeletonAvatar, { opacity }]} />
+        <View style={styles.skeletonTextBlock}>
+          <Animated.View style={[styles.skeletonLineLarge, { opacity }]} />
+          <Animated.View style={[styles.skeletonLineSmall, { opacity }]} />
+        </View>
+      </View>
+      <Animated.View style={[styles.skeletonBodyLine, { opacity }]} />
+      <Animated.View style={[styles.skeletonBodyLineShort, { opacity }]} />
+      <Animated.View style={[styles.skeletonMedia, { opacity }]} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   content: { paddingBottom: 10, paddingTop: FIXED_TOP_BAR_HEIGHT },
+  emptyContent: { flexGrow: 1 },
+  emptyState: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  emptyText: { color: colors.textMuted, fontSize: 14, marginTop: spacing.xs },
+  emptyTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
   screen: { backgroundColor: colors.background, flex: 1 },
+  shareBackdrop: {
+    backgroundColor: "rgba(15,23,42,0.45)",
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  shareClose: { color: colors.primary, fontSize: 14, fontWeight: "800" },
+  shareHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  shareLink: { color: colors.text, flex: 1, fontSize: 13 },
+  shareLinkBox: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  shareOption: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 12,
+    gap: spacing.xs,
+    justifyContent: "center",
+    minHeight: 74,
+    width: "23%",
+  },
+  shareOptions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  shareOptionText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  sharePostText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 19,
+    marginTop: spacing.sm,
+  },
+  shareSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  shareTitle: { color: colors.text, fontSize: 18, fontWeight: "800" },
+  skeletonAvatar: {
+    backgroundColor: colors.border,
+    borderRadius: 20,
+    height: 40,
+    width: 40,
+  },
+  skeletonBodyLine: {
+    backgroundColor: colors.border,
+    borderRadius: 6,
+    height: 12,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    width: "82%",
+  },
+  skeletonBodyLineShort: {
+    backgroundColor: colors.border,
+    borderRadius: 6,
+    height: 12,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    width: "58%",
+  },
+  skeletonCard: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    borderTopWidth: 1,
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  skeletonHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  skeletonLineLarge: {
+    backgroundColor: colors.border,
+    borderRadius: 6,
+    height: 13,
+    width: 130,
+  },
+  skeletonLineSmall: {
+    backgroundColor: colors.border,
+    borderRadius: 6,
+    height: 11,
+    marginTop: spacing.sm,
+    width: 90,
+  },
+  skeletonList: { paddingTop: FIXED_TOP_BAR_HEIGHT },
+  skeletonMedia: {
+    backgroundColor: colors.border,
+    height: 220,
+    marginTop: spacing.md,
+    width: "100%",
+  },
+  skeletonTextBlock: { flex: 1 },
 });

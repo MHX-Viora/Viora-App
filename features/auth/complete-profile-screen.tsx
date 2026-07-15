@@ -2,23 +2,24 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthPrimaryButton } from "@/components/auth/auth-controls";
 import { ProfilePhotoPicker } from "@/components/auth/profile-photo-picker";
-import { colors, spacing } from "@/theme";
-import { createProfile } from "@/services/user.service";
-import { sessionStore } from "@/stores/session-store";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
+import { getStoredAuthSession } from "@/services/auth.service";
+import { createProfile } from "@/services/user.service";
+import { updateUser } from "@/stores/session-store";
+import { colors, spacing } from "@/theme";
 import type { Gender, GenderLabel } from "@/types/auth";
 
 const GENDERS: GenderLabel[] = ["Nam", "Nữ", "Khác"];
@@ -42,9 +43,8 @@ export function CompleteProfileScreen() {
 
     setIsSubmitting(true);
     try {
-      // Lấy access token đã lưu sau bước đăng nhập.
-      const session = await sessionStore.getSession();
-      if (!session) {
+      const session = await getStoredAuthSession();
+      if (!session?.accessToken) {
         showAlert({
           title: "Phiên đã hết",
           message: "Vui lòng đăng nhập lại.",
@@ -56,8 +56,7 @@ export function CompleteProfileScreen() {
       // Backend nhận giới tính dưới dạng số: Nam = 0, Nữ = 1, Khác = 2.
       const genderValue = GENDERS.indexOf(gender) as Gender;
 
-      // Gọi API tạo hồ sơ và gửi token trong Authorization header.
-      const user = await createProfile(session.accessToken, {
+      const user = await createProfile({
         avatarUrl: avatarUri,
         coverUrl: coverUri,
         displayName: normalizedName,
@@ -65,14 +64,8 @@ export function CompleteProfileScreen() {
       });
 
       // Thay user null trong phiên bằng user backend vừa trả về.
-      await sessionStore.updateUser(user);
-      showAlert({
-        title: "Hoàn tất hồ sơ",
-        message: "Hồ sơ của bạn đã được lưu.",
-        kind: "success",
-        actionLabel: "Tiếp tục",
-        onAction: () => router.replace("/"),
-      });
+      await updateUser(user);
+      router.replace("/");
     } catch (error) {
       showAlert({
         title: "Không thể lưu hồ sơ",
@@ -125,7 +118,11 @@ export function CompleteProfileScreen() {
                     style={styles.input}
                     value={displayName}
                   />
-                  <Ionicons color={colors.textMuted} name="id-card-outline" size={21} />
+                  <Ionicons
+                    color={colors.textMuted}
+                    name="id-card-outline"
+                    size={21}
+                  />
                 </View>
               </View>
 
@@ -140,9 +137,17 @@ export function CompleteProfileScreen() {
                         accessibilityState={{ selected }}
                         key={item}
                         onPress={() => setGender(item)}
-                        style={[styles.genderButton, selected && styles.genderSelected]}
+                        style={[
+                          styles.genderButton,
+                          selected && styles.genderSelected,
+                        ]}
                       >
-                        <Text style={[styles.genderText, selected && styles.genderTextSelected]}>
+                        <Text
+                          style={[
+                            styles.genderText,
+                            selected && styles.genderTextSelected,
+                          ]}
+                        >
                           {item}
                         </Text>
                       </Pressable>
@@ -175,12 +180,23 @@ const styles = StyleSheet.create({
   fieldGroup: { gap: spacing.sm },
   flex: { flex: 1 },
   formCard: {
-    backgroundColor: colors.surface, borderRadius: 20, gap: spacing.xl,
-    padding: spacing.xl, shadowColor: "#7D8799", shadowOpacity: 0.08, shadowRadius: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    gap: spacing.xl,
+    padding: spacing.xl,
+    shadowColor: "#7D8799",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
   },
   genderButton: {
-    alignItems: "center", backgroundColor: colors.background, borderColor: colors.border,
-    borderRadius: 10, borderWidth: 1, flex: 1, minHeight: 46, justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1,
+    flex: 1,
+    minHeight: 46,
+    justifyContent: "center",
   },
   genderRow: { flexDirection: "row", gap: spacing.sm },
   genderSelected: { backgroundColor: "#E0EBFF", borderColor: colors.primary },
@@ -190,10 +206,19 @@ const styles = StyleSheet.create({
   input: { color: colors.text, flex: 1, fontSize: 15, paddingVertical: 12 },
   label: { color: colors.text, fontSize: 13, fontWeight: "700" },
   nameField: {
-    alignItems: "center", backgroundColor: colors.background, borderRadius: 10,
-    flexDirection: "row", minHeight: 48, paddingHorizontal: spacing.md,
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    flexDirection: "row",
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
   },
   screen: { backgroundColor: "#F5F7FD", flex: 1 },
-  subtitle: { color: colors.textMuted, fontSize: 14, maxWidth: 300, textAlign: "center" },
+  subtitle: {
+    color: colors.textMuted,
+    fontSize: 14,
+    maxWidth: 300,
+    textAlign: "center",
+  },
   title: { color: "#071A38", fontSize: 26, fontWeight: "900" },
 });

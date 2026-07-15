@@ -1,33 +1,41 @@
 import { refreshToken } from "@/services/auth.service";
-import { sessionStore } from "@/stores/session-store";
+import { getAccessToken, setAccessToken } from "@/stores/session-store";
 
-const sendWithToken = async (
+export const authenticatedFetch = async (
   url: string,
-  accessToken: string,
-  init: RequestInit,
+  options: RequestInit = {},
 ): Promise<Response> => {
-  const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${accessToken}`);
+  const token = await getAccessToken();
 
-  const response = await fetch(url, {
-    ...init,
-    headers,
+  //  Gọi API lần đầu. Nếu có token thì gắn Authorization.
+  let response = await fetch(url, {
+    ...options,
+    headers: token
+      ? {
+          ...options.headers,
+          Authorization: `Bearer ${token}`,
+        }
+      : options.headers,
     credentials: "include",
   });
-  return response;
-};
 
-export const fetchWithRefresh = async (
-  url: string,
-  accessToken: string,
-  init: RequestInit,
-): Promise<Response> => {
-  const response = await sendWithToken(url, accessToken, init);
-  if (response.status !== 401) return response;
+  // Nếu API không trả 401 thì trả response cho service tự xử lý tiếp.
+  if (response.status !== 401 || !token) {
+    return response;
+  }
 
-  // Token hết hạn: lấy token mới từ refresh cookie, lưu lại rồi retry đúng một lần.
+  // 401 Unauthorized: Token hết hạn: refresh token, lưu token mới, rồi gọi lại đúng 1 lần.
   const refreshedSession = await refreshToken();
-  await sessionStore.updateAccessToken(refreshedSession.accessToken);
+  await setAccessToken(refreshedSession.accessToken);
 
-  return sendWithToken(url, refreshedSession.accessToken, init);
+  response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${refreshedSession.accessToken}`,
+    },
+    credentials: "include",
+  });
+
+  return response;
 };

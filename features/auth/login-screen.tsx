@@ -2,24 +2,23 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-  AuthField,
-  AuthFooterLink,
-  AuthPrimaryButton,
+    AuthField,
+    AuthFooterLink,
+    AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
-import { login } from "@/services/auth.service";
-import { sessionStore } from "@/stores/session-store";
+import { login, saveAuthSession } from "@/services/auth.service";
 import { colors, spacing } from "@/theme";
 
 export function LoginScreen() {
@@ -45,8 +44,7 @@ export function LoginScreen() {
         password,
       });
 
-      // Lưu token và user trước khi chuyển trang để phiên đăng nhập không bị mất.
-      await sessionStore.saveSession(session);
+      await saveAuthSession(session);
 
       // Chưa có user thì hoàn thiện hồ sơ; đã có user thì vào trang chủ.
       router.replace(session.user === null ? "/complete-profile" : "/");

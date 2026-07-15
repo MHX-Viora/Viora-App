@@ -56,13 +56,13 @@ export function RegisterScreen() {
     setIsSubmitting(true);
     try {
       // Gọi API đăng ký sau khi dữ liệu trên form đã hợp lệ.
-      const result = await register({
+      await register({
         identifier: normalizedIdentifier,
         password,
       });
       showAlert({
         title: "Đăng ký thành công",
-        message: result.message,
+        message: "Tài khoản đã được tạo. Vui lòng đăng nhập để tiếp tục.",
         kind: "success",
         actionLabel: "Đăng nhập",
         onAction: () => router.replace("/login"),
