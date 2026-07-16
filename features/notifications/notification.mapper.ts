@@ -1,5 +1,6 @@
 import type {
   NotificationItemModel,
+  NotificationPayload,
   NotificationReference,
   NotificationReferenceType,
   NotificationSender,
@@ -41,6 +42,15 @@ const mapReference = (value: unknown): NotificationReference | null => {
   };
 };
 
+const mapFlatReference = (value: Record<string, unknown>): NotificationReference | null => {
+  const id = toString(value.referenceId);
+  const type = toNumber(value.referenceType, -1);
+
+  if (!id || !isReferenceType(type)) return null;
+
+  return { id, type };
+};
+
 export const mapNotification = (value: unknown): NotificationItemModel => {
   if (!isRecord(value)) {
     throw new Error("Phản hồi thông báo không hợp lệ.");
@@ -49,27 +59,61 @@ export const mapNotification = (value: unknown): NotificationItemModel => {
   return {
     content: toString(value.content),
     createdAt: toString(value.createdAt),
-    id: toString(value.id),
+    id: toString(value.id, toString(value.notificationId)),
     imageUrl: typeof value.imageUrl === "string" ? value.imageUrl : null,
-    isRead: value.isRead === true,
-    reference: mapReference(value.reference),
+    isRead: value.isRead === true || value.read === true,
+    reference: mapReference(value.reference) ?? mapFlatReference(value),
     sender: mapSender(value.sender),
     title: toString(value.title, "Thông báo"),
-    type: toNumber(value.type),
+    type: toNumber(value.type, toNumber(value.notificationType)),
   };
 };
 
 export const mapNotificationsPage = (value: unknown): NotificationsPage => {
-  if (!isRecord(value) || !Array.isArray(value.items)) {
+  const page = isRecord(value) && isRecord(value.data) ? value.data : value;
+
+  if (!isRecord(page)) {
+    throw new Error("Phản hồi danh sách thông báo không hợp lệ.");
+  }
+
+  const items = Array.isArray(page.items)
+    ? page.items
+    : Array.isArray(page.notifications)
+      ? page.notifications
+      : Array.isArray(page.data)
+        ? page.data
+        : null;
+
+  if (!items) {
     throw new Error("Phản hồi danh sách thông báo không hợp lệ.");
   }
 
   return {
-    items: value.items.map(mapNotification),
-    page: toNumber(value.page, 1),
-    pageSize: toNumber(value.pageSize, 20),
-    totalItems: toNumber(value.totalItems),
-    totalPages: toNumber(value.totalPages, 1),
-    unreadCount: toNumber(value.unreadCount),
+    items: items.map(mapNotification),
+    page: toNumber(page.page, 1),
+    pageSize: toNumber(page.pageSize, 20),
+    totalItems: toNumber(page.totalItems, items.length),
+    totalPages: toNumber(page.totalPages, 1),
+    unreadCount: toNumber(page.unreadCount),
   };
 };
+
+export const mapRealtimeNotification = (
+  payload: NotificationPayload,
+): NotificationItemModel => ({
+  content: payload.content ?? "",
+  createdAt: payload.createdAt,
+  id: payload.notificationId,
+  imageUrl: payload.imageUrl,
+  isRead: false,
+  reference:
+    payload.referenceId && payload.referenceType !== null
+      ? {
+          id: payload.referenceId,
+          type: payload.referenceType,
+        }
+      : null,
+  sender: null,
+  title: payload.title,
+  type: payload.notificationType,
+});

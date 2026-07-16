@@ -12,6 +12,7 @@ import { NotificationEmpty } from "@/components/notifications/notification-empty
 import { NotificationHeader } from "@/components/notifications/notification-header";
 import { NotificationItem } from "@/components/notifications/notification-item";
 import { navigateNotification } from "@/features/notifications/notification-navigation";
+import { subscribeRealtimeNotifications } from "@/features/notifications/notification-events";
 import { setNotificationUnreadCount } from "@/features/notifications/notification-unread-count";
 import { NotificationSkeleton } from "@/components/notifications/notification-skeleton";
 import {
@@ -91,6 +92,19 @@ export function NotificationsScreen() {
   useEffect(() => {
     loadNotifications(1, "initial");
   }, [loadNotifications]);
+
+  useEffect(
+    () =>
+      subscribeRealtimeNotifications((notification) => {
+        setNotifications((current) =>
+          current.some((item) => item.id === notification.id)
+            ? current
+            : [notification, ...current],
+        );
+        setUnreadCount((current) => current + 1);
+      }),
+    [],
+  );
 
   const refresh = useCallback(() => {
     if (isRefreshing) return;

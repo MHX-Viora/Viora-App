@@ -39,3 +39,14 @@ export type NotificationsQuery = {
   isRead?: boolean;
   type?: number;
 };
+
+export type NotificationPayload = {
+  notificationId: string;
+  notificationType: number;
+  referenceId: string | null;
+  referenceType: NotificationReferenceType | null;
+  title: string;
+  content: string | null;
+  imageUrl: string | null;
+  createdAt: string;
+};

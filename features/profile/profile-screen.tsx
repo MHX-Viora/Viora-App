@@ -13,6 +13,7 @@ import { logout } from "@/services/auth.service";
 import { getPosts } from "@/services/feed.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { formatReelCount, getReels } from "@/services/reel.service";
+import { stopRealtime } from "@/services/realtime.service";
 import { getMyStatistics } from "@/services/user.service";
 import { clearSession, getSession } from "@/stores/session-store";
 import { colors } from "@/theme";
@@ -360,6 +361,7 @@ export function ProfileScreen() {
           } catch {
             // Dù API logout lỗi, vẫn xoá session local để người dùng thoát app.
           }
+          await stopRealtime();
           await clearSession();
           router.replace("/login");
         }}
