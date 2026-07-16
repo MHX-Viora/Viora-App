@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { openProfileByUserId } from "@/features/profile/open-profile";
 import {
   acceptFriendRequest,
   getFriends,
@@ -194,7 +195,7 @@ export function FriendsScreen() {
   );
 
   const openProfile = useCallback((userId: string) => {
-    router.push({ pathname: "/users/[userId]", params: { userId } });
+    void openProfileByUserId(router, userId);
   }, []);
 
   const listHeader = useMemo(

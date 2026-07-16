@@ -1,9 +1,39 @@
-import { Tabs } from "expo-router";
+import { Tabs, usePathname } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 
 import { TabIcon } from "@/components/layout/tab-icon";
+import {
+  getNotificationUnreadCount,
+  setNotificationUnreadCount,
+  subscribeNotificationUnreadCount,
+} from "@/features/notifications/notification-unread-count";
+import { getNotifications } from "@/services/notification.service";
 import { colors } from "@/theme";
 
 export default function TabLayout() {
+  const pathname = usePathname();
+  const [unreadNotificationCount, setUnreadNotificationCountState] = useState(
+    getNotificationUnreadCount(),
+  );
+
+  const loadUnreadNotificationCount = useCallback(async () => {
+    try {
+      const result = await getNotifications({ page: 1, pageSize: 1 });
+      setNotificationUnreadCount(result.unreadCount);
+    } catch {
+      setNotificationUnreadCount(0);
+    }
+  }, []);
+
+  useEffect(
+    () => subscribeNotificationUnreadCount(setUnreadNotificationCountState),
+    [],
+  );
+
+  useEffect(() => {
+    loadUnreadNotificationCount();
+  }, [loadUnreadNotificationCount, pathname]);
+
   return (
     <Tabs
       screenOptions={{
@@ -79,6 +109,19 @@ export default function TabLayout() {
         options={{
           title: "Thông báo",
           tabBarAccessibilityLabel: "Thông báo",
+          tabBarBadge:
+            unreadNotificationCount > 0
+              ? unreadNotificationCount > 99
+                ? "99+"
+                : unreadNotificationCount
+              : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.danger,
+            color: colors.white,
+            fontSize: 10,
+            fontWeight: "800",
+            minWidth: 18,
+          },
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}

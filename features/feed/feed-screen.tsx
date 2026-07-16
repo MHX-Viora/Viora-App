@@ -19,6 +19,7 @@ import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { FIXED_TOP_BAR_HEIGHT } from "@/components/layout/fixed-top-bar";
 import { feedPosts as initialPosts } from "@/features/feed/data";
+import { openProfileByUserId } from "@/features/profile/open-profile";
 import { createPost, getPosts } from "@/services/feed.service";
 import {
   reactPost,
@@ -218,7 +219,7 @@ export function FeedScreen() {
     setPosts((current) => current.filter((post) => post.id !== postId));
   };
   const openUserProfile = (userId: string) => {
-    router.push({ pathname: "/users/[userId]", params: { userId } });
+    void openProfileByUserId(router, userId);
   };
   const openWithImagePicker = async () => {
     const selectedUris = await pickImages();

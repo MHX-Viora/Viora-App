@@ -143,3 +143,23 @@ export const rejectFriendRequest = async (
     );
   }
 };
+
+export const deleteFriend = async (
+  userId: string,
+): Promise<{ status: number }> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/friends/${userId}`,
+    { method: "DELETE" },
+  );
+  const data = parseResponseText(await response.text());
+
+  if (!response.ok) {
+    throw new Error(
+      getHttpErrorMessage(response, data, "Không thể hủy kết bạn."),
+    );
+  }
+
+  return {
+    status: isRecord(data) && typeof data.status === "number" ? data.status : -1,
+  };
+};

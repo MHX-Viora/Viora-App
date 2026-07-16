@@ -45,6 +45,7 @@ export type UserProfile = {
   friendCount: number;
   isFollowing: boolean;
   friendship: {
+    friendshipId: string;
     status: string | null;
     isRequester: boolean;
   } | null;
@@ -56,6 +57,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 const toCount = (value: unknown) => (typeof value === "number" ? value : 0);
+
+const toString = (value: unknown, fallback = "") =>
+  typeof value === "string" ? value : fallback;
 
 const parseResponseText = (text: string) => {
   if (!text) return null;
@@ -220,8 +224,8 @@ export const sendFriendRequest = async (
 
   return {
     friendshipId:
-      responseData && typeof responseData.friendshipId === "string"
-        ? responseData.friendshipId
+      responseData
+        ? toString(responseData.friendshipId, toString(responseData.id))
         : "",
     message: typeof data.message === "string" ? data.message : "",
     status:
@@ -252,6 +256,10 @@ export const getUserProfile = async (userId: string): Promise<UserProfile> => {
 
   const friendship = isRecord(data.friendship)
     ? {
+        friendshipId: toString(
+          data.friendship.friendshipId,
+          toString(data.friendship.id),
+        ),
         isRequester: data.friendship.isRequester === true,
         status:
           typeof data.friendship.status === "string"

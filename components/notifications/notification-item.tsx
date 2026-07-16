@@ -1,19 +1,37 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { memo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type GestureResponderEvent,
+} from "react-native";
 
 import { formatNotificationTime } from "@/features/notifications/notification-time";
 import { colors, spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
 
 type Props = {
+  isMarkingRead?: boolean;
   notification: NotificationItemModel;
+  onMarkRead: (notification: NotificationItemModel) => void;
   onPress: (notification: NotificationItemModel) => void;
 };
 
-function NotificationItemComponent({ notification, onPress }: Props) {
+function NotificationItemComponent({
+  isMarkingRead = false,
+  notification,
+  onMarkRead,
+  onPress,
+}: Props) {
   const senderName = notification.sender?.displayName ?? notification.title;
+  const handleMarkRead = (event: GestureResponderEvent) => {
+    event.stopPropagation();
+    onMarkRead(notification);
+  };
 
   return (
     <Pressable
@@ -63,7 +81,28 @@ function NotificationItemComponent({ notification, onPress }: Props) {
         />
       )}
 
-      {!notification.isRead && <View style={styles.unreadDot} />}
+      {!notification.isRead && (
+        <View style={styles.unreadActions}>
+          <Pressable
+            accessibilityLabel="Đánh dấu thông báo này đã đọc"
+            accessibilityRole="button"
+            disabled={isMarkingRead}
+            hitSlop={8}
+            onPress={handleMarkRead}
+            style={({ pressed }) => [
+              styles.readButton,
+              pressed && styles.readButtonPressed,
+              isMarkingRead && styles.readButtonDisabled,
+            ]}
+          >
+            {isMarkingRead ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <Ionicons color={colors.primary} name="checkmark-done" size={15} />
+            )}
+          </Pressable>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -71,12 +110,15 @@ function NotificationItemComponent({ notification, onPress }: Props) {
 export const NotificationItem = memo(
   NotificationItemComponent,
   (previous, next) =>
-    previous.notification === next.notification && previous.onPress === next.onPress,
+    previous.isMarkingRead === next.isMarkingRead &&
+    previous.notification === next.notification &&
+    previous.onMarkRead === next.onMarkRead &&
+    previous.onPress === next.onPress,
 );
 
 const styles = StyleSheet.create({
   avatar: { borderRadius: 26, height: 52, width: 52 },
-  content: { flex: 1, gap: 2 },
+  content: { flex: 1, gap: 2, paddingRight: spacing.md },
   item: {
     alignItems: "center",
     backgroundColor: colors.surface,
@@ -87,6 +129,7 @@ const styles = StyleSheet.create({
     minHeight: 84,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    position: "relative",
   },
   message: { color: colors.text, fontSize: 14, lineHeight: 19 },
   nameRow: {
@@ -94,6 +137,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
   },
+  readButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.primary,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 26,
+    justifyContent: "center",
+    width: 26,
+  },
+  readButtonDisabled: { opacity: 0.62 },
+  readButtonPressed: { opacity: 0.72 },
   sender: {
     color: colors.text,
     flexShrink: 1,
@@ -120,11 +175,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 2,
   },
-  unreadDot: {
-    backgroundColor: colors.primary,
-    borderRadius: 5,
-    height: 10,
-    width: 10,
+  unreadActions: {
+    alignItems: "center",
+    position: "absolute",
+    right: spacing.sm,
+    top: spacing.xs,
   },
   unreadItem: { backgroundColor: colors.primarySoft },
 });

@@ -15,7 +15,9 @@ import {
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { ProfileContent } from "@/components/profile/profile-content";
 import { ProfileOverview } from "@/components/profile/profile-overview";
+import { openProfileByUserId } from "@/features/profile/open-profile";
 import { getPosts } from "@/services/feed.service";
+import { deleteFriend } from "@/services/friend.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { formatReelCount, getReels } from "@/services/reel.service";
 import {
@@ -24,6 +26,7 @@ import {
   sendFriendRequest,
   type UserProfile,
 } from "@/services/user.service";
+import { getUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
@@ -45,9 +48,13 @@ const getUsername = (name: string) =>
 
 const getFriendLabel = (status?: string | null) => {
   const normalized = status?.toLowerCase();
-  if (normalized === "pending") return "Đã gửi lời mời";
-  if (normalized === "accepted") return "Đã kết bạn";
+  if (normalized === "pending") return "Hủy lời mời";
+  if (normalized === "accepted") return "Hủy kết bạn";
   return "Kết bạn";
+};
+
+const canOpenConversation = (profile: UserProfile) => {
+  return profile.canMessage;
 };
 
 export function UserProfileScreen() {
@@ -69,6 +76,12 @@ export function UserProfileScreen() {
 
   const loadProfile = useCallback(async () => {
     if (!userId) return;
+
+    const currentUser = await getUser();
+    if (currentUser?.id === userId) {
+      router.replace("/(tabs)/profile");
+      return;
+    }
 
     setIsLoading(true);
     setLoadErrorMessage("");
@@ -100,7 +113,7 @@ export function UserProfileScreen() {
 
   const openUserProfile = (nextUserId: string) => {
     if (nextUserId === userId) return;
-    router.push({ pathname: "/users/[userId]", params: { userId: nextUserId } });
+    void openProfileByUserId(router, nextUserId);
   };
 
   const handleFollow = async () => {
@@ -132,16 +145,31 @@ export function UserProfileScreen() {
     if (!profile || isActionLoading) return;
 
     const friendshipStatus = profile.friendship?.status?.toLowerCase();
-    if (friendshipStatus === "pending" || friendshipStatus === "accepted") return;
 
     setIsActionLoading(true);
     try {
+      if (friendshipStatus === "accepted" || friendshipStatus === "pending") {
+        const isPendingRequest = friendshipStatus === "pending";
+
+        await deleteFriend(profile.id);
+        const nextProfile = await getUserProfile(profile.id);
+        setProfile(nextProfile);
+        Alert.alert(
+          isPendingRequest ? "Đã hủy lời mời" : "Đã hủy kết bạn",
+          isPendingRequest
+            ? "Lời mời kết bạn đã được hủy."
+            : "Bạn đã hủy kết bạn thành công.",
+        );
+        return;
+      }
+
       const result = await sendFriendRequest(profile.id);
       setProfile((current) =>
         current
           ? {
               ...current,
               friendship: {
+                friendshipId: result.friendshipId,
                 isRequester: true,
                 status: result.status || "pending",
               },
@@ -153,8 +181,14 @@ export function UserProfileScreen() {
         Alert.alert("Đã gửi lời mời", result.message);
       }
     } catch (error) {
+      const isCancelAction =
+        friendshipStatus === "accepted" || friendshipStatus === "pending";
       Alert.alert(
-        "Không thể gửi lời mời kết bạn",
+        isCancelAction
+          ? friendshipStatus === "pending"
+            ? "Không thể hủy lời mời kết bạn"
+            : "Không thể hủy kết bạn"
+          : "Không thể gửi lời mời kết bạn",
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     } finally {
@@ -163,7 +197,7 @@ export function UserProfileScreen() {
   };
 
   const handleChat = () => {
-    if (!profile?.canMessage) return;
+    if (!profile || !canOpenConversation(profile)) return;
     router.push({
       pathname: "/(tabs)/chat",
       params: profile.conversationId
@@ -320,6 +354,7 @@ export function UserProfileScreen() {
     { label: "Đang theo dõi", value: formatCount(profile.followingCount) },
     { label: "Bạn bè", value: formatCount(profile.friendCount) },
   ];
+  const canChat = canOpenConversation(profile);
 
   return (
     <View style={styles.screen}>
@@ -356,7 +391,7 @@ export function UserProfileScreen() {
         />
         <View style={styles.actionWrap}>
           <ProfileActions
-            canMessage={profile.canMessage}
+            canMessage={canChat}
             friendLabel={getFriendLabel(profile.friendship?.status)}
             friendshipStatus={profile.friendship?.status ?? null}
             isActionLoading={isActionLoading}
@@ -418,10 +453,7 @@ function ProfileActions({
   onFriend: () => void;
 }) {
   const normalizedFriendshipStatus = friendshipStatus?.toLowerCase();
-  const isFriendActionDisabled =
-    isActionLoading ||
-    normalizedFriendshipStatus === "pending" ||
-    normalizedFriendshipStatus === "accepted";
+  const isFriendActionDisabled = isActionLoading;
   const isFriendAccepted = normalizedFriendshipStatus === "accepted";
   const isFriendPending = normalizedFriendshipStatus === "pending";
 
@@ -429,10 +461,15 @@ function ProfileActions({
     <View style={styles.actions}>
       <ActionButton
         disabled={isFriendActionDisabled}
-        icon={isFriendAccepted ? "checkmark" : "person-add-outline"}
+        icon={
+          isFriendAccepted || isFriendPending
+            ? "person-remove-outline"
+            : "person-add-outline"
+        }
         label={friendLabel}
         onPress={onFriend}
         primary={!isFriendAccepted && !isFriendPending}
+        danger={isFriendAccepted || isFriendPending}
       />
       <ActionButton
         disabled={isActionLoading}
@@ -449,12 +486,14 @@ function ProfileActions({
 }
 
 function ActionButton({
+  danger,
   disabled,
   icon,
   label,
   onPress,
   primary,
 }: {
+  danger?: boolean;
   disabled?: boolean;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
@@ -469,12 +508,24 @@ function ActionButton({
       style={({ pressed }) => [
         styles.actionButton,
         primary && styles.primaryAction,
+        danger && styles.dangerAction,
         pressed && styles.actionPressed,
         disabled && styles.actionDisabled,
       ]}
     >
-      <Ionicons color={primary ? colors.white : colors.text} name={icon} size={17} />
-      <Text style={[styles.actionText, primary && styles.primaryActionText]}>{label}</Text>
+      <Ionicons
+        color={primary || danger ? colors.white : colors.text}
+        name={icon}
+        size={17}
+      />
+      <Text
+        style={[
+          styles.actionText,
+          (primary || danger) && styles.emphasisActionText,
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -506,6 +557,11 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   content: { backgroundColor: colors.surface, flexGrow: 1 },
+  dangerAction: {
+    backgroundColor: colors.danger,
+    borderColor: colors.danger,
+  },
+  emphasisActionText: { color: colors.white },
   header: {
     alignItems: "center",
     backgroundColor: "#F7F8FD",
@@ -542,6 +598,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  primaryActionText: { color: colors.white },
   screen: { backgroundColor: colors.surface, flex: 1 },
 });

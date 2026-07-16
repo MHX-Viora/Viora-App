@@ -12,6 +12,7 @@ import { NotificationEmpty } from "@/components/notifications/notification-empty
 import { NotificationHeader } from "@/components/notifications/notification-header";
 import { NotificationItem } from "@/components/notifications/notification-item";
 import { navigateNotification } from "@/features/notifications/notification-navigation";
+import { setNotificationUnreadCount } from "@/features/notifications/notification-unread-count";
 import { NotificationSkeleton } from "@/components/notifications/notification-skeleton";
 import {
   getNotifications,
@@ -40,6 +41,18 @@ export function NotificationsScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [markingReadId, setMarkingReadId] = useState<string | null>(null);
+
+  const updateUnreadCount = useCallback((count: number) => {
+    const nextCount = Math.max(0, count);
+    setUnreadCount(nextCount);
+    setNotificationUnreadCount(nextCount);
+  }, []);
+
+  const decreaseUnreadCount = useCallback(() => {
+    const nextCount = Math.max(0, unreadCount - 1);
+    updateUnreadCount(nextCount);
+  }, [unreadCount, updateUnreadCount]);
 
   const loadNotifications = useCallback(
     async (nextPage: number, mode: "initial" | "refresh" | "more") => {
@@ -60,7 +73,7 @@ export function NotificationsScreen() {
         );
         setPage(result.page);
         setTotalPages(result.totalPages);
-        setUnreadCount(result.unreadCount);
+        updateUnreadCount(result.unreadCount);
         setErrorMessage("");
       } catch (error) {
         setErrorMessage(
@@ -72,7 +85,7 @@ export function NotificationsScreen() {
         setIsLoadingMore(false);
       }
     },
-    [],
+    [updateUnreadCount],
   );
 
   useEffect(() => {
@@ -95,8 +108,28 @@ export function NotificationsScreen() {
         item.id === id && !item.isRead ? { ...item, isRead: true } : item,
       ),
     );
-    setUnreadCount((current) => Math.max(0, current - 1));
-  }, []);
+    decreaseUnreadCount();
+  }, [decreaseUnreadCount]);
+
+  const handleMarkNotificationRead = useCallback(
+    async (notification: NotificationItemModel) => {
+      if (notification.isRead || markingReadId) return;
+
+      setMarkingReadId(notification.id);
+      try {
+        await markNotificationRead(notification.id);
+        markItemReadLocally(notification.id);
+      } catch (error) {
+        Alert.alert(
+          "Không thể cập nhật thông báo",
+          error instanceof Error ? error.message : "Vui lòng thử lại.",
+        );
+      } finally {
+        setMarkingReadId(null);
+      }
+    },
+    [markItemReadLocally, markingReadId],
+  );
 
   const handlePressNotification = useCallback(
     async (notification: NotificationItemModel) => {
@@ -131,7 +164,7 @@ export function NotificationsScreen() {
               setNotifications((current) =>
                 current.map((item) => ({ ...item, isRead: true })),
               );
-              setUnreadCount(0);
+              updateUnreadCount(0);
             } catch (error) {
               Alert.alert(
                 "Không thể đánh dấu tất cả",
@@ -143,7 +176,7 @@ export function NotificationsScreen() {
         },
       ],
     );
-  }, []);
+  }, [updateUnreadCount]);
 
   return (
     <View style={styles.screen}>
@@ -184,7 +217,9 @@ export function NotificationsScreen() {
           removeClippedSubviews
           renderItem={({ item }) => (
             <NotificationItem
+              isMarkingRead={markingReadId === item.id}
               notification={item}
+              onMarkRead={handleMarkNotificationRead}
               onPress={handlePressNotification}
             />
           )}

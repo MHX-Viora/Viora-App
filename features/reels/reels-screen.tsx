@@ -23,6 +23,7 @@ import { CreateReelModal } from "@/components/reels/create-reel-modal";
 import { ReelCard } from "@/components/reels/reel-card";
 import { ReelsHeader } from "@/components/reels/reels-header";
 import { ReelsSearchModal } from "@/components/reels/reels-search-modal";
+import { openProfileByUserId } from "@/features/profile/open-profile";
 import { reels } from "@/features/reels/data";
 import { reactPost, savePost } from "@/services/post.service";
 import {
@@ -362,7 +363,7 @@ export function ReelsScreen() {
   };
 
   const openUserProfile = (userId: string) => {
-    router.push({ pathname: "/users/[userId]", params: { userId } });
+    void openProfileByUserId(router, userId);
   };
 
   return (

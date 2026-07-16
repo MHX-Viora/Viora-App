@@ -8,6 +8,7 @@ import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { ProfileQrModal } from "@/components/profile/profile-qr-modal";
 import { ProfileSettingsSheet } from "@/components/profile/profile-settings-sheet";
+import { openProfileByUserId } from "@/features/profile/open-profile";
 import { logout } from "@/services/auth.service";
 import { getPosts } from "@/services/feed.service";
 import { reactPost, savePost } from "@/services/post.service";
@@ -217,7 +218,7 @@ export function ProfileScreen() {
 
   const openUserProfile = (userId: string) => {
     if (userId === user.id) return;
-    router.push({ pathname: "/users/[userId]", params: { userId } });
+    void openProfileByUserId(router, userId);
   };
 
   const openPostComments = (postId: string) => {
@@ -344,12 +345,9 @@ export function ProfileScreen() {
         handle={profileHandle}
         name={profileName}
         onClose={() => setShowQr(false)}
-        onOpenProfile={(nextUserId) =>
-          router.push({
-            pathname: "/users/[userId]",
-            params: { userId: nextUserId },
-          })
-        }
+        onOpenProfile={(nextUserId) => {
+          void openProfileByUserId(router, nextUserId);
+        }}
         qrValue={`viora://profile/${user.id}`}
         visible={showQr}
       />
