@@ -2,18 +2,36 @@ import { Tabs, usePathname } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 
 import { TabIcon } from "@/components/layout/tab-icon";
+import { getNotifications } from "@/services/notification.service";
+import { colors } from "@/theme";
+import {
+  getChatUnreadCount,
+  subscribeChatUnreadCount,
+} from "@/utils/chat-unread-count";
 import {
   getNotificationUnreadCount,
   setNotificationUnreadCount,
   subscribeNotificationUnreadCount,
-} from "@/features/notifications/notification-unread-count";
-import { getNotifications } from "@/services/notification.service";
-import { colors } from "@/theme";
+} from "@/utils/notification-unread-count";
+
+const tabBadgeStyle = {
+  backgroundColor: colors.danger,
+  color: colors.white,
+  fontSize: 10,
+  fontWeight: "800" as const,
+  minWidth: 18,
+};
+
+const getBadge = (count: number) =>
+  count > 0 ? (count > 99 ? "99+" : count) : undefined;
 
 export default function TabLayout() {
   const pathname = usePathname();
   const [unreadNotificationCount, setUnreadNotificationCountState] = useState(
     getNotificationUnreadCount(),
+  );
+  const [unreadChatCount, setUnreadChatCountState] = useState(
+    getChatUnreadCount(),
   );
 
   const loadUnreadNotificationCount = useCallback(async () => {
@@ -30,6 +48,8 @@ export default function TabLayout() {
     [],
   );
 
+  useEffect(() => subscribeChatUnreadCount(setUnreadChatCountState), []);
+
   useEffect(() => {
     loadUnreadNotificationCount();
   }, [loadUnreadNotificationCount, pathname]);
@@ -39,8 +59,8 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
         tabBarHideOnKeyboard: true,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelPosition: "below-icon",
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 2 },
         tabBarStyle: {
@@ -55,7 +75,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Trang chủ",
           tabBarAccessibilityLabel: "Trang chủ",
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -63,12 +82,12 @@ export default function TabLayout() {
               name={focused ? "home" : "home-outline"}
             />
           ),
+          title: "Trang chủ",
         }}
       />
       <Tabs.Screen
         name="reels"
         options={{
-          title: "Reels",
           tabBarAccessibilityLabel: "Reels",
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -76,25 +95,27 @@ export default function TabLayout() {
               name={focused ? "play-circle" : "play-circle-outline"}
             />
           ),
+          title: "Reels",
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
-          title: "Trò chuyện",
           tabBarAccessibilityLabel: "Trò chuyện",
+          tabBarBadge: getBadge(unreadChatCount),
+          tabBarBadgeStyle: tabBadgeStyle,
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
               name={focused ? "chatbubble" : "chatbubble-outline"}
             />
           ),
+          title: "Trò chuyện",
         }}
       />
       <Tabs.Screen
         name="utilities"
         options={{
-          title: "Tiện ích",
           tabBarAccessibilityLabel: "Tiện ích",
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -102,38 +123,27 @@ export default function TabLayout() {
               name={focused ? "grid" : "grid-outline"}
             />
           ),
+          title: "Tiện ích",
         }}
       />
       <Tabs.Screen
         name="notification"
         options={{
-          title: "Thông báo",
           tabBarAccessibilityLabel: "Thông báo",
-          tabBarBadge:
-            unreadNotificationCount > 0
-              ? unreadNotificationCount > 99
-                ? "99+"
-                : unreadNotificationCount
-              : undefined,
-          tabBarBadgeStyle: {
-            backgroundColor: colors.danger,
-            color: colors.white,
-            fontSize: 10,
-            fontWeight: "800",
-            minWidth: 18,
-          },
+          tabBarBadge: getBadge(unreadNotificationCount),
+          tabBarBadgeStyle: tabBadgeStyle,
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
               name={focused ? "notifications" : "notifications-outline"}
             />
           ),
+          title: "Thông báo",
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Hồ sơ",
           tabBarAccessibilityLabel: "Hồ sơ",
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -141,6 +151,7 @@ export default function TabLayout() {
               name={focused ? "person" : "person-outline"}
             />
           ),
+          title: "Hồ sơ",
         }}
       />
     </Tabs>

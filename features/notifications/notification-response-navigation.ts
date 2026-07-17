@@ -43,14 +43,28 @@ const navigateWhenReady = (navigate: () => void) => {
 export const navigateNotificationData = (data: Record<string, unknown>) => {
   console.info("[Push] notification response data", data);
 
+  const chatConversationId = firstString(
+    data.conversationId,
+    data["conversation.id"],
+  );
+  const dataType = firstString(data.type, data.notificationType);
+  if (dataType === "chat" && chatConversationId) {
+    navigateWhenReady(() =>
+      router.push({
+        pathname: "/chat/[conversationId]",
+        params: { conversationId: chatConversationId },
+      }),
+    );
+    return true;
+  }
+
   const notificationId = firstString(data.notificationId, data.id);
   const notificationType = firstNumber(data.notificationType, data.type);
   const referenceId = firstString(data.referenceId, data["reference.id"]);
   const referenceType = firstNumber(data.referenceType, data["reference.type"]);
 
   if (!notificationId) {
-    navigateWhenReady(() => router.push("/notification"));
-    return;
+    return false;
   }
 
   const notification: NotificationItemModel = {
@@ -70,8 +84,9 @@ export const navigateNotificationData = (data: Record<string, unknown>) => {
 
   if (!notification.reference) {
     navigateWhenReady(() => router.push("/notification"));
-    return;
+    return true;
   }
 
   navigateWhenReady(() => navigateNotification(notification, router));
+  return true;
 };

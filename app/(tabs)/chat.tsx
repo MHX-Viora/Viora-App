@@ -1,2 +1,5 @@
-import { PlaceholderScreen } from '@/components/common/placeholder-screen';
-export default function ChatRoute() { return <PlaceholderScreen icon="chatbubbles-outline" title="Trò chuyện" />; }
+import { ConversationsScreen } from "@/features/chat/conversations-screen";
+
+export default function ChatRoute() {
+  return <ConversationsScreen />;
+}

@@ -10,9 +10,9 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 
-import { formatNotificationTime } from "@/features/notifications/notification-time";
 import { colors, spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
+import { formatNotificationTime } from "@/utils/notification-time";
 
 type Props = {
   isMarkingRead?: boolean;
@@ -98,7 +98,11 @@ function NotificationItemComponent({
             {isMarkingRead ? (
               <ActivityIndicator color={colors.primary} size="small" />
             ) : (
-              <Ionicons color={colors.primary} name="checkmark-done" size={15} />
+              <Ionicons
+                color={colors.primary}
+                name="checkmark-done"
+                size={15}
+              />
             )}
           </Pressable>
         </View>

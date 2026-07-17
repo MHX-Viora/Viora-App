@@ -61,6 +61,17 @@ const isAccessTokenResponse = (
   return isRecord(value) && typeof value.accessToken === "string";
 };
 
+const parseResponseText = async (response: Response): Promise<unknown> => {
+  const text = await response.text();
+  if (!text.trim()) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
+
 const translateAuthErrorMessage = (message: string, fallback: string) => {
   const normalizedMessage = message.toLowerCase();
 
@@ -111,8 +122,9 @@ const translateAuthErrorMessage = (message: string, fallback: string) => {
   return message.trim() || fallback;
 };
 
-const getErrorMessage = (error: ApiError, fallback: string) => {
+const getErrorMessage = (error: unknown, fallback: string) => {
   let message = fallback;
+  if (!isRecord(error)) return translateAuthErrorMessage(message, fallback);
 
   if (typeof error.message === "string" && error.message.trim()) {
     message = error.message;
@@ -190,7 +202,7 @@ export const register = async (
   });
 
   //  Parse JSON ngay trong function để nhìn flow không bị nhảy file.
-  const data = await response.json();
+  const data = await parseResponseText(response);
 
   // Nếu API báo lỗi, lấy message dễ hiểu nhất rồi throw.
   if (!response.ok || (isRecord(data) && data.status === 0)) {
@@ -219,7 +231,7 @@ export const login = async (payload: Credentials): Promise<LoginResponse> => {
   });
 
   //  Parse JSON ngay tại đây.
-  const data = await response.json();
+  const data = await parseResponseText(response);
 
   //  API lỗi thì throw Error để màn hình login catch và show alert.
   if (!response.ok || (isRecord(data) && data.status === 0)) {
@@ -246,7 +258,7 @@ export const refreshToken = async (): Promise<AccessTokenResponse> => {
   });
 
   //  Backend trả accessToken mới.
-  const data = await response.json();
+  const data = await parseResponseText(response);
 
   //  Refresh fail thì để API cần token tự catch lỗi.
   if (!response.ok || (isRecord(data) && data.status === 0)) {

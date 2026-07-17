@@ -9,11 +9,36 @@ import {
   registerDeviceToken,
 } from "@/services/device-token.service";
 import { navigateNotificationData } from "@/features/notifications/notification-response-navigation";
+import { getActiveChatConversation } from "@/features/chat/chat-events";
 
 const DEVICE_ID_KEY = "viora.device-id";
 let notificationHandlerConfigured = false;
 let notificationResponseHandlingConfigured = false;
 let registrationPromise: Promise<string | null> | null = null;
+const handledForegroundChatNotifications = new Map<string, number>();
+const FOREGROUND_DEDUPE_MS = 10_000;
+
+const shouldSuppressForegroundNotification = (
+  data: Record<string, unknown>,
+) => {
+  if (data.type !== "chat") return false;
+
+  const conversationId =
+    typeof data.conversationId === "string" ? data.conversationId : "";
+  const messageId = typeof data.messageId === "string" ? data.messageId : "";
+  if (conversationId && getActiveChatConversation() === conversationId) {
+    return true;
+  }
+
+  const dedupeKey = messageId || `${conversationId}:${String(data.createdAt ?? "")}`;
+  if (!dedupeKey) return false;
+
+  const now = Date.now();
+  const lastShownAt = handledForegroundChatNotifications.get(dedupeKey) ?? 0;
+  handledForegroundChatNotifications.set(dedupeKey, now);
+
+  return now - lastShownAt < FOREGROUND_DEDUPE_MS;
+};
 
 const getDeviceId = async () => {
   const existingId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
@@ -149,12 +174,16 @@ export const setupNotificationHandling = () => {
   if (notificationHandlerConfigured) return;
 
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
+    handleNotification: async (notification) => {
+      const data = notification.request.content.data as Record<string, unknown>;
+      const shouldSuppress = shouldSuppressForegroundNotification(data);
+      return {
+        shouldPlaySound: !shouldSuppress,
+        shouldSetBadge: true,
+        shouldShowBanner: !shouldSuppress,
+        shouldShowList: !shouldSuppress,
+      };
+    },
   });
 
   notificationHandlerConfigured = true;
@@ -163,18 +192,26 @@ export const setupNotificationHandling = () => {
 export const setupNotificationResponseHandling = () => {
   if (notificationResponseHandlingConfigured) return;
 
-  Notifications.addNotificationResponseReceivedListener((response) => {
-    navigateNotificationData(
+  const handleResponse = (response: Notifications.NotificationResponse) => {
+    if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
+      return;
+    }
+
+    const didNavigate = navigateNotificationData(
       response.notification.request.content.data as Record<string, unknown>,
     );
+    if (didNavigate) {
+      void Notifications.clearLastNotificationResponseAsync();
+    }
+  };
+
+  Notifications.addNotificationResponseReceivedListener((response) => {
+    handleResponse(response);
   });
 
   void Notifications.getLastNotificationResponseAsync().then((response) => {
     if (!response) return;
-
-    navigateNotificationData(
-      response.notification.request.content.data as Record<string, unknown>,
-    );
+    handleResponse(response);
   });
 
   notificationResponseHandlingConfigured = true;

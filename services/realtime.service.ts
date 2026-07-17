@@ -6,8 +6,23 @@ import {
 } from "@microsoft/signalr";
 
 import { emitRealtimeNotification } from "@/features/notifications/notification-events";
+import {
+  emitRealtimeConversationRead,
+  emitRealtimeConversation,
+  emitRealtimeConversationBlockedChanged,
+  emitRealtimeConversationMutedChanged,
+  emitRealtimeConversationPinnedChanged,
+  emitRealtimeMessage,
+  emitRealtimeMessageDeleted,
+  emitRealtimeMessageDelivered,
+  emitRealtimeNewMessageNotification,
+  emitRealtimeSyncRequest,
+  getActiveChatConversation,
+} from "@/features/chat/chat-events";
+import { showChatRealtimeNotification } from "@/services/chat-foreground-notification.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
 import { getAccessToken } from "@/stores/session-store";
+import { setChatUnreadCount } from "@/utils/chat-unread-count";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -45,18 +60,44 @@ const getRealtimeConnection = () => {
 
     connection.onreconnected(() => {
       console.info("[Realtime] reconnected");
+      emitRealtimeSyncRequest();
     });
 
     connection.onclose((error) => {
       console.info("[Realtime] closed", error?.message);
     });
 
-    connection.on("ReceiveMessage", () => undefined);
+    connection.on("ReceiveMessage", (payload) => {
+      emitRealtimeMessage(payload);
+    });
+    connection.on("MessageDelivered", (payload) => {
+      emitRealtimeMessageDelivered(payload);
+    });
     connection.on("MessageEdited", () => undefined);
-    connection.on("MessageDeleted", () => undefined);
-    connection.on("MessagesRead", () => undefined);
-    connection.on("ConversationUpdated", () => undefined);
-    connection.on("ConversationCreated", () => undefined);
+    connection.on("MessageUpdated", () => undefined);
+    connection.on("MessageDeleted", (payload) => {
+      emitRealtimeMessageDeleted(payload);
+    });
+    connection.on("ConversationRead", (payload) => {
+      emitRealtimeConversationRead(payload);
+    });
+    connection.on("MessagesRead", (payload) => {
+      emitRealtimeConversationRead(payload);
+    });
+    connection.on("ConversationUpdated", (payload) => {
+      emitRealtimeConversation(payload);
+    });
+    connection.on("ConversationCreated", (payload) => {
+      emitRealtimeConversation(payload);
+    });
+    connection.on("NewMessageNotification", (payload) => {
+      const event = emitRealtimeNewMessageNotification(payload);
+      if (!event || getActiveChatConversation() === event.conversationId) {
+        return;
+      }
+      setChatUnreadCount(event.unreadCount);
+      void showChatRealtimeNotification(event);
+    });
     connection.on("FriendRequestReceived", (payload) => {
       handleNotificationPayload(payload, "FriendRequestReceived");
     });
@@ -70,6 +111,28 @@ const getRealtimeConnection = () => {
     connection.on("TypingStopped", () => undefined);
     connection.on("UserOnline", () => undefined);
     connection.on("UserOffline", () => undefined);
+    connection.on("ReactionAdded", () => undefined);
+    connection.on("ReactionRemoved", () => undefined);
+    connection.on("ConversationPinned", (payload) => {
+      emitRealtimeConversationPinnedChanged(payload);
+    });
+    connection.on("ConversationPinnedChanged", (payload) => {
+      emitRealtimeConversationPinnedChanged(payload);
+    });
+    connection.on("ConversationMuted", (payload) => {
+      emitRealtimeConversationMutedChanged(payload);
+    });
+    connection.on("ConversationMutedChanged", (payload) => {
+      emitRealtimeConversationMutedChanged(payload);
+    });
+    connection.on("ConversationBlockedChanged", (payload) => {
+      emitRealtimeConversationBlockedChanged(payload);
+    });
+    connection.on("ConversationRenamed", () => undefined);
+    connection.on("ConversationAvatarChanged", () => undefined);
+    connection.on("MemberAdded", () => undefined);
+    connection.on("MemberRemoved", () => undefined);
+    connection.on("MemberLeft", () => undefined);
   }
 
   return connection;

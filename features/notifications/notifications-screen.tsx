@@ -1,27 +1,27 @@
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  StyleSheet,
-  View,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    StyleSheet,
+    View,
 } from "react-native";
 
 import { NotificationEmpty } from "@/components/notifications/notification-empty";
 import { NotificationHeader } from "@/components/notifications/notification-header";
 import { NotificationItem } from "@/components/notifications/notification-item";
-import { navigateNotification } from "@/features/notifications/notification-navigation";
-import { subscribeRealtimeNotifications } from "@/features/notifications/notification-events";
-import { setNotificationUnreadCount } from "@/features/notifications/notification-unread-count";
 import { NotificationSkeleton } from "@/components/notifications/notification-skeleton";
+import { subscribeRealtimeNotifications } from "@/features/notifications/notification-events";
+import { navigateNotification } from "@/features/notifications/notification-navigation";
 import {
-  getNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
+    getNotifications,
+    markAllNotificationsRead,
+    markNotificationRead,
 } from "@/services/notification.service";
 import { colors, spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
+import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
 
 const PAGE_SIZE = 20;
 
@@ -34,7 +34,9 @@ const mergeNotifications = (
 };
 
 export function NotificationsScreen() {
-  const [notifications, setNotifications] = useState<NotificationItemModel[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItemModel[]>(
+    [],
+  );
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -112,18 +114,29 @@ export function NotificationsScreen() {
   }, [isRefreshing, loadNotifications]);
 
   const loadMore = useCallback(() => {
-    if (isLoading || isRefreshing || isLoadingMore || page >= totalPages) return;
+    if (isLoading || isRefreshing || isLoadingMore || page >= totalPages)
+      return;
     loadNotifications(page + 1, "more");
-  }, [isLoading, isLoadingMore, isRefreshing, loadNotifications, page, totalPages]);
+  }, [
+    isLoading,
+    isLoadingMore,
+    isRefreshing,
+    loadNotifications,
+    page,
+    totalPages,
+  ]);
 
-  const markItemReadLocally = useCallback((id: string) => {
-    setNotifications((current) =>
-      current.map((item) =>
-        item.id === id && !item.isRead ? { ...item, isRead: true } : item,
-      ),
-    );
-    decreaseUnreadCount();
-  }, [decreaseUnreadCount]);
+  const markItemReadLocally = useCallback(
+    (id: string) => {
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === id && !item.isRead ? { ...item, isRead: true } : item,
+        ),
+      );
+      decreaseUnreadCount();
+    },
+    [decreaseUnreadCount],
+  );
 
   const handleMarkNotificationRead = useCallback(
     async (notification: NotificationItemModel) => {

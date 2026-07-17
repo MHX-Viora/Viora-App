@@ -1,6 +1,6 @@
 import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 import "react-native-reanimated";
 
@@ -14,7 +14,6 @@ import { getSession } from "@/stores/session-store";
 
 export default function RootLayout() {
   const segments = useSegments();
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const hasRegisteredPushNotifications = useRef(false);
 
   useEffect(() => {
@@ -54,7 +53,6 @@ export default function RootLayout() {
         if (currentRoute !== "login" && currentRoute !== "register") {
           router.replace("/login");
         }
-        setIsCheckingSession(false);
         return;
       }
 
@@ -64,7 +62,6 @@ export default function RootLayout() {
         if (currentRoute !== "complete-profile") {
           router.replace("/complete-profile");
         }
-        setIsCheckingSession(false);
         return;
       }
 
@@ -84,13 +81,10 @@ export default function RootLayout() {
           hasRegisteredPushNotifications.current = false;
         });
       }
-      setIsCheckingSession(false);
     };
 
     checkLoginStatus();
   }, [segments]);
-
-  if (isCheckingSession) return null;
 
   return (
     <>
@@ -98,6 +92,11 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="friends" />
+        <Stack.Screen name="chat/[conversationId]" />
+        <Stack.Screen name="chat/settings/[conversationId]" />
+        <Stack.Screen name="chat/settings/[conversationId]-attachments" />
+        <Stack.Screen name="chat/settings/[conversationId]-links" />
+        <Stack.Screen name="chat/settings/[conversationId]-search" />
         <Stack.Screen name="users/[userId]" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />

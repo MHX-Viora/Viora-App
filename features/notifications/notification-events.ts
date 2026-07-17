@@ -1,11 +1,9 @@
 import { mapNotification } from "@/features/notifications/notification.mapper";
+import type { NotificationItemModel } from "@/types/notification";
 import {
   getNotificationUnreadCount,
   setNotificationUnreadCount,
-} from "@/features/notifications/notification-unread-count";
-import type {
-  NotificationItemModel,
-} from "@/types/notification";
+} from "@/utils/notification-unread-count";
 
 type Listener = (notification: NotificationItemModel) => void;
 
