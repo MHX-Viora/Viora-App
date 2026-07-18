@@ -18,6 +18,7 @@ import {
 } from "react-native";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
+import { showAppToast } from "@/components/common/app-toast";
 import type { SelectedVideo } from "@/components/reels/create-reel-modal";
 import { CreateReelModal } from "@/components/reels/create-reel-modal";
 import { ReelCard } from "@/components/reels/reel-card";
@@ -202,10 +203,12 @@ export function ReelsScreen() {
     try {
       setSelectedVideo(await prepareVideoForUpload(asset));
     } catch (error) {
-      Alert.alert(
-        "Không thể chuẩn bị video",
-        error instanceof Error ? error.message : "Vui lòng chọn video khác.",
-      );
+      showAppToast({
+        message:
+          error instanceof Error ? error.message : "Vui lòng chọn video khác.",
+        title: "Không thể chuẩn bị video",
+        type: "error",
+      });
     }
   };
 
@@ -242,6 +245,11 @@ export function ReelsScreen() {
     setReelItems((current) => [newReel, ...current]);
     setActiveIndex(0);
     closeCreate();
+    showAppToast({
+      message: "Video của bạn đã được thêm vào danh sách.",
+      title: "Đăng video thành công",
+      type: "success",
+    });
     requestAnimationFrame(() =>
       reelsListRef.current?.scrollToOffset({ animated: false, offset: 0 }),
     );
@@ -263,14 +271,20 @@ export function ReelsScreen() {
       setActiveIndex(0);
       setCreateVisible(false);
       setSelectedVideo(null);
+      showAppToast({
+        message: "Video của bạn đã được đăng.",
+        title: "Đăng video thành công",
+        type: "success",
+      });
       requestAnimationFrame(() =>
         reelsListRef.current?.scrollToOffset({ animated: false, offset: 0 }),
       );
     } catch (error) {
-      Alert.alert(
-        "Không thể đăng reels",
-        error instanceof Error ? error.message : "Vui lòng thử lại.",
-      );
+      showAppToast({
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+        title: "Không thể đăng video",
+        type: "error",
+      });
     } finally {
       setIsCreatingReel(false);
     }

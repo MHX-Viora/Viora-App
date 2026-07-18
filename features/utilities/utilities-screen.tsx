@@ -1,4 +1,5 @@
-import { SafeAreaView, ScrollView, StyleSheet } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { UtilityGrid } from "@/components/utilities/utility-grid";
 import { WeatherCard } from "@/components/utilities/weather-card";

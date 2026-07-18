@@ -1,4 +1,4 @@
-﻿import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -42,6 +42,7 @@ import {
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
 import {
+  getConversation,
   getConversationMessages,
   markConversationRead,
   recallChatMessage,
@@ -52,12 +53,14 @@ import { colors, spacing } from "@/theme";
 import type {
   ChatAttachment,
   ChatMessage,
+  ChatParticipant,
+  Conversation,
   SendMessageAttachment,
 } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 
 const PAGE_SIZE = 30;
-const STICKERS = ["ðŸ‘", "â¤ï¸", "ðŸ˜‚", "ðŸ”¥", "ðŸ‘", "ðŸ˜", "ðŸ˜®", "ðŸ™"];
+const STICKERS = ["👍", "❤️", "😂", "🔥", "👏", "😍", "😮", "🙏"];
 const GOOGLE_MAPS_URL_PATTERN =
   /https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=-?\d+(\.\d+)?,-?\d+(\.\d+)?/;
 
@@ -103,7 +106,7 @@ function AudioAttachment({
   const status = useAudioPlayerStatus(player);
   const durationLabel = status.duration
     ? `${Math.max(1, Math.round(status.duration))}s`
-    : "Ã‚m thanh";
+    : "Âm thanh";
   const activeWaveBars =
     status.playing && status.duration
       ? Math.max(1, Math.ceil((status.currentTime / status.duration) * 18))
@@ -194,7 +197,7 @@ function ImageAttachment({
     return (
       <View style={[styles.mediaLoadError, size]}>
         <Ionicons color={colors.textMuted} name="image-outline" size={28} />
-        <Text style={styles.mediaLoadErrorText}>áº¢nh khÃ´ng táº£i Ä‘Æ°á»£c</Text>
+        <Text style={styles.mediaLoadErrorText}>Ảnh không tải được</Text>
       </View>
     );
   }
@@ -259,24 +262,29 @@ function AttachmentView({
         try {
           const canOpen = await Linking.canOpenURL(attachment.url);
           if (!canOpen) {
-            Alert.alert("KhÃ´ng thá»ƒ má»Ÿ tÃ i liá»‡u", "Thiáº¿t bá»‹ khÃ´ng há»— trá»£ má»Ÿ tá»‡p nÃ y.");
+            Alert.alert("Không thể mở tài liệu", "Thiết bị không hỗ trợ mở tệp này.");
             return;
           }
           await Linking.openURL(attachment.url);
         } catch (error) {
           Alert.alert(
-            "KhÃ´ng thá»ƒ má»Ÿ tÃ i liá»‡u",
-            error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+            "Không thể mở tài liệu",
+            error instanceof Error ? error.message : "Vui lòng thử lại.",
           );
         }
       }}
       style={styles.filePill}
     >
-      <Ionicons color={colors.primary} name="document-attach" size={18} />
-      <Text numberOfLines={1} style={styles.fileName}>
-        {attachment.name}
-      </Text>
-      <Ionicons color={colors.textMuted} name="open-outline" size={16} />
+      <View style={styles.fileIcon}>
+        <Ionicons color={colors.primary} name="document-text" size={22} />
+      </View>
+      <View style={styles.fileText}>
+        <Text numberOfLines={1} style={styles.fileName}>
+          {attachment.name}
+        </Text>
+        <Text style={styles.fileMeta}>Tệp</Text>
+      </View>
+      <Ionicons color={colors.textMuted} name="open-outline" size={18} />
     </Pressable>
   );
 }
@@ -303,7 +311,7 @@ function VideoAttachment({
     return (
       <View style={styles.mediaLoadError}>
         <Ionicons color={colors.textMuted} name="videocam-outline" size={28} />
-        <Text style={styles.mediaLoadErrorText}>Video khÃ´ng táº£i Ä‘Æ°á»£c</Text>
+        <Text style={styles.mediaLoadErrorText}>Video không tải được</Text>
       </View>
     );
   }
@@ -338,12 +346,12 @@ function PendingAttachmentPreview({
   );
   const label =
     attachment.kind === "image"
-      ? "áº¢nh"
+      ? "Ảnh"
       : attachment.kind === "video"
         ? "Video"
         : attachment.kind === "audio"
-          ? "Ã‚m thanh"
-          : "TÃ i liá»‡u";
+          ? "Âm thanh"
+          : "Tài liệu";
 
   return (
     <View style={styles.attachmentPreview}>
@@ -383,7 +391,7 @@ function PendingAttachmentPreview({
         {label}
       </Text>
       <Pressable
-        accessibilityLabel="Loáº¡i bá» tá»‡p Ä‘Ã£ chá»n"
+        accessibilityLabel="Loại bỏ tệp đã chọn"
         onPress={() => onRemove(attachment.id)}
         style={styles.removeAttachmentButton}
       >
@@ -407,13 +415,13 @@ function LocationCard({ url, isMine }: { url: string; isMine: boolean }) {
       />
       <View style={styles.locationTextWrap}>
         <Text style={[styles.locationTitle, isMine && styles.mineText]}>
-          Vá»‹ trÃ­ hiá»‡n táº¡i
+          Vị trí hiện tại
         </Text>
         <Text
           numberOfLines={1}
           style={[styles.locationSubtitle, isMine && styles.mineTime]}
         >
-          Má»Ÿ báº±ng Google Maps
+          Mở bằng Google Maps
         </Text>
       </View>
     </Pressable>
@@ -450,8 +458,8 @@ function MessageRow({
     ? message.content.replace(locationUrl, "").trim()
     : message.content;
   const recallText = message.isMine
-    ? "Báº¡n Ä‘Ã£ thu há»“i má»™t tin nháº¯n."
-    : `${message.sender.displayName} Ä‘Ã£ thu há»“i má»™t tin nháº¯n.`;
+    ? "Bạn đã thu hồi một tin nhắn."
+    : `${message.sender.displayName} đã thu hồi một tin nhắn.`;
   const hasMediaAttachment = message.attachments.some(
     (attachment) => attachment.type === "image" || attachment.type === "video",
   );
@@ -473,7 +481,7 @@ function MessageRow({
       ]}
     >
       <Pressable
-        accessibilityLabel="Tráº£ lá»i tin nháº¯n"
+        accessibilityLabel="Trả lời tin nhắn"
         onPress={() => {
           onReply(message);
           onCloseActions();
@@ -484,7 +492,7 @@ function MessageRow({
       </Pressable>
       {canRecall ? (
         <Pressable
-          accessibilityLabel="Thu há»“i tin nháº¯n"
+          accessibilityLabel="Thu hồi tin nhắn"
           onPress={() => {
             onRecall(message);
             onCloseActions();
@@ -613,7 +621,7 @@ function MessageRow({
               message.sendStatus === "failed" && styles.failedSendStatus,
             ]}
           >
-            {message.sendStatus === "sending" ? "Äang gá»­i..." : "Gá»­i lá»—i"}
+            {message.sendStatus === "sending" ? "Đang gửi..." : "Gửi lỗi"}
           </Text>
         ) : null}
       </View>
@@ -646,7 +654,7 @@ function MediaViewer({
     >
       <View style={styles.viewer}>
         <Pressable
-          accessibilityLabel="ÄÃ³ng trÃ¬nh xem"
+          accessibilityLabel="Đóng trình xem"
           onPress={onClose}
           style={styles.viewerClose}
         >
@@ -710,6 +718,10 @@ export function ChatScreen() {
   const [showStickers, setShowStickers] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isBlocked, setIsBlocked] = useState(params.isBlocked === "true");
+  const [blockedBy, setBlockedBy] = useState<ChatParticipant | null>(null);
+  const [conversationDetails, setConversationDetails] =
+    useState<Conversation | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [viewingAttachment, setViewingAttachment] =
     useState<ChatAttachment | null>(null);
@@ -757,6 +769,10 @@ export function ChatScreen() {
         const nextItems = toNewestFirstMessages(
           result.items.map(normalizeMessage),
         );
+        if (result.conversation) {
+          setIsBlocked(result.conversation.isBlocked === true);
+          setBlockedBy(result.conversation.blockedBy ?? null);
+        }
         setMessages((current) =>
           nextPage === 1 ? nextItems : mergeOlder(current, nextItems),
         );
@@ -765,8 +781,8 @@ export function ChatScreen() {
         if (nextPage === 1) void markConversationRead(conversationId);
       } catch (error) {
         Alert.alert(
-          "KhÃ´ng thá»ƒ táº£i tin nháº¯n",
-          error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+          "Không thể tải tin nhắn",
+          error instanceof Error ? error.message : "Vui lòng thử lại.",
         );
       } finally {
         setIsLoading(false);
@@ -780,7 +796,7 @@ export function ChatScreen() {
     async (messageId: string) => {
       if (scrollToMessage(messageId)) return;
       if (!conversationId || page >= totalPages || isLoadingMore) {
-        Alert.alert("KhÃ´ng tÃ¬m tháº¥y tin nháº¯n", "Tin nháº¯n gá»‘c chÆ°a cÃ³ trong phÃ²ng chat.");
+        Alert.alert("Không tìm thấy tin nhắn", "Tin nhắn gốc chưa có trong phòng chat.");
         return;
       }
 
@@ -811,11 +827,11 @@ export function ChatScreen() {
           return;
         }
 
-        Alert.alert("KhÃ´ng tÃ¬m tháº¥y tin nháº¯n", "HÃ£y kÃ©o lÃªn táº£i thÃªm tin cÅ© rá»“i thá»­ láº¡i.");
+        Alert.alert("Không tìm thấy tin nhắn", "Hãy kéo lên tải thêm tin cũ rồi thử lại.");
       } catch (error) {
         Alert.alert(
-          "KhÃ´ng thá»ƒ táº£i tin nháº¯n gá»‘c",
-          error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+          "Không thể tải tin nhắn gốc",
+          error instanceof Error ? error.message : "Vui lòng thử lại.",
         );
       } finally {
         setIsLoadingMore(false);
@@ -838,8 +854,30 @@ export function ChatScreen() {
   }, [conversationId]);
 
   useEffect(() => {
+    getUser().then((user) => setCurrentUserId(user?.id ?? null));
+  }, []);
+
+  useEffect(() => {
     load(1, "initial");
   }, [load]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    let isMounted = true;
+    void getConversation(conversationId)
+      .then((conversation) => {
+        if (!isMounted) return;
+        setConversationDetails(conversation);
+        setIsBlocked(conversation.isBlocked === true);
+        setBlockedBy(conversation.blockedBy ?? null);
+      })
+      .catch(() => {
+        if (isMounted) setConversationDetails(null);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [conversationId]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -916,6 +954,7 @@ export function ChatScreen() {
       subscribeRealtimeConversationBlockedChanges((event) => {
         if (event.conversationId !== conversationId) return;
         setIsBlocked(event.isBlocked);
+        if (!event.isBlocked) setBlockedBy(null);
       }),
     [conversationId],
   );
@@ -930,37 +969,70 @@ export function ChatScreen() {
   }, [messages.length, params.scrollToMessageId, scrollToMessage]);
 
   const title = useMemo(() => {
+    if (conversationDetails) {
+      return conversationDetails.conversationType === "Private"
+        ? (conversationDetails.otherParticipant?.displayName ??
+            conversationDetails.name)
+        : conversationDetails.name;
+    }
     if (params.conversationName) return params.conversationName;
     const other = messages.find((item) => !item.isMine)?.sender.displayName;
     return other ?? "Chat";
-  }, [messages, params.conversationName]);
+  }, [conversationDetails, messages, params.conversationName]);
+
+  const blockedComposerMessage = useMemo(() => {
+    if (!isBlocked) return "";
+    if (blockedBy?.id && blockedBy.id === currentUserId) {
+      return "Bạn đã chặn cuộc trò chuyện này.";
+    }
+    const blockerName = blockedBy?.displayName?.trim();
+    return blockerName
+      ? `${blockerName} đã chặn cuộc trò chuyện này.`
+      : "Cuộc trò chuyện này đã bị chặn.";
+  }, [blockedBy, currentUserId, isBlocked]);
 
   const openSettings = useCallback(() => {
     const otherMessage = messages.find((item) => !item.isMine);
+    const otherParticipant = conversationDetails?.otherParticipant;
     router.push({
       pathname: "/chat/settings/[conversationId]",
       params: {
         conversationAvatarUrl:
           params.conversationAvatarUrl ||
+          conversationDetails?.avatarUrl ||
+          otherParticipant?.avatarUrl ||
           params.otherAvatarUrl ||
           otherMessage?.sender.avatarUrl ||
           "",
         conversationId,
         conversationName: title,
-        conversationType: params.conversationType ?? "Private",
-        isMuted: params.isMuted ?? "false",
-        isPinned: params.isPinned ?? "false",
+        conversationType:
+          conversationDetails?.conversationType ??
+          params.conversationType ??
+          "Private",
+        isMuted: params.isMuted ?? String(conversationDetails?.isMuted ?? false),
+        isPinned: params.isPinned ?? String(conversationDetails?.isPinned ?? false),
         isVerified:
-          params.isVerified ?? String(otherMessage?.sender.isVerified ?? false),
-        memberCount: params.memberCount ?? "",
+          params.isVerified ??
+          String(otherParticipant?.isVerified ?? otherMessage?.sender.isVerified ?? false),
+        memberCount:
+          params.memberCount ?? String(conversationDetails?.memberCount ?? ""),
         otherAvatarUrl:
-          params.otherAvatarUrl || otherMessage?.sender.avatarUrl || "",
-        otherUserId: params.otherUserId || otherMessage?.sender.id || "",
+          params.otherAvatarUrl ||
+          otherParticipant?.avatarUrl ||
+          otherMessage?.sender.avatarUrl ||
+          "",
+        otherUserId:
+          params.otherUserId || otherParticipant?.id || otherMessage?.sender.id || "",
         otherUserName:
-          params.otherUserName || otherMessage?.sender.displayName || title,
+          params.otherUserName ||
+          otherParticipant?.displayName ||
+          otherMessage?.sender.displayName ||
+          title,
       },
     });
   }, [
+    conversationDetails,
     conversationId,
     messages,
     params.conversationAvatarUrl,
@@ -1011,7 +1083,7 @@ export function ChatScreen() {
   const takePhoto = useCallback(async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("KhÃ´ng thá»ƒ chá»¥p áº£nh", "á»¨ng dá»¥ng chÆ°a cÃ³ quyá»n dÃ¹ng camera.");
+      Alert.alert("Không thể chụp ảnh", "Ứng dụng chưa có quyền dùng camera.");
       return;
     }
 
@@ -1072,7 +1144,7 @@ export function ChatScreen() {
 
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("KhÃ´ng thá»ƒ ghi Ã¢m", "á»¨ng dá»¥ng chÆ°a cÃ³ quyá»n dÃ¹ng micro.");
+        Alert.alert("Không thể ghi âm", "Ứng dụng chưa có quyền dùng micro.");
         return;
       }
       await setAudioModeAsync({
@@ -1083,8 +1155,8 @@ export function ChatScreen() {
       recorder.record();
     } catch (error) {
       Alert.alert(
-        "KhÃ´ng thá»ƒ ghi Ã¢m",
-        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+        "Không thể ghi âm",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
   }, [recorder, recorderState.isRecording]);
@@ -1093,7 +1165,7 @@ export function ChatScreen() {
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("KhÃ´ng thá»ƒ chia sáº» vá»‹ trÃ­", "á»¨ng dá»¥ng chÆ°a cÃ³ quyá»n vá»‹ trÃ­.");
+        Alert.alert("Không thể chia sẻ vị trí", "Ứng dụng chưa có quyền vị trí.");
         return;
       }
       const location = await Location.getCurrentPositionAsync({});
@@ -1102,8 +1174,8 @@ export function ChatScreen() {
       setContent((current) => [current.trim(), url].filter(Boolean).join(" "));
     } catch (error) {
       Alert.alert(
-        "KhÃ´ng thá»ƒ láº¥y vá»‹ trÃ­",
-        error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+        "Không thể lấy vị trí",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
   }, []);
@@ -1134,8 +1206,8 @@ export function ChatScreen() {
           current.map((item) => (item.id === message.id ? message : item)),
         );
         Alert.alert(
-          "KhÃ´ng thá»ƒ thu há»“i tin nháº¯n",
-          error instanceof Error ? error.message : "Vui lÃ²ng thá»­ láº¡i.",
+          "Không thể thu hồi tin nhắn",
+          error instanceof Error ? error.message : "Vui lòng thử lại.",
         );
       }
     },
@@ -1178,7 +1250,7 @@ export function ChatScreen() {
       reactions: [],
       reply: draftReply
         ? {
-            content: draftReply.content || "Tá»‡p Ä‘Ã­nh kÃ¨m",
+            content: draftReply.content || "Tệp đính kèm",
             id: draftReply.id,
             senderName: draftReply.sender.displayName,
           }
@@ -1186,7 +1258,7 @@ export function ChatScreen() {
       sendStatus: "sending",
       sender: {
         avatarUrl: currentUser?.avatarUrl ?? null,
-        displayName: currentUser?.displayName ?? "Báº¡n",
+        displayName: currentUser?.displayName ?? "Bạn",
         id: currentUser?.id ?? "current-user",
         isVerified: currentUser?.isVerified,
       },
@@ -1240,7 +1312,7 @@ export function ChatScreen() {
         ]}
       >
         <Pressable
-          accessibilityLabel="Quay láº¡i"
+          accessibilityLabel="Quay lại"
           hitSlop={10}
           onPress={() => router.back()}
           style={styles.iconButton}
@@ -1251,7 +1323,7 @@ export function ChatScreen() {
           {title}
         </Text>
         <Pressable
-          accessibilityLabel="CÃ i Ä‘áº·t cuá»™c trÃ² chuyá»‡n"
+          accessibilityLabel="Cài đặt cuộc trò chuyện"
           hitSlop={10}
           onPress={openSettings}
           style={styles.iconButton}
@@ -1276,6 +1348,13 @@ export function ChatScreen() {
           keyExtractor={(item) => item.id}
           ListFooterComponent={
             isLoadingMore ? <ActivityIndicator color={colors.primary} /> : null
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyMessages}>
+              <Text style={styles.emptyMessagesText}>
+                Hãy bắt đầu cuộc trò chuyện.
+              </Text>
+            </View>
           }
           onContentSizeChange={() => {
             if (!pendingScrollToEndRef.current) return;
@@ -1302,6 +1381,7 @@ export function ChatScreen() {
             const { contentOffset } = event.nativeEvent;
             const atBottom = contentOffset.y < 48;
             isAtBottomRef.current = atBottom;
+            if (!atBottom) pendingScrollToEndRef.current = false;
             setIsAtBottom(atBottom);
             if (atBottom) setHasNewMessage(false);
           }}
@@ -1320,7 +1400,7 @@ export function ChatScreen() {
                 message={item}
                 onCloseActions={() => setActionMessageId(null)}
                 onMediaLayout={() => {
-                  if (!pendingScrollToEndRef.current && !isAtBottom) return;
+                  if (!pendingScrollToEndRef.current && !isAtBottomRef.current) return;
                   scrollToEndAfterLayout(true);
                 }}
                 onOpenActions={openMessageActions}
@@ -1352,7 +1432,7 @@ export function ChatScreen() {
             },
           ]}
         >
-          <Text style={styles.newMessageText}>CÃ³ tin nháº¯n má»›i</Text>
+          <Text style={styles.newMessageText}>Có tin nhắn mới</Text>
         </Pressable>
       )}
       <View
@@ -1365,6 +1445,15 @@ export function ChatScreen() {
           },
         ]}
       >
+        {isBlocked ? (
+          <View style={styles.blockedComposer}>
+            <Ionicons color={colors.danger} name="ban-outline" size={18} />
+            <Text style={styles.blockedComposerText}>
+              {blockedComposerMessage}
+            </Text>
+          </View>
+        ) : (
+          <>
         {replyTo && (
           <View style={styles.replyComposer}>
             <View style={styles.replyComposerText}>
@@ -1372,11 +1461,11 @@ export function ChatScreen() {
                 {replyTo.sender.displayName}
               </Text>
               <Text numberOfLines={1} style={styles.replyText}>
-                {replyTo.content || "Tá»‡p Ä‘Ã­nh kÃ¨m"}
+                {replyTo.content || "Tệp đính kèm"}
               </Text>
             </View>
             <Pressable
-              accessibilityLabel="ÄÃ³ng reply"
+              accessibilityLabel="Đóng reply"
               onPress={() => setReplyTo(null)}
             >
               <Ionicons color={colors.textMuted} name="close" size={20} />
@@ -1385,7 +1474,7 @@ export function ChatScreen() {
         )}
         {attachments.length > 0 && (
           <Text numberOfLines={1} style={styles.attachmentSummary}>
-            {attachments.length} tá»‡p Ä‘Ã£ chá»n
+            {attachments.length} tệp đã chọn
           </Text>
         )}
         <ScrollView
@@ -1412,7 +1501,7 @@ export function ChatScreen() {
           <View style={styles.stickerTray}>
             {STICKERS.map((sticker) => (
               <Pressable
-                accessibilityLabel={`Chá»n sticker ${sticker}`}
+                accessibilityLabel={`Chọn sticker ${sticker}`}
                 key={sticker}
                 onPress={() => {
                   setContent((current) => `${current}${sticker}`);
@@ -1427,28 +1516,28 @@ export function ChatScreen() {
         )}
         <View style={styles.actionRow}>
           <Pressable
-            accessibilityLabel="Chá»¥p áº£nh nhanh"
+            accessibilityLabel="Chụp ảnh nhanh"
             onPress={takePhoto}
             style={styles.toolButton}
           >
             <Ionicons color={colors.primary} name="camera" size={20} />
           </Pressable>
           <Pressable
-            accessibilityLabel="Chá»n áº£nh hoáº·c video"
+            accessibilityLabel="Chọn ảnh hoặc video"
             onPress={pickMedia}
             style={styles.toolButton}
           >
             <Ionicons color={colors.primary} name="image" size={20} />
           </Pressable>
           <Pressable
-            accessibilityLabel="Chá»n file"
+            accessibilityLabel="Chọn file"
             onPress={pickFiles}
             style={styles.toolButton}
           >
             <Ionicons color={colors.primary} name="document-attach" size={20} />
           </Pressable>
           <Pressable
-            accessibilityLabel={recorderState.isRecording ? "Dá»«ng ghi Ã¢m" : "Ghi Ã¢m"}
+            accessibilityLabel={recorderState.isRecording ? "Dừng ghi âm" : "Ghi âm"}
             onPress={toggleRecording}
             style={[
               styles.toolButton,
@@ -1462,14 +1551,14 @@ export function ChatScreen() {
             />
           </Pressable>
           <Pressable
-            accessibilityLabel="Chá»n sticker"
+            accessibilityLabel="Chọn sticker"
             onPress={() => setShowStickers((current) => !current)}
             style={styles.toolButton}
           >
             <Ionicons color={colors.primary} name="happy" size={20} />
           </Pressable>
           <Pressable
-            accessibilityLabel="Chia sáº» vá»‹ trÃ­ hiá»‡n táº¡i"
+            accessibilityLabel="Chia sẻ vị trí hiện tại"
             onPress={shareLocation}
             style={styles.toolButton}
           >
@@ -1478,42 +1567,34 @@ export function ChatScreen() {
         </View>
         {recorderState.isRecording && (
           <Text style={styles.recordingText}>
-            Äang ghi Ã¢m {Math.floor(recorderState.durationMillis / 1000)}s
+            Đang ghi âm {Math.floor(recorderState.durationMillis / 1000)}s
           </Text>
-        )}
-        {isBlocked && (
-          <View style={styles.blockedComposer}>
-            <Ionicons color={colors.danger} name="ban-outline" size={16} />
-            <Text style={styles.blockedComposerText}>
-              Ban da chan cuoc tro chuyen nay.
-            </Text>
-          </View>
         )}
         <View style={styles.inputRow}>
           <TextInput
-            editable={!isBlocked}
             multiline
             onChangeText={setContent}
-            placeholder="Nháº­p tin nháº¯n"
+            placeholder="Nhập tin nhắn"
             placeholderTextColor={colors.textMuted}
             style={styles.input}
             value={content}
           />
           <Pressable
-            accessibilityLabel="Gá»­i tin nháº¯n"
-            disabled={isBlocked || (!content.trim() && attachments.length === 0)}
+            accessibilityLabel="Gửi tin nhắn"
+            disabled={!content.trim() && attachments.length === 0}
             onPress={send}
             style={[
               styles.sendButton,
               !content.trim() &&
                 attachments.length === 0 &&
                 styles.sendButtonDisabled,
-              isBlocked && styles.sendButtonDisabled,
             ]}
           >
             <Ionicons color={colors.white} name="send" size={18} />
           </Pressable>
         </View>
+          </>
+        )}
       </View>
       <MediaViewer
         attachment={viewingAttachment}
@@ -1614,15 +1695,28 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
   },
-  fileName: { color: colors.text, flex: 1, fontSize: 13, fontWeight: "700" },
+  fileIcon: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 8,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  fileMeta: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  fileName: { color: colors.text, fontSize: 14, fontWeight: "800" },
   filePill: {
     alignItems: "center",
     backgroundColor: colors.background,
+    borderColor: colors.border,
     borderRadius: 8,
+    borderWidth: 1,
     flexDirection: "row",
-    gap: spacing.xs,
+    gap: spacing.sm,
+    minWidth: 220,
     padding: spacing.sm,
   },
+  fileText: { flex: 1 },
   header: {
     alignItems: "center",
     backgroundColor: colors.surface,
@@ -1837,6 +1931,19 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 2,
   },
+  emptyMessages: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl * 2,
+  },
+  emptyMessagesText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
   failedSendStatus: { color: colors.danger },
   sendButton: {
     alignItems: "center",
@@ -1849,15 +1956,22 @@ const styles = StyleSheet.create({
   sendButtonDisabled: { opacity: 0.45 },
   blockedComposer: {
     alignItems: "center",
-    backgroundColor: "rgba(239, 71, 111, 0.10)",
-    borderColor: "rgba(239, 71, 111, 0.24)",
+    backgroundColor: colors.background,
+    borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
-    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  blockedComposerText: { color: colors.danger, flex: 1, fontSize: 13, fontWeight: "800" },
+  blockedComposerText: {
+    color: colors.textMuted,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 18,
+  },
   senderName: { color: colors.text, fontSize: 12, fontWeight: "900" },
   smallAvatar: { borderRadius: 16, height: 32, width: 32 },
   theirBubble: {

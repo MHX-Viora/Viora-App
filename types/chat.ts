@@ -3,6 +3,11 @@ export type ChatParticipant = {
   displayName: string;
   avatarUrl: string | null;
   isVerified?: boolean;
+  isStranger?: boolean;
+  friendship?: {
+    status: string | null;
+    isRequester: boolean;
+  } | null;
 };
 
 export type ChatAttachment = {
@@ -42,7 +47,9 @@ export type Conversation = {
   name: string;
   avatarUrl: string | null;
   otherParticipant: ChatParticipant | null;
+  blockedBy?: ChatParticipant | null;
   memberCount?: number;
+  role?: number;
   lastMessage: LastMessage | null;
   unreadCount: number;
   isPinned: boolean;
@@ -166,6 +173,10 @@ export type ConversationsPage = {
 };
 
 export type MessagesPage = {
+  conversation: Pick<
+    Conversation,
+    "id" | "conversationType" | "isBlocked" | "blockedBy"
+  > | null;
   items: ChatMessage[];
   page: number;
   totalPages: number;

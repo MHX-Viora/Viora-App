@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 33,
     justifyContent: "center",
-    marginTop: -7,
+    marginTop: -12,
     width: 33,
   },
   createButtonPressed: {

@@ -9,10 +9,13 @@ import type { ChatSearchResult } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 
 const PAGE_SIZE = 30;
+const normalizeConversationId = (value: string) =>
+  value.replace(/-(attachments|links|report|search)(?:-|$).*/, "");
 
 export function ConversationSearchScreen() {
   const insets = useSafeAreaInsets();
-  const { conversationId = "" } = useLocalSearchParams<{ conversationId?: string }>();
+  const { conversationId: rawConversationId = "" } = useLocalSearchParams<{ conversationId?: string }>();
+  const conversationId = normalizeConversationId(rawConversationId);
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [items, setItems] = useState<ChatSearchResult[]>([]);
@@ -59,7 +62,7 @@ export function ConversationSearchScreen() {
         <TextInput
           autoFocus
           onChangeText={setKeyword}
-          placeholder="Tim tin nhan"
+          placeholder="Tìm tin nhắn"
           placeholderTextColor={colors.textMuted}
           style={styles.searchInput}
           value={keyword}
@@ -80,11 +83,11 @@ export function ConversationSearchScreen() {
               }
               style={styles.row}
             >
-              <Text numberOfLines={2} style={styles.content}>{item.content || "Tep dinh kem"}</Text>
-              <Text style={styles.meta}>{item.sender?.displayName ?? "Nguoi dung"} - {formatChatTime(item.createdAt)}</Text>
+              <Text numberOfLines={2} style={styles.content}>{item.content || "Tệp đính kèm"}</Text>
+              <Text style={styles.meta}>{item.sender?.displayName ?? "Người dùng"} - {formatChatTime(item.createdAt)}</Text>
             </Pressable>
           )}
-          ListEmptyComponent={<Text style={styles.empty}>{debouncedKeyword ? "Khong co ket qua." : "Nhap tu khoa de tim kiem."}</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{debouncedKeyword ? "Không có kết quả." : "Nhập từ khóa để tìm kiếm."}</Text>}
           ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.primary} /> : null}
           onEndReached={() => {
             if (loadingMore || page >= totalPages) return;

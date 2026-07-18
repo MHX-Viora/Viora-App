@@ -1,4 +1,4 @@
-﻿import {
+import {
   mapConversation,
   mapConversationsPage,
   mapMessage,
@@ -44,6 +44,19 @@ const getErrorMessage = (data: unknown, fallback: string) => {
   return fallback;
 };
 
+const getPrivateConversationErrorMessage = (
+  status: number,
+  data: unknown,
+) => {
+  if (status === 400) return "Không thể tạo cuộc trò chuyện.";
+  if (status === 403) {
+    return getErrorMessage(data, "Không thể tạo cuộc trò chuyện.");
+  }
+  if (status === 404) return "Không tìm thấy người dùng.";
+  if (status >= 500) return "Đã xảy ra lỗi, vui lòng thử lại.";
+  return getErrorMessage(data, "Không thể tạo cuộc trò chuyện.");
+};
+
 export const getConversations = async (query: {
   page: number;
   pageSize: number;
@@ -60,7 +73,7 @@ export const getConversations = async (query: {
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong tim thay cuoc tro chuyen."));
+    throw new Error(getErrorMessage(data, "Không thể tải cuộc trò chuyện."));
   return mapConversationsPage(data);
 };
 
@@ -77,15 +90,17 @@ export const getConversationMessages = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the tai tin nhan."));
+    throw new Error(getErrorMessage(data, "Không thể tải tin nhắn."));
   return mapMessagesPage(data);
 };
 
 export const getConversation = async (
   conversationId: string,
 ): Promise<Conversation> => {
+  const url = `${BASE_URL}/api/chat/conversations/${conversationId}`;
   const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/conversations/${conversationId}`,
+    url,
+    { headers: { Accept: "text/plain" } },
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
@@ -94,6 +109,42 @@ export const getConversation = async (
   if (!conversation)
     throw new Error("Backend trả về cuộc trò chuyện không hợp lệ.");
   return conversation;
+};
+
+export const createPrivateConversation = async (
+  userId: string,
+): Promise<string> => {
+  try {
+    const response = await authenticatedFetch(
+      `${BASE_URL}/api/chat/conversations/private`,
+      {
+        body: JSON.stringify({ userId }),
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      },
+    );
+    const data = parseResponseText(await response.text());
+    if (!response.ok) {
+      throw new Error(getPrivateConversationErrorMessage(response.status, data));
+    }
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "conversationId" in data &&
+      typeof (data as { conversationId?: unknown }).conversationId === "string"
+    ) {
+      return (data as { conversationId: string }).conversationId;
+    }
+    throw new Error("Không thể tạo cuộc trò chuyện.");
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("Không có kết nối mạng.");
+    }
+    throw error;
+  }
 };
 
 export const markConversationRead = async (
@@ -105,7 +156,7 @@ export const markConversationRead = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the danh dau da doc."));
+    throw new Error(getErrorMessage(data, "Không thể đánh dấu đã đọc."));
 };
 
 export const setConversationPinned = async (
@@ -122,7 +173,7 @@ export const setConversationPinned = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the cap nhat ghim tro chuyen."));
+    throw new Error(getErrorMessage(data, "Không thể cập nhật ghim trò chuyện."));
 };
 
 export const setConversationMuted = async (
@@ -139,7 +190,7 @@ export const setConversationMuted = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the cap nhat thong bao tro chuyen."));
+    throw new Error(getErrorMessage(data, "Không thể cập nhật thông báo trò chuyện."));
 };
 
 export const setConversationBlocked = async (
@@ -156,24 +207,34 @@ export const setConversationBlocked = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the cap nhat chan nguoi dung."));
+    throw new Error(getErrorMessage(data, "Không thể cập nhật chặn người dùng."));
 };
 
+export const leaveConversation = async (conversationId: string): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/conversations/${conversationId}/leave`,
+    { method: "POST" },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể rời nhóm."));
+  }
+};
 export const getConversationAttachments = async (
   conversationId: string,
-  query: { type: number; page: number; pageSize: number },
+  query: { type?: number; page: number; pageSize: number },
 ): Promise<ChatSharedAttachmentsPage> => {
   const params = new URLSearchParams({
     page: String(query.page),
     pageSize: String(query.pageSize),
-    type: String(query.type),
   });
+  if (typeof query.type === "number") params.set("type", String(query.type));
   const response = await authenticatedFetch(
     `${BASE_URL}/api/chat/conversations/${conversationId}/attachments?${params.toString()}`,
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the tai tep da chia se."));
+    throw new Error(getErrorMessage(data, "Không thể tải tệp đã chia sẻ."));
   return mapSharedAttachmentsPage(data);
 };
 
@@ -185,12 +246,13 @@ export const getConversationLinks = async (
     page: String(query.page),
     pageSize: String(query.pageSize),
   });
+  const url = `${BASE_URL}/api/chat/conversations/${conversationId}/links?${params.toString()}`;
   const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/conversations/${conversationId}/links?${params.toString()}`,
+    url,
+    { headers: { Accept: "text/plain" } },
   );
   const data = parseResponseText(await response.text());
-  if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the tai lien ket da chia se."));
+  if (!response.ok) throw new Error("Không thể tải liên kết đã chia sẻ.");
   return mapSharedLinksPage(data);
 };
 
@@ -208,7 +270,7 @@ export const searchConversationMessages = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the tim kiem tin nhan."));
+    throw new Error(getErrorMessage(data, "Không thể tìm kiếm tin nhắn."));
   return mapSearchResultsPage(data);
 };
 
@@ -226,10 +288,10 @@ export const recallChatMessage = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the thu hoi tin nhan."));
+    throw new Error(getErrorMessage(data, "Không thể thu hồi tin nhắn."));
 
   if (typeof data !== "object" || data === null) {
-    throw new Error("Backend tra ve du lieu thu hoi khong hop le.");
+    throw new Error("Backend trả về dữ liệu thu hồi không hợp lệ.");
   }
   const result = data as Record<string, unknown>;
   return {
@@ -329,7 +391,7 @@ const uploadChatAttachments = async (
 
   if (!response.ok) {
     throw new Error(
-      getErrorMessage(data, "Khong the upload tep dinh kem chat."),
+      getErrorMessage(data, "Không thể upload tệp đính kèm chat."),
     );
   }
 
@@ -338,7 +400,7 @@ const uploadChatAttachments = async (
     .filter((item): item is UploadedChatAttachment => item !== null);
 
   if (uploaded.length !== attachments.length) {
-    throw new Error("Backend tra ve du lieu upload tep khong hop le.");
+    throw new Error("Backend trả về dữ liệu upload tệp không hợp lệ.");
   }
 
   return uploaded;
@@ -373,9 +435,9 @@ export const sendChatMessage = async (input: {
   });
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Khong the gui tin nhan."));
+    throw new Error(getErrorMessage(data, "Không thể gửi tin nhắn."));
   const message = mapMessage(data);
-  if (!message) throw new Error("Backend tra ve tin nhan khong hop le.");
+  if (!message) throw new Error("Backend trả về tin nhắn không hợp lệ.");
   return message;
 };
 

@@ -16,6 +16,7 @@ import { CommentsModal } from "@/components/comments/comments-modal";
 import { ProfileContent } from "@/components/profile/profile-content";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { openProfileByUserId } from "@/features/profile/open-profile";
+import { createPrivateConversation } from "@/services/chat.service";
 import { getPosts } from "@/services/feed.service";
 import { deleteFriend } from "@/services/friend.service";
 import { reactPost, savePost } from "@/services/post.service";
@@ -65,6 +66,7 @@ export function UserProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadErrorMessage, setLoadErrorMessage] = useState("");
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isChatLoading, setIsChatLoading] = useState(false);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [commentTargetType, setCommentTargetType] = useState<"post" | "reel" | null>(
     null,
@@ -196,15 +198,36 @@ export function UserProfileScreen() {
     }
   };
 
-  const handleChat = () => {
-    if (!profile || !canOpenConversation(profile)) return;
+  const openChatRoom = useCallback((conversationId: string) => {
     router.push({
-      pathname: "/(tabs)/chat",
-      params: profile.conversationId
-        ? { conversationId: profile.conversationId }
-        : undefined,
+      pathname: "/chat/[conversationId]",
+      params: { conversationId },
     });
-  };
+  }, []);
+
+  const handleChat = useCallback(async () => {
+    if (!profile || !canOpenConversation(profile) || isChatLoading) return;
+    if (profile.conversationId) {
+      openChatRoom(profile.conversationId);
+      return;
+    }
+
+    setIsChatLoading(true);
+    try {
+      const conversationId = await createPrivateConversation(profile.id);
+      setProfile((current) =>
+        current ? { ...current, conversationId } : current,
+      );
+      openChatRoom(conversationId);
+    } catch (error) {
+      Alert.alert(
+        "Không thể tạo cuộc trò chuyện.",
+        error instanceof Error ? error.message : "Đã xảy ra lỗi, vui lòng thử lại.",
+      );
+    } finally {
+      setIsChatLoading(false);
+    }
+  }, [isChatLoading, openChatRoom, profile]);
 
   const handleReactPost = async (postId: string, reactionType: number) => {
     try {
@@ -394,6 +417,7 @@ export function UserProfileScreen() {
             canMessage={canChat}
             friendLabel={getFriendLabel(profile.friendship?.status)}
             friendshipStatus={profile.friendship?.status ?? null}
+            isChatLoading={isChatLoading}
             isActionLoading={isActionLoading}
             isFollowing={profile.isFollowing}
             onChat={handleChat}
@@ -438,6 +462,7 @@ function ProfileActions({
   friendLabel,
   friendshipStatus,
   isActionLoading,
+  isChatLoading,
   isFollowing,
   onChat,
   onFollow,
@@ -447,6 +472,7 @@ function ProfileActions({
   friendLabel: string;
   friendshipStatus: string | null;
   isActionLoading: boolean;
+  isChatLoading: boolean;
   isFollowing: boolean;
   onChat: () => void;
   onFollow: () => void;
@@ -479,7 +505,13 @@ function ProfileActions({
         primary={!isFollowing}
       />
       {canMessage && (
-        <ActionButton icon="chatbubble-outline" label="Trò chuyện" onPress={onChat} />
+        <ActionButton
+          disabled={isChatLoading}
+          icon="chatbubble-outline"
+          label="Nhắn tin"
+          loading={isChatLoading}
+          onPress={onChat}
+        />
       )}
     </View>
   );
@@ -490,6 +522,7 @@ function ActionButton({
   disabled,
   icon,
   label,
+  loading,
   onPress,
   primary,
 }: {
@@ -497,6 +530,7 @@ function ActionButton({
   disabled?: boolean;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
+  loading?: boolean;
   onPress: () => void;
   primary?: boolean;
 }) {
@@ -513,11 +547,18 @@ function ActionButton({
         disabled && styles.actionDisabled,
       ]}
     >
-      <Ionicons
-        color={primary || danger ? colors.white : colors.text}
-        name={icon}
-        size={17}
-      />
+      {loading ? (
+        <ActivityIndicator
+          color={primary || danger ? colors.white : colors.text}
+          size="small"
+        />
+      ) : (
+        <Ionicons
+          color={primary || danger ? colors.white : colors.text}
+          name={icon}
+          size={17}
+        />
+      )}
       <Text
         style={[
           styles.actionText,

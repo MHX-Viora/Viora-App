@@ -39,8 +39,30 @@ const asArray = (value: unknown): unknown[] => Array.isArray(value) ? value : []
 const asNullableNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
-const asConversationType = (value: unknown): "Private" | "Group" =>
-  asString(value) === "Private" ? "Private" : "Group";
+const asConversationType = (value: unknown): "Private" | "Group" => {
+  if (value === 0 || asString(value) === "0" || asString(value) === "Private") {
+    return "Private";
+  }
+  return "Group";
+};
+
+const asAttachmentType = (
+  fileType: unknown,
+  typeValue: unknown,
+  mimeType: unknown,
+): ChatAttachment["type"] => {
+  const numericType = asNullableNumber(fileType ?? typeValue);
+  if (numericType === 1) return "image";
+  if (numericType === 2) return "video";
+  if (numericType === 4) return "audio";
+  if (numericType === 3) return "file";
+
+  const rawType = asString(typeValue ?? mimeType).toLowerCase();
+  if (rawType.includes("image")) return "image";
+  if (rawType.includes("video")) return "video";
+  if (rawType.includes("audio")) return "audio";
+  return "file";
+};
 
 const mapParticipant = (value: unknown): ChatParticipant | null => {
   if (!isRecord(value)) return null;
@@ -49,7 +71,14 @@ const mapParticipant = (value: unknown): ChatParticipant | null => {
   return {
     avatarUrl: asString(value.avatarUrl ?? value.avatar, "") || null,
     displayName: asString(value.displayName ?? value.name ?? value.fullName, "Người dùng"),
+    friendship: isRecord(value.friendship)
+      ? {
+          isRequester: asBoolean(value.friendship.isRequester),
+          status: asString(value.friendship.status, "") || null,
+        }
+      : null,
     id,
+    isStranger: asBoolean(value.isStranger),
     isVerified: asBoolean(value.isVerified),
   };
 };
@@ -74,17 +103,10 @@ const mapAttachment = (value: unknown): ChatAttachment | null => {
   if (!isRecord(value)) return null;
   const url = asString(value.url ?? value.fileUrl);
   if (!url) return null;
-  const rawType = asString(value.type ?? value.fileType ?? value.mimeType).toLowerCase();
-  const type = rawType.includes("image")
-    ? "image"
-    : rawType.includes("video")
-      ? "video"
-      : rawType.includes("audio")
-        ? "audio"
-        : "file";
+  const type = asAttachmentType(value.fileType, value.type, value.mimeType);
 
   return {
-    id: asString(value.id, url),
+    id: asString(value.id ?? value.attachmentId, url),
     name: asString(value.name ?? value.fileName, "Tệp đính kèm"),
     thumbnailUrl: asString(value.thumbnailUrl, "") || null,
     type,
@@ -127,10 +149,14 @@ export const mapConversation = (value: unknown): Conversation | null => {
   const id = asString(value.id ?? value.conversationId);
   if (!id) return null;
   const type = asConversationType(value.conversationType ?? value.type);
-  const otherParticipant = mapParticipant(value.otherParticipant ?? value.participant);
+  const otherUsers = asArray(value.otherUsers);
+  const otherParticipant =
+    mapParticipant(value.otherParticipant ?? value.participant) ??
+    mapParticipant(otherUsers[0]);
 
   return {
     avatarUrl: asString(value.avatarUrl ?? value.avatar, "") || null,
+    blockedBy: mapParticipant(value.blockedBy),
     conversationType: type,
     id,
     isBlocked: asBoolean(value.isBlocked),
@@ -140,6 +166,7 @@ export const mapConversation = (value: unknown): Conversation | null => {
     memberCount: asNumber(value.memberCount ?? value.membersCount, 0),
     name: asString(value.name ?? value.title, type === "Private" ? "Cuộc trò chuyện" : "Nhóm"),
     otherParticipant,
+    role: asNumber(value.role ?? value.myRole ?? value.memberRole, 0),
     unreadCount: asNumber(value.unreadCount),
   };
 };
@@ -299,7 +326,7 @@ const mapSharedLink = (value: unknown): ChatSharedLink | null => {
   if (!url) return null;
   return {
     createdAt: asString(value.createdAt ?? value.sentAt),
-    id: asString(value.id, url),
+    id: asString(value.id ?? value.messageId, url),
     sender: mapParticipant(value.sender ?? value.user),
     url,
   };
@@ -324,11 +351,29 @@ export const mapConversationsPage = (data: unknown): ConversationsPage => ({
   totalPages: isRecord(data) ? asNumber(data.totalPages, asNumber(data.totalPage, 1)) : 1,
 });
 
-export const mapMessagesPage = (data: unknown): MessagesPage => ({
-  items: pageItems(data).map(mapMessage).filter((item): item is ChatMessage => item !== null),
-  page: isRecord(data) ? asNumber(data.page, 1) : 1,
-  totalPages: isRecord(data) ? asNumber(data.totalPages, asNumber(data.totalPage, 1)) : 1,
-});
+export const mapMessagesPage = (data: unknown): MessagesPage => {
+  const conversation = isRecord(data)
+    ? mapConversation(data.conversation)
+    : null;
+
+  return {
+    conversation: conversation
+      ? {
+          blockedBy: conversation.blockedBy,
+          conversationType: conversation.conversationType,
+          id: conversation.id,
+          isBlocked: conversation.isBlocked,
+        }
+      : null,
+    items: pageItems(data)
+      .map(mapMessage)
+      .filter((item): item is ChatMessage => item !== null),
+    page: isRecord(data) ? asNumber(data.page, 1) : 1,
+    totalPages: isRecord(data)
+      ? asNumber(data.totalPages, asNumber(data.totalPage, 1))
+      : 1,
+  };
+};
 
 export const mapSharedAttachmentsPage = (
   data: unknown,

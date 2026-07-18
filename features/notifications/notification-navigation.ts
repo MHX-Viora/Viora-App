@@ -58,8 +58,11 @@ export const navigateNotification = (
 
   if (reference.type === 3 || reference.type === 4) {
     appRouter.push({
-      pathname: "/chat",
-      params: { conversationId: reference.id, messageId: reference.id },
+      pathname: "/chat/[conversationId]",
+      params: {
+        conversationId: reference.id,
+        scrollToMessageId: reference.id,
+      },
     });
     return;
   }

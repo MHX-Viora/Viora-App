@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 import "react-native-reanimated";
 
+import { AppToastHost } from "@/components/common/app-toast";
 import {
   registerPushNotifications,
   setupNotificationHandling,
@@ -95,7 +96,10 @@ export default function RootLayout() {
         <Stack.Screen name="chat/[conversationId]" />
         <Stack.Screen name="chat/settings/[conversationId]" />
         <Stack.Screen name="chat/settings/[conversationId]-attachments" />
+        <Stack.Screen name="chat/settings/attachments" />
         <Stack.Screen name="chat/settings/[conversationId]-links" />
+        <Stack.Screen name="chat/settings/links" />
+        <Stack.Screen name="chat/settings/[conversationId]-report" />
         <Stack.Screen name="chat/settings/[conversationId]-search" />
         <Stack.Screen name="users/[userId]" />
         <Stack.Screen name="login" />
@@ -103,6 +107,7 @@ export default function RootLayout() {
         <Stack.Screen name="complete-profile" />
       </Stack>
       <StatusBar style="auto" />
+      <AppToastHost />
     </>
   );
 }

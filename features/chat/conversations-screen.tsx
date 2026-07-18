@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,6 +24,7 @@ import {
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
 import {
+  getConversation,
   getConversations,
   markConversationRead,
   setConversationMuted,
@@ -36,6 +37,9 @@ import { formatChatTime } from "@/utils/chat-time";
 import { setChatUnreadCount } from "@/utils/chat-unread-count";
 
 const PAGE_SIZE = 20;
+
+const firstParam = (value: string | string[] | undefined) =>
+  Array.isArray(value) ? value[0] ?? "" : value ?? "";
 
 const getLastMessageTime = (conversation: Conversation) => {
   const value = conversation.lastMessage?.createdAt;
@@ -74,12 +78,32 @@ const getAvatar = (conversation: Conversation) =>
     ? (conversation.otherParticipant?.avatarUrl ?? conversation.avatarUrl)
     : conversation.avatarUrl;
 
+const getConversationRouteParams = (
+  conversation: Conversation,
+  scrollToMessageId?: string,
+) => {
+  const avatar = getAvatar(conversation);
+  return {
+    conversationAvatarUrl: avatar ?? "",
+    conversationId: conversation.id,
+    conversationName: getTitle(conversation),
+    conversationType: conversation.conversationType,
+    isMuted: String(conversation.isMuted),
+    isPinned: String(conversation.isPinned),
+    isVerified: String(conversation.otherParticipant?.isVerified ?? false),
+    otherAvatarUrl: conversation.otherParticipant?.avatarUrl ?? "",
+    otherUserId: conversation.otherParticipant?.id ?? "",
+    otherUserName: conversation.otherParticipant?.displayName ?? "",
+    scrollToMessageId,
+  };
+};
+
 const getLastMessageText = (conversation: Conversation) => {
   const lastMessage = conversation.lastMessage;
   if (!lastMessage) return "Chưa có tin nhắn.";
 
   if (lastMessage.isDeleted || lastMessage.messageType === 7) {
-    return `${lastMessage.isMine ? "Báº¡n: " : ""}Tin nhắn đã được thu hồi`;
+    return `${lastMessage.isMine ? "Bạn: " : ""}Tin nhắn đã được thu hồi`;
   }
 
   const content = lastMessage.content.trim();
@@ -103,41 +127,26 @@ const getLastMessageText = (conversation: Conversation) => {
 function ConversationRow({
   conversation,
   isPinLoading,
+  onOpen,
   onOpenMenu,
 }: {
   conversation: Conversation;
   isPinLoading: boolean;
+  onOpen: (conversation: Conversation) => void;
   onOpenMenu: (conversation: Conversation) => void;
 }) {
   const title = getTitle(conversation);
   const avatar = getAvatar(conversation);
-  const preview = conversation.lastMessage
-    ? `${conversation.lastMessage.isMine ? "Bạn: " : ""}${conversation.lastMessage.content}`
-    : "Chưa có tin nhắn.";
+  const isPrivate = conversation.conversationType === "Private";
+  const otherParticipant = conversation.otherParticipant;
+  const showVerified = isPrivate && otherParticipant?.isVerified === true;
+  const showStrangerBadge = isPrivate && otherParticipant?.isStranger === true;
 
   return (
     <Pressable
       accessibilityRole="button"
       onLongPress={() => onOpenMenu(conversation)}
-      onPress={() =>
-        router.push({
-          pathname: "/chat/[conversationId]",
-          params: {
-            conversationAvatarUrl: avatar ?? "",
-            conversationId: conversation.id,
-            conversationName: title,
-            conversationType: conversation.conversationType,
-            isMuted: String(conversation.isMuted),
-            isPinned: String(conversation.isPinned),
-            isVerified: String(
-              conversation.otherParticipant?.isVerified ?? false,
-            ),
-            otherAvatarUrl: conversation.otherParticipant?.avatarUrl ?? "",
-            otherUserId: conversation.otherParticipant?.id ?? "",
-            otherUserName: conversation.otherParticipant?.displayName ?? "",
-          },
-        })
-      }
+      onPress={() => onOpen(conversation)}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       {avatar ? (
@@ -156,14 +165,22 @@ function ConversationRow({
           <Text numberOfLines={1} style={styles.title}>
             {title}
           </Text>
+          {showVerified ? (
+            <Ionicons color={colors.primary} name="checkmark-circle" size={16} />
+          ) : null}
           {conversation.isMuted && (
             <Ionicons
               color={colors.textMuted}
               name="notifications-off"
-              size={14}
+              size={18}
             />
           )}
         </View>
+        {showStrangerBadge ? (
+          <View style={styles.strangerBadge}>
+            <Text style={styles.strangerBadgeText}>Người lạ</Text>
+          </View>
+        ) : null}
         <Text
           numberOfLines={1}
           style={[
@@ -176,7 +193,7 @@ function ConversationRow({
       </View>
       <View style={styles.meta}>
         {conversation.isPinned && (
-          <Ionicons color={colors.primary} name="bookmark" size={14} />
+          <Ionicons color={colors.primary} name="pricetag" size={15} />
         )}
         <Text style={styles.time}>
           {conversation.lastMessage
@@ -200,6 +217,10 @@ function ConversationRow({
 
 export function ConversationsScreen() {
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{
+    conversationId?: string | string[];
+    scrollToMessageId?: string | string[];
+  }>();
   const [items, setItems] = useState<Conversation[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -212,9 +233,13 @@ export function ConversationsScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
+  const [openedConversationId, setOpenedConversationId] = useState("");
   const [actionLoadingIds, setActionLoadingIds] = useState<Set<string>>(
     () => new Set(),
   );
+
+  const requestedConversationId = firstParam(params.conversationId);
+  const requestedMessageId = firstParam(params.scrollToMessageId);
 
   useEffect(() => {
     getUser().then((user) => setCurrentUserId(user?.id ?? null));
@@ -230,6 +255,19 @@ export function ConversationsScreen() {
     const timer = setTimeout(() => setDebouncedKeyword(keyword), 300);
     return () => clearTimeout(timer);
   }, [keyword]);
+
+  const openConversation = useCallback(
+    (conversation: Conversation) => {
+      router.push({
+        pathname: "/chat/[conversationId]",
+        params: getConversationRouteParams(
+          conversation,
+          requestedMessageId || undefined,
+        ),
+      });
+    },
+    [requestedMessageId],
+  );
 
   const load = useCallback(
     async (nextPage: number, mode: "initial" | "refresh" | "more") => {
@@ -268,6 +306,45 @@ export function ConversationsScreen() {
   useEffect(() => {
     load(1, "initial");
   }, [load]);
+
+  useEffect(() => {
+    if (!requestedConversationId || openedConversationId === requestedConversationId) {
+      return;
+    }
+
+    const existing = items.find((item) => item.id === requestedConversationId);
+    if (existing) {
+      setOpenedConversationId(requestedConversationId);
+      openConversation(existing);
+      return;
+    }
+
+    let isMounted = true;
+    void getConversation(requestedConversationId)
+      .then((conversation) => {
+        if (!isMounted) return;
+        setItems((current) => mergeConversations(current, [conversation]));
+        setOpenedConversationId(requestedConversationId);
+        openConversation(conversation);
+      })
+      .catch((openError) => {
+        if (!isMounted) return;
+        setOpenedConversationId(requestedConversationId);
+        Alert.alert(
+          "Không thể mở cuộc trò chuyện",
+          openError instanceof Error ? openError.message : "Vui lòng thử lại.",
+        );
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    items,
+    openConversation,
+    openedConversationId,
+    requestedConversationId,
+  ]);
 
   useEffect(
     () =>
@@ -529,6 +606,7 @@ export function ConversationsScreen() {
             <ConversationRow
               conversation={item}
               isPinLoading={actionLoadingIds.has(item.id)}
+              onOpen={openConversation}
               onOpenMenu={openConversationMenu}
             />
           )}
@@ -572,8 +650,8 @@ export function ConversationsScreen() {
                         color={colors.primary}
                         name={
                           selectedConversation.isPinned
-                            ? "bookmark"
-                            : "bookmark-outline"
+                            ? "pricetag"
+                            : "pricetag-outline"
                         }
                         size={20}
                       />
@@ -736,7 +814,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   menuTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
-  meta: { alignItems: "flex-end", gap: spacing.sm, minWidth: 42 },
+  meta: { alignItems: "flex-end", gap: 4, minWidth: 42 },
   preview: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   reportMenuIcon: { backgroundColor: "rgba(240, 68, 56, 0.12)" },
   reportText: { color: colors.danger },
@@ -771,8 +849,22 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 0,
   },
+  strangerBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  strangerBadgeText: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+  },
   time: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
   title: { color: colors.text, flex: 1, fontSize: 16, fontWeight: "800" },
-  titleLine: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  titleLine: { alignItems: "center", flexDirection: "row", gap: 3 },
   unreadPreview: { color: colors.text, fontWeight: "800" },
 });
