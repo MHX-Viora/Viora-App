@@ -7,16 +7,15 @@ import {
   Alert,
   Animated,
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  ToastAndroid,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { showAppToast } from "@/components/common/app-toast";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import {
   acceptFriendRequest,
@@ -37,15 +36,6 @@ const tabStatus: Record<FriendTab, FriendStatus> = {
 const tabLabels: Record<FriendTab, string> = {
   friends: "Bạn bè",
   requests: "Yêu cầu kết bạn",
-};
-
-const showToast = (message: string) => {
-  if (Platform.OS === "android") {
-    ToastAndroid.show(message, ToastAndroid.SHORT);
-    return;
-  }
-
-  Alert.alert("Viora", message);
 };
 
 const getInitialTab = (value?: string): FriendTab =>
@@ -160,7 +150,10 @@ export function FriendsScreen() {
       try {
         await acceptFriendRequest(friendshipId);
         removeFriendship(friendshipId);
-        showToast("Đã đồng ý lời mời kết bạn.");
+        showAppToast({
+          message: "Đã đồng ý lời mời kết bạn.",
+          type: "success",
+        });
       } catch (error) {
         Alert.alert(
           "Không thể xác nhận",
@@ -181,7 +174,10 @@ export function FriendsScreen() {
       try {
         await rejectFriendRequest(friendshipId);
         removeFriendship(friendshipId);
-        showToast("Đã từ chối lời mời kết bạn.");
+        showAppToast({
+          message: "Đã từ chối lời mời kết bạn.",
+          type: "success",
+        });
       } catch (error) {
         Alert.alert(
           "Không thể từ chối",

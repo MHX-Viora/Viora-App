@@ -1,3 +1,4 @@
+import { MessageType } from "@/types/chat";
 import type {
   ChatAttachment,
   ChatMessage,
@@ -29,8 +30,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const asString = (value: unknown, fallback = "") =>
   typeof value === "string" ? value : fallback;
 
-const asNumber = (value: unknown, fallback = 0) =>
-  typeof value === "number" && Number.isFinite(value) ? value : fallback;
+const asNumber = (value: unknown, fallback = 0) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
 
 const asBoolean = (value: unknown) => value === true;
 
@@ -38,6 +45,14 @@ const asArray = (value: unknown): unknown[] => Array.isArray(value) ? value : []
 
 const asNullableNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const getMessagePayload = (value: unknown): unknown => {
+  if (!isRecord(value) || !isRecord(value.message)) return value;
+  return {
+    ...value.message,
+    conversationId: value.message.conversationId ?? value.conversationId,
+  };
+};
 
 const asConversationType = (value: unknown): "Private" | "Group" => {
   if (value === 0 || asString(value) === "0" || asString(value) === "Private") {
@@ -80,6 +95,21 @@ const mapParticipant = (value: unknown): ChatParticipant | null => {
     id,
     isStranger: asBoolean(value.isStranger),
     isVerified: asBoolean(value.isVerified),
+  };
+};
+
+const mapGroupPreviewMember = (value: unknown) => {
+  if (!isRecord(value)) return null;
+  const id = asString(value.id ?? value.userId);
+  if (!id) return null;
+  return {
+    avatarUrl: asString(value.avatarUrl ?? value.avatar, "") || null,
+    displayName: asString(value.displayName ?? value.name ?? value.fullName, "Người dùng"),
+    id,
+    isOnline: asBoolean(value.isOnline),
+    isVerified: asBoolean(value.isVerified),
+    joinedAt: asString(value.joinedAt),
+    role: asNumber(value.role),
   };
 };
 
@@ -156,8 +186,15 @@ export const mapConversation = (value: unknown): Conversation | null => {
 
   return {
     avatarUrl: asString(value.avatarUrl ?? value.avatar, "") || null,
+    canSendMessage:
+      "canSendMessage" in value
+        ? typeof value.canSendMessage === "boolean"
+          ? value.canSendMessage
+          : asNumber(value.canSendMessage, 0)
+        : undefined,
     blockedBy: mapParticipant(value.blockedBy),
     conversationType: type,
+    createdBy: mapParticipant(value.createdBy),
     id,
     isBlocked: asBoolean(value.isBlocked),
     isMuted: asBoolean(value.isMuted),
@@ -166,30 +203,46 @@ export const mapConversation = (value: unknown): Conversation | null => {
     memberCount: asNumber(value.memberCount ?? value.membersCount, 0),
     name: asString(value.name ?? value.title, type === "Private" ? "Cuộc trò chuyện" : "Nhóm"),
     otherParticipant,
-    role: asNumber(value.role ?? value.myRole ?? value.memberRole, 0),
+    onlyAdminCanSend:
+      "onlyAdminCanSend" in value ? asBoolean(value.onlyAdminCanSend) : undefined,
+    role: asNumber(value.myRole ?? value.role ?? value.memberRole, 0),
+    membersPreview: asArray(value.membersPreview)
+      .map(mapGroupPreviewMember)
+      .filter((item): item is NonNullable<typeof item> => item !== null),
     unreadCount: asNumber(value.unreadCount),
   };
 };
 
 export const mapMessage = (value: unknown): ChatMessage | null => {
-  if (!isRecord(value)) return null;
-  const id = asString(value.id ?? value.messageId);
-  const sender = mapParticipant(value.sender ?? value.user);
+  const payload = getMessagePayload(value);
+  if (!isRecord(payload)) return null;
+  const id = asString(payload.id ?? payload.messageId);
+  const messageType = asNullableNumber(payload.messageType ?? payload.type);
+  const sender =
+    mapParticipant(payload.sender ?? payload.user) ??
+    (messageType === MessageType.System
+      ? {
+          avatarUrl: null,
+          displayName: "Hệ thống",
+          id: "system",
+          isVerified: false,
+        }
+      : null);
   if (!id || !sender) return null;
 
   return {
-    attachments: asArray(value.attachments).map(mapAttachment).filter((item): item is ChatAttachment => item !== null),
-    content: asString(value.content ?? value.text),
-    conversationId: asString(value.conversationId),
-    createdAt: asString(value.createdAt ?? value.sentAt),
-    deletedBy: asString(value.deletedBy, "") || undefined,
+    attachments: asArray(payload.attachments).map(mapAttachment).filter((item): item is ChatAttachment => item !== null),
+    content: asString(payload.content ?? payload.text),
+    conversationId: asString(payload.conversationId),
+    createdAt: asString(payload.createdAt ?? payload.sentAt),
+    deletedBy: asString(payload.deletedBy, "") || undefined,
     id,
-    isDeleted: asBoolean(value.isDeleted),
-    isEdited: asBoolean(value.isEdited),
-    isMine: asBoolean(value.isMine),
-    messageType: asNullableNumber(value.messageType),
-    reactions: asArray(value.reactions).map(mapReaction).filter((item): item is ChatReaction => item !== null),
-    reply: mapReply(value.reply ?? value.replyMessage ?? value.replyTo),
+    isDeleted: asBoolean(payload.isDeleted),
+    isEdited: asBoolean(payload.isEdited),
+    isMine: asBoolean(payload.isMine),
+    messageType,
+    reactions: asArray(payload.reactions).map(mapReaction).filter((item): item is ChatReaction => item !== null),
+    reply: mapReply(payload.reply ?? payload.replyMessage ?? payload.replyTo),
     sender,
   };
 };
@@ -359,10 +412,17 @@ export const mapMessagesPage = (data: unknown): MessagesPage => {
   return {
     conversation: conversation
       ? {
+          avatarUrl: conversation.avatarUrl,
           blockedBy: conversation.blockedBy,
           conversationType: conversation.conversationType,
           id: conversation.id,
           isBlocked: conversation.isBlocked,
+          memberCount: conversation.memberCount,
+          name: conversation.name,
+          onlyAdminCanSend: conversation.onlyAdminCanSend,
+          otherParticipant: conversation.otherParticipant,
+          role: conversation.role,
+          canSendMessage: conversation.canSendMessage,
         }
       : null,
     items: pageItems(data)

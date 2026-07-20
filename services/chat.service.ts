@@ -9,8 +9,11 @@ import {
 } from "@/features/chat/chat.mapper";
 import { authenticatedFetch } from "@/services/authenticated-fetch";
 import { getAccessToken } from "@/stores/session-store";
+import type { CreateGroupInput } from "@/types/chat-group";
 import type {
   ChatMessage,
+  ChatGroupMember,
+  ChatGroupMembersPage,
   ChatSearchResultsPage,
   ChatSharedAttachmentsPage,
   ChatSharedLinksPage,
@@ -44,6 +47,24 @@ const getErrorMessage = (data: unknown, fallback: string) => {
   return fallback;
 };
 
+export class ChatApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ChatApiError";
+    this.status = status;
+  }
+}
+
+const throwChatApiError = (
+  response: Response,
+  data: unknown,
+  fallback: string,
+): never => {
+  throw new ChatApiError(getErrorMessage(data, fallback), response.status);
+};
+
 const getPrivateConversationErrorMessage = (
   status: number,
   data: unknown,
@@ -56,6 +77,40 @@ const getPrivateConversationErrorMessage = (
   if (status >= 500) return "Đã xảy ra lỗi, vui lòng thử lại.";
   return getErrorMessage(data, "Không thể tạo cuộc trò chuyện.");
 };
+
+const mapGroupMember = (value: unknown): ChatGroupMember | null => {
+  if (!isRecord(value)) return null;
+  const id = asString(value.id ?? value.userId);
+  if (!id) return null;
+
+  return {
+    avatarUrl: asString(value.avatarUrl ?? value.avatar, "") || null,
+    displayName: asString(value.displayName ?? value.name ?? value.fullName, "Người dùng"),
+    id,
+    isOnline: value.isOnline === true,
+    isVerified: value.isVerified === true,
+    joinedAt: asString(value.joinedAt),
+    role: asNumber(value.role),
+  };
+};
+
+const getPageItems = (data: unknown) => {
+  if (!isRecord(data)) return [];
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.results)) return data.results;
+  return [];
+};
+
+const mapGroupMembersPage = (data: unknown): ChatGroupMembersPage => ({
+  items: getPageItems(data)
+    .map(mapGroupMember)
+    .filter((item): item is ChatGroupMember => item !== null),
+  page: isRecord(data) ? asNumber(data.page, 1) : 1,
+  totalPages: isRecord(data)
+    ? asNumber(data.totalPages, asNumber(data.totalPage, 1))
+    : 1,
+});
 
 export const getConversations = async (query: {
   page: number;
@@ -73,7 +128,7 @@ export const getConversations = async (query: {
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Không thể tải cuộc trò chuyện."));
+    throwChatApiError(response, data, "Không thể tải cuộc trò chuyện.");
   return mapConversationsPage(data);
 };
 
@@ -90,7 +145,7 @@ export const getConversationMessages = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Không thể tải tin nhắn."));
+    throwChatApiError(response, data, "Không thể tải tin nhắn.");
   return mapMessagesPage(data);
 };
 
@@ -104,11 +159,53 @@ export const getConversation = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Không thể tải cuộc trò chuyện."));
+    throwChatApiError(response, data, "Không thể tải cuộc trò chuyện.");
   const conversation = mapConversation(data);
   if (!conversation)
     throw new Error("Backend trả về cuộc trò chuyện không hợp lệ.");
   return conversation;
+};
+
+export const getGroupDetails = async (
+  conversationId: string,
+): Promise<Conversation> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}`,
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể tải thông tin nhóm."));
+  }
+  const conversation = mapConversation({
+    ...(isRecord(data) ? data : {}),
+    conversationType: "Group",
+    id: isRecord(data) ? (data.id ?? conversationId) : conversationId,
+  });
+  if (!conversation) {
+    throw new Error("Backend trả về thông tin nhóm không hợp lệ.");
+  }
+  return conversation;
+};
+
+export const getGroupMembers = async (
+  conversationId: string,
+  query: { keyword?: string; page: number; pageSize: number },
+): Promise<ChatGroupMembersPage> => {
+  const params = new URLSearchParams({
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  });
+  if (query.keyword?.trim()) params.set("keyword", query.keyword.trim());
+
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/members?${params.toString()}`,
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể tải thành viên nhóm."));
+  }
+
+  return mapGroupMembersPage(data);
 };
 
 export const createPrivateConversation = async (
@@ -147,6 +244,46 @@ export const createPrivateConversation = async (
   }
 };
 
+const appendGroupAvatar = (formData: FormData, avatarUri?: string) => {
+  if (!avatarUri) return;
+  const extension = avatarUri.split(".").pop()?.split("?")[0] || "jpg";
+  formData.append("avatar", {
+    name: `group-avatar.${extension}`,
+    type: extension.toLowerCase() === "png" ? "image/png" : "image/jpeg",
+    uri: avatarUri,
+  } as unknown as Blob);
+};
+
+export const createGroupConversation = async (
+  input: CreateGroupInput,
+): Promise<Conversation> => {
+  const formData = new FormData();
+  formData.append("name", input.name);
+  appendGroupAvatar(formData, input.avatarUri);
+  input.memberIds.forEach((memberId) => {
+    formData.append("memberIds[]", memberId);
+  });
+
+  const response = await authenticatedFetch(`${BASE_URL}/api/chat/groups`, {
+    body: formData,
+    method: "POST",
+  });
+  const data = parseResponseText(await response.text());
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể tạo nhóm chat."));
+  }
+
+  const payload =
+    isRecord(data) && isRecord(data.conversation) ? data.conversation : data;
+  const conversation = mapConversation(payload);
+  if (!conversation) {
+    throw new Error("Backend trả về nhóm chat không hợp lệ.");
+  }
+
+  return conversation;
+};
+
 export const markConversationRead = async (
   conversationId: string,
 ): Promise<void> => {
@@ -156,7 +293,7 @@ export const markConversationRead = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Không thể đánh dấu đã đọc."));
+    throwChatApiError(response, data, "Không thể đánh dấu đã đọc.");
 };
 
 export const setConversationPinned = async (
@@ -210,16 +347,196 @@ export const setConversationBlocked = async (
     throw new Error(getErrorMessage(data, "Không thể cập nhật chặn người dùng."));
 };
 
-export const leaveConversation = async (conversationId: string): Promise<void> => {
+export const updateGroupName = async (
+  conversationId: string,
+  name: string,
+): Promise<{ conversationId: string; name: string; updatedAt?: string }> => {
   const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/conversations/${conversationId}/leave`,
+    `${BASE_URL}/api/chat/groups/${conversationId}/name`,
+    {
+      body: JSON.stringify({ name }),
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+    },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể đổi tên nhóm."));
+  }
+
+  const payload = isRecord(data) ? data : {};
+  return {
+    conversationId: asString(payload.conversationId, conversationId),
+    name: asString(payload.name, name),
+    updatedAt: asString(payload.updatedAt, "") || undefined,
+  };
+};
+
+export const updateGroupAvatar = async (
+  conversationId: string,
+  avatarUri: string,
+): Promise<{ avatarUrl: string | null; conversationId: string; updatedAt?: string }> => {
+  const formData = new FormData();
+  appendGroupAvatar(formData, avatarUri);
+
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/avatar`,
+    {
+      body: formData,
+      method: "PUT",
+    },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể đổi ảnh nhóm."));
+  }
+
+  const payload = isRecord(data) ? data : {};
+  return {
+    avatarUrl: asString(payload.avatarUrl, "") || null,
+    conversationId: asString(payload.conversationId, conversationId),
+    updatedAt: asString(payload.updatedAt, "") || undefined,
+  };
+};
+
+export const leaveConversation = async (
+  conversationId: string,
+): Promise<{ action?: string; conversationId: string; updatedAt?: string }> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/leave`,
     { method: "POST" },
   );
   const data = parseResponseText(await response.text());
   if (!response.ok) {
-    throw new Error(getErrorMessage(data, "Không thể rời nhóm."));
+    throw new ChatApiError(
+      getErrorMessage(data, "Không thể rời nhóm."),
+      response.status,
+    );
+  }
+  const payload = isRecord(data) ? data : {};
+  return {
+    action: asString(payload.action, "") || undefined,
+    conversationId: asString(payload.conversationId, conversationId),
+    updatedAt: asString(payload.updatedAt, "") || undefined,
+  };
+};
+
+export const addGroupMembers = async (
+  conversationId: string,
+  memberIds: string[],
+): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/members`,
+    {
+      body: JSON.stringify({ memberIds }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Khong the them thanh vien."));
   }
 };
+
+export const updateGroupPermission = async (
+  conversationId: string,
+  canSendMessage: number,
+): Promise<{ canSendMessage: number; conversationId: string; updatedAt?: string }> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/permission`,
+    {
+      body: JSON.stringify({ canSendMessage }),
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+    },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể cập nhật quyền gửi tin nhắn."));
+  }
+
+  const payload = isRecord(data) ? data : {};
+  return {
+    canSendMessage: asNumber(payload.canSendMessage, canSendMessage),
+    conversationId: asString(payload.conversationId, conversationId),
+    updatedAt: asString(payload.updatedAt, "") || undefined,
+  };
+};
+
+export const promoteGroupAdmin = async (
+  conversationId: string,
+  userId: string,
+): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/members/${userId}/admin`,
+    { method: "PUT" },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể lên Admin."));
+  }
+};
+
+export const demoteGroupAdmin = async (
+  conversationId: string,
+  userId: string,
+): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/members/${userId}/admin`,
+    { method: "DELETE" },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể hạ Admin."));
+  }
+};
+
+export const removeGroupMember = async (
+  conversationId: string,
+  userId: string,
+): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/members/${userId}`,
+    { method: "DELETE" },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể xóa thành viên."));
+  }
+};
+
+export const transferGroupOwner = async (
+  conversationId: string,
+  userId: string,
+): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}/owner`,
+    {
+      body: JSON.stringify({ userId }),
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+    },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể chuyển quyền quản lý."));
+  }
+};
+
+export const deleteGroupConversation = async (
+  conversationId: string,
+): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${conversationId}`,
+    { method: "DELETE" },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data, "Không thể giải tán nhóm."));
+  }
+};
+
 export const getConversationAttachments = async (
   conversationId: string,
   query: { type?: number; page: number; pageSize: number },
@@ -288,7 +605,7 @@ export const recallChatMessage = async (
   );
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Không thể thu hồi tin nhắn."));
+    throwChatApiError(response, data, "Không thể thu hồi tin nhắn.");
 
   if (typeof data !== "object" || data === null) {
     throw new Error("Backend trả về dữ liệu thu hồi không hợp lệ.");
@@ -331,8 +648,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const asString = (value: unknown, fallback = "") =>
   typeof value === "string" ? value : fallback;
 
-const asNumber = (value: unknown, fallback = 0) =>
-  typeof value === "number" && Number.isFinite(value) ? value : fallback;
+const asNumber = (value: unknown, fallback = 0) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
 
 const getUploadItems = (data: unknown) => {
   if (Array.isArray(data)) return data;
@@ -435,12 +758,28 @@ export const sendChatMessage = async (input: {
   });
   const data = parseResponseText(await response.text());
   if (!response.ok)
-    throw new Error(getErrorMessage(data, "Không thể gửi tin nhắn."));
+    throwChatApiError(response, data, "Không thể gửi tin nhắn.");
   const message = mapMessage(data);
   if (!message) throw new Error("Backend trả về tin nhắn không hợp lệ.");
   return message;
 };
 
-
-
-
+export const forwardChatMessage = async (
+  messageId: string,
+  conversationIds: string[],
+): Promise<void> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/messages/${messageId}/forward`,
+    {
+      body: JSON.stringify({ conversationIds }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(data, "Không thể chuyển tiếp tin nhắn."),
+    );
+  }
+};

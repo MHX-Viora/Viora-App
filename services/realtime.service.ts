@@ -12,6 +12,7 @@ import {
   emitRealtimeConversationBlockedChanged,
   emitRealtimeConversationMutedChanged,
   emitRealtimeConversationPinnedChanged,
+  emitRealtimeConversationDissolved,
   emitRealtimeMessage,
   emitRealtimeMessageDeleted,
   emitRealtimeMessageDelivered,
@@ -127,6 +128,9 @@ const getRealtimeConnection = () => {
     });
     connection.on("ConversationBlockedChanged", (payload) => {
       emitRealtimeConversationBlockedChanged(payload);
+    });
+    connection.on("ConversationDissolved", (payload) => {
+      emitRealtimeConversationDissolved(payload);
     });
     connection.on("ConversationRenamed", () => undefined);
     connection.on("ConversationAvatarChanged", () => undefined);

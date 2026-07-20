@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthPrimaryButton } from "@/components/auth/auth-controls";
+import { showAppToast } from "@/components/common/app-toast";
 import { ViewableImage } from "@/components/common/viewable-image";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { updateProfile } from "@/services/user.service";
@@ -105,6 +106,11 @@ export function EditProfileScreen() {
       });
 
       await updateUser(updatedUser);
+      showAppToast({
+        message: "Hồ sơ của bạn đã được cập nhật.",
+        title: "Cập nhật thành công",
+        type: "success",
+      });
       router.replace("/profile");
     } catch (error) {
       showAlert({

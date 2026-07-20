@@ -33,23 +33,29 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AddMembersModal } from "@/components/chat/add-members-modal";
+import { showAppToast } from "@/components/common/app-toast";
 import {
   setActiveChatConversation,
   subscribeRealtimeConversationBlockedChanges,
+  subscribeRealtimeConversationDissolved,
   subscribeRealtimeMessageDeleted,
   subscribeRealtimeMessageDelivered,
   subscribeRealtimeMessages,
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
 import {
+  ChatApiError,
   getConversation,
   getConversationMessages,
   markConversationRead,
   recallChatMessage,
   sendChatMessage,
 } from "@/services/chat.service";
+import { leaveRealtimeGroup } from "@/services/realtime.service";
 import { getUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
+import { MessageType } from "@/types/chat";
 import type {
   ChatAttachment,
   ChatMessage,
@@ -63,6 +69,9 @@ const PAGE_SIZE = 30;
 const STICKERS = ["👍", "❤️", "😂", "🔥", "👏", "😍", "😮", "🙏"];
 const GOOGLE_MAPS_URL_PATTERN =
   /https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=-?\d+(\.\d+)?,-?\d+(\.\d+)?/;
+
+const isConversationGoneError = (error: unknown) =>
+  error instanceof ChatApiError && (error.status === 404 || error.status === 410);
 
 const mergeOlder = (current: ChatMessage[], older: ChatMessage[]) => {
   const seen = new Set(current.map((item) => item.id));
@@ -87,7 +96,7 @@ const markMessageRecalled = (
   attachments: [],
   content: "",
   isDeleted: true,
-  messageType: 7,
+  messageType: MessageType.Recall,
   reactions: [],
   sendStatus: "sent",
   deletedBy,
@@ -428,15 +437,27 @@ function LocationCard({ url, isMine }: { url: string; isMine: boolean }) {
   );
 }
 
+function SystemMessage({ content }: { content: string }) {
+  return (
+    <View style={styles.systemMessageRow}>
+      <View style={styles.systemMessageBubble}>
+        <Text style={styles.systemMessageText}>{content}</Text>
+      </View>
+    </View>
+  );
+}
+
 function MessageRow({
   isActionsOpen,
   isHighlighted,
   message,
   showAvatar,
+  canReply,
   onMediaLayout,
   onCloseActions,
   onOpenActions,
   onRecall,
+  onForward,
   onReply,
   onReplyPress,
   onOpenAttachment,
@@ -445,14 +466,20 @@ function MessageRow({
   isHighlighted: boolean;
   message: ChatMessage;
   showAvatar: boolean;
+  canReply: boolean;
   onMediaLayout: () => void;
   onCloseActions: () => void;
   onOpenActions: (message: ChatMessage) => void;
   onRecall: (message: ChatMessage) => void;
+  onForward: (message: ChatMessage) => void;
   onReply: (message: ChatMessage) => void;
   onReplyPress: (messageId: string) => void;
   onOpenAttachment: (attachment: ChatAttachment) => void;
 }) {
+  if (message.messageType === MessageType.System) {
+    return <SystemMessage content={message.content} />;
+  }
+
   const locationUrl = message.content.match(GOOGLE_MAPS_URL_PATTERN)?.[0] ?? "";
   const textContent = locationUrl
     ? message.content.replace(locationUrl, "").trim()
@@ -480,16 +507,18 @@ function MessageRow({
           : styles.theirMessageActionMenu,
       ]}
     >
-      <Pressable
-        accessibilityLabel="Trả lời tin nhắn"
-        onPress={() => {
-          onReply(message);
-          onCloseActions();
-        }}
-        style={styles.messageActionButton}
-      >
-        <Ionicons color={colors.primary} name="return-up-back" size={18} />
-      </Pressable>
+      {canReply ? (
+        <Pressable
+          accessibilityLabel="Trả lời tin nhắn"
+          onPress={() => {
+            onReply(message);
+            onCloseActions();
+          }}
+          style={styles.messageActionButton}
+        >
+          <Ionicons color={colors.primary} name="return-up-back" size={18} />
+        </Pressable>
+      ) : null}
       {canRecall ? (
         <Pressable
           accessibilityLabel="Thu hồi tin nhắn"
@@ -500,6 +529,18 @@ function MessageRow({
           style={[styles.messageActionButton, styles.recallActionButton]}
         >
           <Ionicons color={colors.danger} name="trash-outline" size={18} />
+        </Pressable>
+      ) : null}
+      {!message.isDeleted && !message.id.startsWith("pending-") ? (
+        <Pressable
+          accessibilityLabel="Chuyển tiếp tin nhắn"
+          onPress={() => {
+            onForward(message);
+            onCloseActions();
+          }}
+          style={styles.messageActionButton}
+        >
+          <Ionicons color={colors.primary} name="arrow-redo-outline" size={18} />
         </Pressable>
       ) : null}
     </View>
@@ -697,6 +738,7 @@ export function ChatScreen() {
     otherAvatarUrl?: string;
     otherUserId?: string;
     otherUserName?: string;
+    role?: string;
     scrollToMessageId?: string;
   }>();
   const conversationId = params.conversationId ?? "";
@@ -704,6 +746,7 @@ export function ChatScreen() {
   const pendingScrollToEndRef = useRef(false);
   const pendingScrollAnimatedRef = useRef(false);
   const isAtBottomRef = useRef(true);
+  const dissolvedRef = useRef(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -725,6 +768,11 @@ export function ChatScreen() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [viewingAttachment, setViewingAttachment] =
     useState<ChatAttachment | null>(null);
+  const [addMembersVisible, setAddMembersVisible] = useState(false);
+  const [messagePermissions, setMessagePermissions] = useState<{
+    canSendMessage: boolean;
+    onlyAdminCanSend: boolean;
+  } | null>(null);
 
   const normalizeMessage = useCallback(
     (message: ChatMessage): ChatMessage => message,
@@ -738,6 +786,31 @@ export function ChatScreen() {
       listRef.current?.scrollToOffset({ animated, offset: 0 }),
     );
   }, []);
+
+  const handleConversationDissolved = useCallback(() => {
+    if (dissolvedRef.current) return;
+    dissolvedRef.current = true;
+    setActiveChatConversation(null);
+    void leaveRealtimeGroup(conversationId).catch(() => undefined);
+    showAppToast({ message: "Nhóm đã bị giải tán.", type: "success" });
+    router.replace("/(tabs)/chat");
+  }, [conversationId]);
+
+  const handleRoomApiError = useCallback(
+    (error: unknown) => {
+      if (isConversationGoneError(error)) {
+        handleConversationDissolved();
+        return true;
+      }
+      return false;
+    },
+    [handleConversationDissolved],
+  );
+
+  const markConversationReadSafe = useCallback(() => {
+    if (!conversationId || dissolvedRef.current) return;
+    void markConversationRead(conversationId).catch(handleRoomApiError);
+  }, [conversationId, handleRoomApiError]);
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
@@ -757,6 +830,7 @@ export function ChatScreen() {
   const load = useCallback(
     async (nextPage: number, mode: "initial" | "more") => {
       if (!conversationId) return;
+      if (dissolvedRef.current) return;
       if (mode === "initial") {
         setIsLoading(true);
       }
@@ -770,6 +844,33 @@ export function ChatScreen() {
           result.items.map(normalizeMessage),
         );
         if (result.conversation) {
+          setMessagePermissions((current) => ({
+            canSendMessage:
+              typeof result.conversation?.canSendMessage === "boolean"
+                ? result.conversation.canSendMessage
+                : current?.canSendMessage ?? true,
+            onlyAdminCanSend:
+              typeof result.conversation?.onlyAdminCanSend === "boolean"
+                ? result.conversation.onlyAdminCanSend
+                : current?.onlyAdminCanSend ?? false,
+          }));
+          setConversationDetails((current) => ({
+            ...(current ?? {
+              avatarUrl: params.conversationAvatarUrl || null,
+              conversationType:
+                result.conversation?.conversationType ??
+                params.conversationType ??
+                "Private",
+              id: conversationId,
+              isMuted: params.isMuted === "true",
+              isPinned: params.isPinned === "true",
+              lastMessage: null,
+              name: params.conversationName ?? "Chat",
+              otherParticipant: null,
+              unreadCount: 0,
+            }),
+            ...result.conversation,
+          }));
           setIsBlocked(result.conversation.isBlocked === true);
           setBlockedBy(result.conversation.blockedBy ?? null);
         }
@@ -778,8 +879,9 @@ export function ChatScreen() {
         );
         setPage(result.page);
         setTotalPages(result.totalPages);
-        if (nextPage === 1) void markConversationRead(conversationId);
+        if (nextPage === 1) markConversationReadSafe();
       } catch (error) {
+        if (handleRoomApiError(error)) return;
         Alert.alert(
           "Không thể tải tin nhắn",
           error instanceof Error ? error.message : "Vui lòng thử lại.",
@@ -789,7 +891,7 @@ export function ChatScreen() {
         setIsLoadingMore(false);
       }
     },
-    [conversationId, normalizeMessage, scrollToEndAfterLayout],
+    [conversationId, handleRoomApiError, markConversationReadSafe, normalizeMessage],
   );
 
   const scrollToReplyMessage = useCallback(
@@ -829,6 +931,7 @@ export function ChatScreen() {
 
         Alert.alert("Không tìm thấy tin nhắn", "Hãy kéo lên tải thêm tin cũ rồi thử lại.");
       } catch (error) {
+        if (handleRoomApiError(error)) return;
         Alert.alert(
           "Không thể tải tin nhắn gốc",
           error instanceof Error ? error.message : "Vui lòng thử lại.",
@@ -839,6 +942,7 @@ export function ChatScreen() {
     },
     [
       conversationId,
+      handleRoomApiError,
       isLoadingMore,
       messages,
       normalizeMessage,
@@ -849,7 +953,9 @@ export function ChatScreen() {
   );
 
   useEffect(() => {
+    dissolvedRef.current = false;
     setActiveChatConversation(conversationId || null);
+    setMessagePermissions(null);
     return () => setActiveChatConversation(null);
   }, [conversationId]);
 
@@ -867,17 +973,24 @@ export function ChatScreen() {
     void getConversation(conversationId)
       .then((conversation) => {
         if (!isMounted) return;
-        setConversationDetails(conversation);
+        setConversationDetails((current) => ({
+          ...conversation,
+          canSendMessage:
+            conversation.canSendMessage ?? current?.canSendMessage,
+          onlyAdminCanSend:
+            conversation.onlyAdminCanSend ?? current?.onlyAdminCanSend,
+        }));
         setIsBlocked(conversation.isBlocked === true);
         setBlockedBy(conversation.blockedBy ?? null);
       })
-      .catch(() => {
+      .catch((error) => {
+        if (handleRoomApiError(error)) return;
         if (isMounted) setConversationDetails(null);
       });
     return () => {
       isMounted = false;
     };
-  }, [conversationId]);
+  }, [conversationId, handleRoomApiError]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
@@ -903,14 +1016,23 @@ export function ChatScreen() {
             ? current
             : [nextMessage, ...current],
         );
-        if (!nextMessage.isMine) void markConversationRead(conversationId);
+        if (!nextMessage.isMine) markConversationReadSafe();
         if (isAtBottomRef.current || nextMessage.isMine) {
           scrollToEndAfterLayout(true);
         } else {
           setHasNewMessage(true);
         }
       }),
-    [conversationId, normalizeMessage, scrollToEndAfterLayout],
+    [conversationId, markConversationReadSafe, normalizeMessage, scrollToEndAfterLayout],
+  );
+
+  useEffect(
+    () =>
+      subscribeRealtimeConversationDissolved((event) => {
+        if (event.conversationId !== conversationId) return;
+        handleConversationDissolved();
+      }),
+    [conversationId, handleConversationDissolved],
   );
 
   useEffect(
@@ -980,6 +1102,26 @@ export function ChatScreen() {
     return other ?? "Chat";
   }, [conversationDetails, messages, params.conversationName]);
 
+  const conversationType =
+    conversationDetails?.conversationType ?? params.conversationType ?? "Private";
+  const routeRole = Number.parseInt(params.role ?? "0", 10);
+  const currentUserRole = conversationDetails?.role ?? (Number.isNaN(routeRole) ? 0 : routeRole);
+  const canAddMembers = conversationType === "Group";
+  const hasGroupMessagePermission =
+    conversationType !== "Group" || messagePermissions !== null;
+  const canSendInConversation =
+    conversationType === "Group"
+      ? messagePermissions?.canSendMessage === true
+      : messagePermissions?.canSendMessage ?? true;
+  const shouldRenderComposer =
+    isBlocked ||
+    (conversationType === "Group" ? hasGroupMessagePermission : true);
+  const showAdminOnlyMessage =
+    conversationType === "Group" &&
+    messagePermissions?.onlyAdminCanSend === true &&
+    !canSendInConversation &&
+    !isBlocked;
+
   const blockedComposerMessage = useMemo(() => {
     if (!isBlocked) return "";
     if (blockedBy?.id && blockedBy.id === currentUserId) {
@@ -990,6 +1132,16 @@ export function ChatScreen() {
       ? `${blockerName} đã chặn cuộc trò chuyện này.`
       : "Cuộc trò chuyện này đã bị chặn.";
   }, [blockedBy, currentUserId, isBlocked]);
+
+  useEffect(() => {
+    if (canSendInConversation || isBlocked) return;
+    setAttachments([]);
+    setReplyTo(null);
+    setShowStickers(false);
+    if (recorderState.isRecording) {
+      void recorder.stop();
+    }
+  }, [canSendInConversation, isBlocked, recorder, recorderState.isRecording]);
 
   const openSettings = useCallback(() => {
     const otherMessage = messages.find((item) => !item.isMine);
@@ -1029,6 +1181,7 @@ export function ChatScreen() {
           otherParticipant?.displayName ||
           otherMessage?.sender.displayName ||
           title,
+        role: params.role ?? String(conversationDetails?.role ?? 0),
       },
     });
   }, [
@@ -1044,8 +1197,28 @@ export function ChatScreen() {
     params.otherAvatarUrl,
     params.otherUserId,
     params.otherUserName,
+    params.role,
     title,
   ]);
+
+  const refreshConversationDetails = useCallback(() => {
+    if (!conversationId) return;
+    void getConversation(conversationId)
+      .then((conversation) => {
+        setConversationDetails((current) => ({
+          ...conversation,
+          canSendMessage:
+            conversation.canSendMessage ?? current?.canSendMessage,
+          onlyAdminCanSend:
+            conversation.onlyAdminCanSend ?? current?.onlyAdminCanSend,
+        }));
+        setIsBlocked(conversation.isBlocked === true);
+        setBlockedBy(conversation.blockedBy ?? null);
+      })
+      .catch((error) => {
+        if (handleRoomApiError(error)) return;
+      });
+  }, [conversationId, handleRoomApiError]);
 
   const addImagePickerAssets = useCallback(
     (assets: ImagePicker.ImagePickerAsset[]) => {
@@ -1071,6 +1244,7 @@ export function ChatScreen() {
   );
 
   const pickMedia = useCallback(async () => {
+    if (!canSendInConversation) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: true,
       mediaTypes: ["images", "videos"],
@@ -1078,9 +1252,10 @@ export function ChatScreen() {
     });
     if (result.canceled) return;
     addImagePickerAssets(result.assets);
-  }, [addImagePickerAssets]);
+  }, [addImagePickerAssets, canSendInConversation]);
 
   const takePhoto = useCallback(async () => {
+    if (!canSendInConversation) return;
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       Alert.alert("Không thể chụp ảnh", "Ứng dụng chưa có quyền dùng camera.");
@@ -1093,9 +1268,10 @@ export function ChatScreen() {
     });
     if (result.canceled) return;
     addImagePickerAssets(result.assets);
-  }, [addImagePickerAssets]);
+  }, [addImagePickerAssets, canSendInConversation]);
 
   const pickFiles = useCallback(async () => {
+    if (!canSendInConversation) return;
     const result = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
       multiple: true,
@@ -1114,13 +1290,14 @@ export function ChatScreen() {
         uri: asset.uri,
       })),
     ]);
-  }, []);
+  }, [canSendInConversation]);
 
   const removeAttachment = useCallback((id: string) => {
     setAttachments((current) => current.filter((item) => item.id !== id));
   }, []);
 
   const toggleRecording = useCallback(async () => {
+    if (!canSendInConversation && !recorderState.isRecording) return;
     try {
       if (recorderState.isRecording) {
         await recorder.stop();
@@ -1159,9 +1336,10 @@ export function ChatScreen() {
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
-  }, [recorder, recorderState.isRecording]);
+  }, [canSendInConversation, recorder, recorderState.isRecording]);
 
   const shareLocation = useCallback(async () => {
+    if (!canSendInConversation) return;
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
@@ -1178,7 +1356,7 @@ export function ChatScreen() {
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
-  }, []);
+  }, [canSendInConversation]);
 
   const recallMessage = useCallback(
     async (message: ChatMessage) => {
@@ -1202,6 +1380,7 @@ export function ChatScreen() {
           ),
         );
       } catch (error) {
+        if (handleRoomApiError(error)) return;
         setMessages((current) =>
           current.map((item) => (item.id === message.id ? message : item)),
         );
@@ -1211,17 +1390,35 @@ export function ChatScreen() {
         );
       }
     },
-    [],
+    [handleRoomApiError],
   );
 
   const openMessageActions = useCallback((message: ChatMessage) => {
     if (message.isDeleted) return;
+    if (message.messageType === MessageType.System) return;
+    if (!canSendInConversation && !message.isMine) return;
     setActionMessageId((current) =>
       current === message.id ? null : message.id,
     );
+  }, [canSendInConversation]);
+
+  const forwardMessage = useCallback((message: ChatMessage) => {
+    if (
+      message.isDeleted ||
+      message.messageType === MessageType.System ||
+      message.id.startsWith("pending-")
+    ) {
+      return;
+    }
+    router.push({
+      pathname: "/chat/forward-message",
+      params: { messageId: message.id },
+    });
   }, []);
 
   const send = useCallback(async () => {
+    if (!canSendInConversation) return;
+    if (dissolvedRef.current) return;
     if (!content.trim() && attachments.length === 0) return;
     const draftContent = content.trim();
     const draftAttachments = attachments;
@@ -1290,13 +1487,19 @@ export function ChatScreen() {
       );
       scrollToEndAfterLayout(true);
     } catch (error) {
+      if (handleRoomApiError(error)) {
+        setMessages((current) =>
+          current.filter((item) => item.id !== optimisticId),
+        );
+        return;
+      }
       setMessages((current) =>
         current.map((item) =>
           item.id === optimisticId ? { ...item, sendStatus: "failed" } : item,
         ),
       );
     }
-  }, [attachments, content, conversationId, normalizeMessage, replyTo, scrollToEndAfterLayout]);
+  }, [attachments, canSendInConversation, content, conversationId, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
 
   return (
     <KeyboardAvoidingView
@@ -1322,6 +1525,16 @@ export function ChatScreen() {
         <Text numberOfLines={1} style={styles.headerTitle}>
           {title}
         </Text>
+        {canAddMembers ? (
+          <Pressable
+            accessibilityLabel="Them thanh vien"
+            hitSlop={10}
+            onPress={() => setAddMembersVisible(true)}
+            style={styles.iconButton}
+          >
+            <Ionicons color={colors.text} name="person-add" size={22} />
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityLabel="Cài đặt cuộc trò chuyện"
           hitSlop={10}
@@ -1335,6 +1548,12 @@ export function ChatScreen() {
           />
         </Pressable>
       </View>
+      <AddMembersModal
+        conversationId={conversationId}
+        onAdded={refreshConversationDetails}
+        onClose={() => setAddMembersVisible(false)}
+        visible={addMembersVisible}
+      />
       {isLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} />
@@ -1395,6 +1614,7 @@ export function ChatScreen() {
               !nextOlder || nextOlder.sender.id !== item.sender.id;
             return (
               <MessageRow
+                canReply={canSendInConversation}
                 isActionsOpen={actionMessageId === item.id}
                 isHighlighted={highlightedMessageId === item.id}
                 message={item}
@@ -1405,6 +1625,7 @@ export function ChatScreen() {
                 }}
                 onOpenActions={openMessageActions}
                 onOpenAttachment={setViewingAttachment}
+                onForward={forwardMessage}
                 onRecall={(message) => void recallMessage(message)}
                 onReply={setReplyTo}
                 onReplyPress={scrollToReplyMessage}
@@ -1435,6 +1656,7 @@ export function ChatScreen() {
           <Text style={styles.newMessageText}>Có tin nhắn mới</Text>
         </Pressable>
       )}
+      {shouldRenderComposer ? (
       <View
         style={[
           styles.composer,
@@ -1452,6 +1674,14 @@ export function ChatScreen() {
               {blockedComposerMessage}
             </Text>
           </View>
+        ) : !canSendInConversation ? (
+          showAdminOnlyMessage ? (
+            <View style={styles.permissionComposer}>
+              <Text style={styles.permissionComposerText}>
+                Chỉ quản trị viên mới có thể gửi tin nhắn.
+              </Text>
+            </View>
+          ) : null
         ) : (
           <>
         {replyTo && (
@@ -1596,6 +1826,7 @@ export function ChatScreen() {
           </>
         )}
       </View>
+      ) : null}
       <MediaViewer
         attachment={viewingAttachment}
         onClose={() => setViewingAttachment(null)}
@@ -1769,7 +2000,7 @@ const styles = StyleSheet.create({
   },
   messageActionMenu: {
     alignSelf: "center",
-    flexDirection: "row",
+    flexDirection: "column",
     gap: spacing.xs,
   },
   messageRow: {
@@ -1972,8 +2203,44 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     lineHeight: 18,
   },
+  permissionComposer: {
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  permissionComposerText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+  },
   senderName: { color: colors.text, fontSize: 12, fontWeight: "900" },
   smallAvatar: { borderRadius: 16, height: 32, width: 32 },
+  systemMessageBubble: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    maxWidth: "82%",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  systemMessageRow: {
+    alignItems: "center",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  systemMessageText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    textAlign: "center",
+  },
   theirBubble: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

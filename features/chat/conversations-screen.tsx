@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,7 +16,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { showAppToast } from "@/components/common/app-toast";
 import {
+  subscribeRealtimeConversationDissolved,
   subscribeRealtimeConversationMutedChanges,
   subscribeRealtimeConversationPinnedChanges,
   subscribeRealtimeConversationReads,
@@ -24,6 +27,7 @@ import {
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
 import {
+  ChatApiError,
   getConversation,
   getConversations,
   markConversationRead,
@@ -38,8 +42,12 @@ import { setChatUnreadCount } from "@/utils/chat-unread-count";
 
 const PAGE_SIZE = 20;
 
+const isConversationGoneError = (error: unknown) =>
+  error instanceof ChatApiError &&
+  (error.status === 404 || error.status === 410);
+
 const firstParam = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] ?? "" : value ?? "";
+  Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 
 const getLastMessageTime = (conversation: Conversation) => {
   const value = conversation.lastMessage?.createdAt;
@@ -91,9 +99,11 @@ const getConversationRouteParams = (
     isMuted: String(conversation.isMuted),
     isPinned: String(conversation.isPinned),
     isVerified: String(conversation.otherParticipant?.isVerified ?? false),
+    memberCount: String(conversation.memberCount ?? ""),
     otherAvatarUrl: conversation.otherParticipant?.avatarUrl ?? "",
     otherUserId: conversation.otherParticipant?.id ?? "",
     otherUserName: conversation.otherParticipant?.displayName ?? "",
+    role: String(conversation.role ?? 0),
     scrollToMessageId,
   };
 };
@@ -166,7 +176,11 @@ function ConversationRow({
             {title}
           </Text>
           {showVerified ? (
-            <Ionicons color={colors.primary} name="checkmark-circle" size={16} />
+            <Ionicons
+              color={colors.primary}
+              name="checkmark-circle"
+              size={16}
+            />
           ) : null}
           {conversation.isMuted && (
             <Ionicons
@@ -233,6 +247,11 @@ export function ConversationsScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
+  const [quickMenuVisible, setQuickMenuVisible] = useState(false);
+  const [qrScannerVisible, setQrScannerVisible] = useState(false);
+  const [qrScanMessage, setQrScanMessage] = useState("");
+  const [qrScanning, setQrScanning] = useState(true);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [openedConversationId, setOpenedConversationId] = useState("");
   const [actionLoadingIds, setActionLoadingIds] = useState<Set<string>>(
     () => new Set(),
@@ -267,6 +286,56 @@ export function ConversationsScreen() {
       });
     },
     [requestedMessageId],
+  );
+
+  const openCreateGroup = useCallback(() => {
+    setQuickMenuVisible(false);
+    router.push("/chat/create-group");
+  }, []);
+
+  const openFriends = useCallback(() => {
+    setQuickMenuVisible(false);
+    router.push("/friends");
+  }, []);
+
+  const openQrScanner = useCallback(() => {
+    setQrScanMessage("");
+    setQrScanning(true);
+    setQrScannerVisible(true);
+  }, []);
+
+  const closeQrScanner = useCallback(() => {
+    setQrScannerVisible(false);
+    setQrScanMessage("");
+    setQrScanning(true);
+  }, []);
+
+  const handleGroupQrScanned = useCallback(
+    ({ data }: { data: string }) => {
+      if (!qrScanning) return;
+      setQrScanning(false);
+      const trimmed = data.trim();
+      const conversationId =
+        trimmed.match(/^viora:\/\/chat\/group\/([^/?#]+)/i)?.[1] ??
+        trimmed.match(/^viora:\/\/group\/([^/?#]+)/i)?.[1] ??
+        trimmed.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)?.[0] ??
+        "";
+
+      if (!conversationId) {
+        setQrScanMessage("Mã QR nhóm không hợp lệ.");
+        return;
+      }
+
+      setQrScanMessage("Đã tìm thấy nhóm.");
+      setTimeout(() => {
+        closeQrScanner();
+        router.push({
+          pathname: "/chat/[conversationId]",
+          params: { conversationId, conversationType: "Group" },
+        });
+      }, 450);
+    },
+    [closeQrScanner, qrScanning],
   );
 
   const load = useCallback(
@@ -308,7 +377,10 @@ export function ConversationsScreen() {
   }, [load]);
 
   useEffect(() => {
-    if (!requestedConversationId || openedConversationId === requestedConversationId) {
+    if (
+      !requestedConversationId ||
+      openedConversationId === requestedConversationId
+    ) {
       return;
     }
 
@@ -339,12 +411,7 @@ export function ConversationsScreen() {
     return () => {
       isMounted = false;
     };
-  }, [
-    items,
-    openConversation,
-    openedConversationId,
-    requestedConversationId,
-  ]);
+  }, [items, openConversation, openedConversationId, requestedConversationId]);
 
   useEffect(
     () =>
@@ -355,7 +422,9 @@ export function ConversationsScreen() {
           );
           if (conversation.lastMessage)
             return sortConversations([conversation, ...withoutCurrent]);
-          const index = current.findIndex((item) => item.id === conversation.id);
+          const index = current.findIndex(
+            (item) => item.id === conversation.id,
+          );
           if (index < 0) return sortConversations([conversation, ...current]);
           return sortConversations(
             current.map((item) =>
@@ -428,6 +497,16 @@ export function ConversationsScreen() {
 
   useEffect(
     () =>
+      subscribeRealtimeConversationDissolved((event) => {
+        setItems((current) =>
+          current.filter((item) => item.id !== event.conversationId),
+        );
+      }),
+    [],
+  );
+
+  useEffect(
+    () =>
       subscribeRealtimeSyncRequests(() => {
         void load(1, "refresh");
       }),
@@ -456,6 +535,11 @@ export function ConversationsScreen() {
     [],
   );
 
+  const removeDissolvedConversation = useCallback((conversationId: string) => {
+    setItems((current) => current.filter((item) => item.id !== conversationId));
+    showAppToast({ message: "Nhóm đã bị giải tán.", type: "success" });
+  }, []);
+
   const togglePinConversation = useCallback(
     async (conversation: Conversation) => {
       if (actionLoadingIds.has(conversation.id)) return;
@@ -465,6 +549,10 @@ export function ConversationsScreen() {
       try {
         await setConversationPinned(conversation.id, nextPinned);
       } catch (pinError) {
+        if (isConversationGoneError(pinError)) {
+          removeDissolvedConversation(conversation.id);
+          return;
+        }
         updateConversationLocal(conversation.id, {
           isPinned: conversation.isPinned,
         });
@@ -476,7 +564,12 @@ export function ConversationsScreen() {
         setItemActionLoading(conversation.id, false);
       }
     },
-    [actionLoadingIds, setItemActionLoading, updateConversationLocal],
+    [
+      actionLoadingIds,
+      removeDissolvedConversation,
+      setItemActionLoading,
+      updateConversationLocal,
+    ],
   );
 
   const markConversationReadLocal = useCallback(
@@ -487,6 +580,10 @@ export function ConversationsScreen() {
       try {
         await markConversationRead(conversation.id);
       } catch (readError) {
+        if (isConversationGoneError(readError)) {
+          removeDissolvedConversation(conversation.id);
+          return;
+        }
         updateConversationLocal(conversation.id, {
           unreadCount: conversation.unreadCount,
         });
@@ -498,7 +595,12 @@ export function ConversationsScreen() {
         setItemActionLoading(conversation.id, false);
       }
     },
-    [actionLoadingIds, setItemActionLoading, updateConversationLocal],
+    [
+      actionLoadingIds,
+      removeDissolvedConversation,
+      setItemActionLoading,
+      updateConversationLocal,
+    ],
   );
 
   const toggleMuteConversation = useCallback(
@@ -510,6 +612,10 @@ export function ConversationsScreen() {
       try {
         await setConversationMuted(conversation.id, nextMuted);
       } catch (muteError) {
+        if (isConversationGoneError(muteError)) {
+          removeDissolvedConversation(conversation.id);
+          return;
+        }
         updateConversationLocal(conversation.id, {
           isMuted: conversation.isMuted,
         });
@@ -521,7 +627,12 @@ export function ConversationsScreen() {
         setItemActionLoading(conversation.id, false);
       }
     },
-    [actionLoadingIds, setItemActionLoading, updateConversationLocal],
+    [
+      actionLoadingIds,
+      removeDissolvedConversation,
+      setItemActionLoading,
+      updateConversationLocal,
+    ],
   );
 
   const openConversationMenu = useCallback((conversation: Conversation) => {
@@ -562,7 +673,34 @@ export function ConversationsScreen() {
           { paddingTop: Math.max(spacing.xl, insets.top + spacing.lg) },
         ]}
       >
-        <Text style={styles.heading}>Trò chuyện</Text>
+        <View style={styles.headingRow}>
+          <Text style={styles.heading}>Trò chuyện</Text>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityLabel="Quét mã QR nhóm"
+              accessibilityRole="button"
+              onPress={openQrScanner}
+              style={({ pressed }) => [
+                styles.headerIconButton,
+                pressed && styles.rowPressed,
+              ]}
+            >
+              <Ionicons color={colors.primary} name="qr-code-outline" size={22} />
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Mở chức năng"
+              accessibilityRole="button"
+              onPress={() => setQuickMenuVisible(true)}
+              style={({ pressed }) => [
+                styles.headerIconButton,
+                styles.primaryHeaderIconButton,
+                pressed && styles.rowPressed,
+              ]}
+            >
+              <Ionicons color={colors.white} name="add" size={24} />
+            </Pressable>
+          </View>
+        </View>
         <View style={styles.searchBox}>
           <Ionicons color={colors.textMuted} name="search" size={18} />
           <TextInput
@@ -615,6 +753,92 @@ export function ConversationsScreen() {
       )}
       <Modal
         animationType="fade"
+        onRequestClose={() => setQuickMenuVisible(false)}
+        transparent
+        visible={quickMenuVisible}
+      >
+        <Pressable
+          onPress={() => setQuickMenuVisible(false)}
+          style={styles.quickMenuOverlay}
+        >
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            style={[styles.quickMenu, { top: insets.top + 68 }]}
+          >
+            <Pressable onPress={openFriends} style={styles.quickMenuItem}>
+              <View style={styles.quickMenuIcon}>
+                <Ionicons color={colors.primary} name="person-add-outline" size={20} />
+              </View>
+              <Text style={styles.quickMenuText}>Thêm bạn</Text>
+            </Pressable>
+            <Pressable onPress={openCreateGroup} style={styles.quickMenuItem}>
+              <View style={styles.quickMenuIcon}>
+                <Ionicons color={colors.primary} name="people-outline" size={20} />
+              </View>
+              <Text style={styles.quickMenuText}>Tạo nhóm</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+      <Modal
+        animationType="slide"
+        onRequestClose={closeQrScanner}
+        visible={qrScannerVisible}
+      >
+        <View style={[styles.qrScreen, { paddingTop: insets.top + spacing.md }]}>
+          <View style={styles.qrHeader}>
+            <Pressable
+              accessibilityLabel="Đóng quét mã QR"
+              onPress={closeQrScanner}
+              style={styles.headerIconButton}
+            >
+              <Ionicons color={colors.text} name="close" size={24} />
+            </Pressable>
+            <Text style={styles.qrTitle}>Quét mã QR nhóm</Text>
+            <View style={styles.headerIconButton} />
+          </View>
+          {cameraPermission?.granted ? (
+            <View style={styles.qrBody}>
+              <Text style={styles.qrHelp}>Đặt mã QR nhóm vào giữa khung hình</Text>
+              <View style={styles.cameraWrap}>
+                <CameraView
+                  barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+                  onBarcodeScanned={qrScanning ? handleGroupQrScanned : undefined}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <View pointerEvents="none" style={styles.scanFrame} />
+              </View>
+              {qrScanMessage ? (
+                <View style={styles.qrResult}>
+                  <Text style={styles.qrResultText}>{qrScanMessage}</Text>
+                  {!qrScanning && !qrScanMessage.startsWith("Đã") ? (
+                    <Pressable
+                      onPress={() => {
+                        setQrScanMessage("");
+                        setQrScanning(true);
+                      }}
+                    >
+                      <Text style={styles.scanAgainText}>Quét lại</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <View style={styles.qrPermission}>
+              <Ionicons color={colors.textMuted} name="camera-outline" size={42} />
+              <Text style={styles.qrPermissionText}>
+                Viora cần quyền camera để quét mã QR nhóm.
+              </Text>
+              <Pressable onPress={requestCameraPermission} style={styles.permissionButton}>
+                <Text style={styles.permissionButtonText}>Cho phép camera</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </Modal>
+      <Modal
+        animationType="fade"
         onRequestClose={() => setSelectedConversation(null)}
         transparent
         visible={selectedConversation !== null}
@@ -627,7 +851,9 @@ export function ConversationsScreen() {
             onPress={(event) => event.stopPropagation()}
             style={[
               styles.menuSheet,
-              { paddingBottom: Math.max(spacing.lg, insets.bottom + spacing.md) },
+              {
+                paddingBottom: Math.max(spacing.lg, insets.bottom + spacing.md),
+              },
             ]}
           >
             {selectedConversation ? (
@@ -672,7 +898,11 @@ export function ConversationsScreen() {
                     style={styles.menuAction}
                   >
                     <View style={styles.menuIcon}>
-                      <Ionicons color={colors.primary} name="mail-open" size={20} />
+                      <Ionicons
+                        color={colors.primary}
+                        name="mail-open"
+                        size={20}
+                      />
                     </View>
                     <View style={styles.menuActionText}>
                       <Text style={styles.menuActionTitle}>
@@ -682,7 +912,9 @@ export function ConversationsScreen() {
                   </Pressable>
 
                   <Pressable
-                    onPress={() => runConversationAction(toggleMuteConversation)}
+                    onPress={() =>
+                      runConversationAction(toggleMuteConversation)
+                    }
                     style={styles.menuAction}
                   >
                     <View style={styles.menuIcon}>
@@ -766,6 +998,37 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
   },
   heading: { color: colors.text, fontSize: 28, fontWeight: "900" },
+  headingRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+  },
+  headerActions: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
+  headerIconButton: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  primaryHeaderIconButton: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  createRoomButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    flexDirection: "row",
+    gap: 4,
+    minHeight: 36,
+    paddingHorizontal: spacing.sm,
+  },
+  createRoomText: { color: colors.white, fontSize: 12, fontWeight: "900" },
   listContent: { paddingBottom: 112 },
   loading: { flex: 1, justifyContent: "center" },
   menuAction: {
@@ -806,6 +1069,104 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 18,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
+  },
+  cameraWrap: {
+    aspectRatio: 1,
+    backgroundColor: colors.text,
+    borderRadius: 16,
+    overflow: "hidden",
+    width: "100%",
+  },
+  permissionButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  permissionButtonText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  qrBody: { flex: 1, gap: spacing.lg, padding: spacing.lg },
+  qrHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  qrHelp: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  qrPermission: {
+    alignItems: "center",
+    flex: 1,
+    gap: spacing.md,
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  qrPermissionText: {
+    color: colors.textMuted,
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  qrResult: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    gap: spacing.sm,
+    padding: spacing.md,
+  },
+  qrResultText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  qrScreen: { backgroundColor: colors.white, flex: 1 },
+  qrTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
+  quickMenu: {
+    backgroundColor: colors.white,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 190,
+    paddingVertical: spacing.xs,
+    position: "absolute",
+    right: spacing.lg,
+  },
+  quickMenuIcon: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 999,
+    height: 34,
+    justifyContent: "center",
+    width: 34,
+  },
+  quickMenuItem: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+  },
+  quickMenuOverlay: { flex: 1 },
+  quickMenuText: { color: colors.text, fontSize: 15, fontWeight: "800" },
+  scanAgainText: { color: colors.primary, fontSize: 14, fontWeight: "900" },
+  scanFrame: {
+    borderColor: colors.white,
+    borderRadius: 14,
+    borderWidth: 3,
+    height: "58%",
+    left: "21%",
+    position: "absolute",
+    top: "21%",
+    width: "58%",
   },
   menuSubtitle: {
     color: colors.textMuted,

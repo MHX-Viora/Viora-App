@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 
+import { showAppToast } from "@/components/common/app-toast";
 import { ViewableImage } from "@/components/common/viewable-image";
 import { deletePost, reportPost } from "@/services/post.service";
 import { colors, spacing, typography } from "@/theme";
@@ -234,7 +235,11 @@ export function PostCard({
         reason: reason.value,
       });
       setReportVisible(false);
-      Alert.alert("Đã gửi báo cáo", "Cảm ơn bạn đã giúp Viora an toàn hơn.");
+      showAppToast({
+        message: "Cảm ơn bạn đã giúp Viora an toàn hơn.",
+        title: "Đã gửi báo cáo",
+        type: "success",
+      });
     } catch (error) {
       Alert.alert(
         "Không thể báo cáo",

@@ -28,31 +28,59 @@ type ApiError = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-const isUser = (value: unknown): boolean => {
-  if (!isRecord(value)) return false;
+const asString = (value: unknown, fallback = "") =>
+  typeof value === "string" ? value : fallback;
 
-  return (
-    typeof value.id === "string" &&
-    typeof value.accountId === "string" &&
-    typeof value.displayName === "string" &&
-    typeof value.avatarUrl === "string" &&
-    typeof value.coverUrl === "string" &&
-    typeof value.role === "number" &&
-    typeof value.isVerified === "boolean" &&
-    typeof value.verificationStatus === "number"
-  );
+const asNumber = (value: unknown, fallback = 0) =>
+  typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+const asBoolean = (value: unknown, fallback = false) =>
+  typeof value === "boolean" ? value : fallback;
+
+const normalizeUser = (value: unknown): LoginResponse["user"] | undefined => {
+  if (value === null) return null;
+  if (!isRecord(value)) return undefined;
+
+  const id = asString(value.id ?? value.userId);
+  if (!id) return undefined;
+
+  return {
+    accountId: asString(value.accountId),
+    avatarUrl: asString(value.avatarUrl ?? value.avatar),
+    coverUrl: asString(value.coverUrl ?? value.cover),
+    displayName: asString(value.displayName ?? value.name ?? value.fullName, "Người dùng"),
+    id,
+    isVerified: asBoolean(value.isVerified),
+    role: asNumber(value.role),
+    verificationStatus: asNumber(value.verificationStatus),
+  };
 };
 
 const isRegisterResponse = (value: unknown): value is RegisterResponse => {
   return isRecord(value) && typeof value.message === "string";
 };
 
-const isLoginResponse = (value: unknown): value is LoginResponse => {
-  return (
-    isRecord(value) &&
-    typeof value.accessToken === "string" &&
-    (value.user === null || isUser(value.user))
+const normalizeLoginResponse = (value: unknown): LoginResponse | null => {
+  if (!isRecord(value)) return null;
+
+  const payload = isRecord(value.data)
+    ? value.data
+    : isRecord(value.result)
+      ? value.result
+      : value;
+  const accessToken = asString(
+    payload.accessToken ?? payload.token ?? payload.jwt,
   );
+  if (!accessToken) return null;
+
+  const user = "user" in payload
+    ? normalizeUser(payload.user)
+    : "profile" in payload
+      ? normalizeUser(payload.profile)
+      : null;
+  if (user === undefined) return null;
+
+  return { accessToken, user };
 };
 
 const isAccessTokenResponse = (
@@ -241,12 +269,13 @@ export const login = async (payload: Credentials): Promise<LoginResponse> => {
     throw new Error(message);
   }
 
-  //  Login phải trả accessToken và user hoặc null.
-  if (!isLoginResponse(data)) {
+  //  Login phải trả accessToken; user có thể null nếu chưa hoàn thiện hồ sơ.
+  const session = normalizeLoginResponse(data);
+  if (!session) {
     throw new Error("Phản hồi đăng nhập không hợp lệ.");
   }
 
-  return data;
+  return session;
 };
 
 export const refreshToken = async (): Promise<AccessTokenResponse> => {

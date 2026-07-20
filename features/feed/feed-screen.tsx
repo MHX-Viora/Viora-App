@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
+import { showAppToast } from "@/components/common/app-toast";
 import { CreatePostModal } from "@/components/feed/create-post-modal";
 import { FeedSearchModal } from "@/components/feed/feed-search-modal";
 import { PostCard } from "@/components/feed/post-card";
@@ -139,6 +140,11 @@ export function FeedScreen() {
       const newPost = await createPost(payload);
       setPosts((current) => [newPost, ...current]);
       closeModal();
+      showAppToast({
+        message: "Bài viết của bạn đã được đăng.",
+        title: "Đăng bài thành công",
+        type: "success",
+      });
     } catch (error) {
       Alert.alert(
         "Không thể tạo bài viết",

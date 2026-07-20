@@ -31,6 +31,18 @@ export type ChatReply = {
   content: string;
 };
 
+export enum MessageType {
+  Text = 0,
+  Image = 1,
+  Video = 2,
+  File = 3,
+  Audio = 4,
+  Sticker = 5,
+  Location = 6,
+  Recall = 7,
+  System = 100,
+}
+
 export type LastMessage = {
   attachments: ChatAttachment[];
   id: string;
@@ -46,6 +58,10 @@ export type Conversation = {
   conversationType: "Private" | "Group";
   name: string;
   avatarUrl: string | null;
+  canSendMessage?: boolean | number;
+  onlyAdminCanSend?: boolean;
+  createdBy?: ChatParticipant | null;
+  membersPreview?: ChatGroupMember[];
   otherParticipant: ChatParticipant | null;
   blockedBy?: ChatParticipant | null;
   memberCount?: number;
@@ -72,6 +88,22 @@ export type ChatSharedLink = {
   url: string;
   sender: ChatParticipant | null;
   createdAt: string;
+};
+
+export type ChatGroupMember = {
+  avatarUrl: string | null;
+  displayName: string;
+  id: string;
+  isOnline: boolean;
+  isVerified: boolean;
+  joinedAt: string;
+  role: number;
+};
+
+export type ChatGroupMembersPage = {
+  items: ChatGroupMember[];
+  page: number;
+  totalPages: number;
 };
 
 export type ChatSearchResult = {
@@ -175,7 +207,17 @@ export type ConversationsPage = {
 export type MessagesPage = {
   conversation: Pick<
     Conversation,
-    "id" | "conversationType" | "isBlocked" | "blockedBy"
+    | "avatarUrl"
+    | "blockedBy"
+    | "conversationType"
+    | "id"
+    | "isBlocked"
+    | "memberCount"
+    | "name"
+    | "onlyAdminCanSend"
+    | "otherParticipant"
+    | "role"
+    | "canSendMessage"
   > | null;
   items: ChatMessage[];
   page: number;

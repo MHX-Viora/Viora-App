@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -34,7 +35,7 @@ export function AppToastHost() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toast, setToast] = useState<ToastPayload | null>(null);
 
-  const hide = () => {
+  const hide = useCallback(() => {
     Animated.parallel([
       Animated.timing(translateY, {
         duration: 180,
@@ -47,7 +48,7 @@ export function AppToastHost() {
         useNativeDriver: true,
       }),
     ]).start(() => setToast(null));
-  };
+  }, [opacity, translateY]);
 
   useEffect(() => {
     const listener: ToastListener = (payload) => {
@@ -74,12 +75,12 @@ export function AppToastHost() {
       listeners.delete(listener);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [opacity, translateY]);
+  }, [hide, opacity, translateY]);
 
   if (!toast) return null;
 
   const type = toast.type ?? "success";
-  const icon = type === "success" ? "checkmark-circle" : "alert-circle";
+  const icon = type === "success" ? "checkmark" : "alert-circle";
 
   return (
     <Animated.View
@@ -93,21 +94,21 @@ export function AppToastHost() {
         },
       ]}
     >
-      <Pressable
-        accessibilityRole="button"
-        onPress={hide}
-        style={styles.toast}
-      >
+      <Pressable accessibilityRole="button" onPress={hide} style={styles.toast}>
         <View style={[styles.iconWrap, type === "error" && styles.errorIcon]}>
-          <Ionicons
-            color={type === "error" ? colors.danger : colors.primary}
-            name={icon}
-            size={20}
-          />
+          {type === "success" ? (
+            <>
+              <Image
+                source={require("@/assets/images/viora_logo.png")}
+                style={styles.appIcon}
+              />
+            </>
+          ) : (
+            <Ionicons color={colors.danger} name={icon} size={14} />
+          )}
         </View>
         <View style={styles.copy}>
-          {toast.title ? <Text style={styles.title}>{toast.title}</Text> : null}
-          <Text numberOfLines={2} style={styles.message}>
+          <Text numberOfLines={1} style={styles.message}>
             {toast.message}
           </Text>
         </View>
@@ -118,8 +119,23 @@ export function AppToastHost() {
 
 const styles = StyleSheet.create({
   copy: { flex: 1 },
-  errorIcon: { backgroundColor: "rgba(239, 71, 111, 0.12)" },
+  appIcon: { borderRadius: 5, height: 20, width: 20 },
+  checkBadge: {
+    alignItems: "center",
+    backgroundColor: "#2F7DFF",
+    borderColor: "#111111",
+    borderRadius: 6,
+    borderWidth: 1,
+    bottom: -2,
+    height: 12,
+    justifyContent: "center",
+    position: "absolute",
+    right: -4,
+    width: 12,
+  },
+  errorIcon: { backgroundColor: "rgba(239, 71, 111, 0.16)" },
   host: {
+    alignItems: "center",
     left: 0,
     paddingHorizontal: spacing.md,
     position: "absolute",
@@ -129,22 +145,32 @@ const styles = StyleSheet.create({
   },
   iconWrap: {
     alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderRadius: 8,
-    height: 36,
+    borderRadius: 5,
+    height: 22,
     justifyContent: "center",
-    width: 36,
+    width: 22,
   },
-  message: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
-  title: { color: colors.text, fontSize: 14, fontWeight: "900", marginBottom: 2 },
+  message: {
+    color: "#D3D3D3",
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
   toast: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
+    alignSelf: "center",
+    backgroundColor: "#111111",
+    borderRadius: 10,
+    elevation: 10,
     flexDirection: "row",
-    gap: spacing.sm,
-    padding: spacing.sm,
+    gap: 9,
+    maxWidth: "88%",
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    shadowColor: "#000000",
+    shadowOffset: { height: 7, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
   },
 });

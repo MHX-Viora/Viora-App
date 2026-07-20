@@ -6,6 +6,11 @@ import type {
   FriendListUser,
   FriendStatus,
 } from "@/types/friend";
+import type {
+  SelectableFriend,
+  SelectableFriendsPage,
+  SelectableFriendsQuery,
+} from "@/types/chat-group";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -86,6 +91,38 @@ const mapFriendListResponse = (value: unknown): FriendListResponse => {
   };
 };
 
+const mapSelectableFriend = (value: unknown): SelectableFriend | null => {
+  if (!isRecord(value)) return null;
+  const id = toString(value.id ?? value.userId);
+  if (!id) return null;
+
+  return {
+    avatarUrl: toString(value.avatarUrl ?? value.avatar) || null,
+    displayName: toString(value.displayName ?? value.name ?? value.fullName, "Người dùng"),
+    id,
+    isOnline: value.isOnline === true,
+    isVerified: value.isVerified === true,
+  };
+};
+
+const getPageItems = (value: unknown) => {
+  if (!isRecord(value)) return [];
+  if (Array.isArray(value.items)) return value.items;
+  if (Array.isArray(value.data)) return value.data;
+  if (Array.isArray(value.results)) return value.results;
+  return [];
+};
+
+const mapSelectableFriendsPage = (value: unknown): SelectableFriendsPage => ({
+  items: getPageItems(value)
+    .map(mapSelectableFriend)
+    .filter((item): item is SelectableFriend => item !== null),
+  page: isRecord(value) ? toNumber(value.page, 1) : 1,
+  totalPages: isRecord(value)
+    ? toNumber(value.totalPages, toNumber(value.totalPage, 1))
+    : 1,
+});
+
 export const getFriends = async (
   query: FriendListQuery,
 ): Promise<FriendListResponse> => {
@@ -110,6 +147,31 @@ export const getFriends = async (
   }
 
   return mapFriendListResponse(data);
+};
+
+export const getSelectableFriends = async (
+  query: SelectableFriendsQuery,
+): Promise<SelectableFriendsPage> => {
+  const params = new URLSearchParams({
+    page: String(query.page),
+    pageSize: String(query.pageSize),
+  });
+
+  const keyword = query.keyword?.trim();
+  if (keyword) params.set("keyword", keyword);
+
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/friends/selectable?${params.toString()}`,
+  );
+  const data = parseResponseText(await response.text());
+
+  if (!response.ok) {
+    throw new Error(
+      getHttpErrorMessage(response, data, "Không thể tải danh sách bạn bè."),
+    );
+  }
+
+  return mapSelectableFriendsPage(data);
 };
 
 export const acceptFriendRequest = async (

@@ -33,6 +33,10 @@ type ConversationBlockedChangedListener = (
   event: ConversationBlockedChangedEvent,
 ) => void;
 type ConversationReadListener = (event: ConversationReadEvent) => void;
+type ConversationDissolvedEvent = { conversationId: string };
+type ConversationDissolvedListener = (
+  event: ConversationDissolvedEvent,
+) => void;
 type MessageDeliveredListener = (event: MessageDeliveredEvent) => void;
 type MessageDeletedListener = (event: MessageDeletedEvent) => void;
 type NewMessageNotificationListener = (
@@ -49,6 +53,8 @@ const conversationMutedChangedListeners =
 const conversationBlockedChangedListeners =
   new Set<ConversationBlockedChangedListener>();
 const conversationReadListeners = new Set<ConversationReadListener>();
+const conversationDissolvedListeners =
+  new Set<ConversationDissolvedListener>();
 const messageDeliveredListeners = new Set<MessageDeliveredListener>();
 const messageDeletedListeners = new Set<MessageDeletedListener>();
 const newMessageNotificationListeners =
@@ -86,6 +92,10 @@ export const subscribeRealtimeConversationBlockedChanges = (
 export const subscribeRealtimeConversationReads = (
   listener: ConversationReadListener,
 ) => subscribe(conversationReadListeners, listener);
+
+export const subscribeRealtimeConversationDissolved = (
+  listener: ConversationDissolvedListener,
+) => subscribe(conversationDissolvedListeners, listener);
 
 export const subscribeRealtimeMessageDelivered = (
   listener: MessageDeliveredListener,
@@ -151,6 +161,26 @@ export const emitRealtimeConversationRead = (payload: unknown) => {
   const event = mapConversationReadEvent(payload);
   if (!event) return null;
   conversationReadListeners.forEach((listener) => listener(event));
+  return event;
+};
+
+export const emitRealtimeConversationDissolved = (payload: unknown) => {
+  if (typeof payload === "string") {
+    const event = { conversationId: payload };
+    conversationDissolvedListeners.forEach((listener) => listener(event));
+    return event;
+  }
+  if (typeof payload !== "object" || payload === null) return null;
+  const raw = payload as { conversationId?: unknown; id?: unknown };
+  const conversationId =
+    typeof raw.conversationId === "string"
+      ? raw.conversationId
+      : typeof raw.id === "string"
+        ? raw.id
+        : "";
+  if (!conversationId) return null;
+  const event = { conversationId };
+  conversationDissolvedListeners.forEach((listener) => listener(event));
   return event;
 };
 

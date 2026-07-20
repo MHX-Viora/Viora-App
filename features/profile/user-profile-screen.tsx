@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
+import { showAppToast } from "@/components/common/app-toast";
 import { ProfileContent } from "@/components/profile/profile-content";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { openProfileByUserId } from "@/features/profile/open-profile";
@@ -133,6 +134,13 @@ export function UserProfileScreen() {
             }
           : current,
       );
+      showAppToast({
+        message: result.isFollowing
+          ? "Bạn đã theo dõi người dùng này."
+          : "Bạn đã bỏ theo dõi người dùng này.",
+        title: result.isFollowing ? "Đã theo dõi" : "Đã bỏ theo dõi",
+        type: "success",
+      });
     } catch (error) {
       Alert.alert(
         "Không thể theo dõi",
@@ -156,12 +164,13 @@ export function UserProfileScreen() {
         await deleteFriend(profile.id);
         const nextProfile = await getUserProfile(profile.id);
         setProfile(nextProfile);
-        Alert.alert(
-          isPendingRequest ? "Đã hủy lời mời" : "Đã hủy kết bạn",
-          isPendingRequest
+        showAppToast({
+          message: isPendingRequest
             ? "Lời mời kết bạn đã được hủy."
             : "Bạn đã hủy kết bạn thành công.",
-        );
+          title: isPendingRequest ? "Đã hủy lời mời" : "Đã hủy kết bạn",
+          type: "success",
+        });
         return;
       }
 
@@ -180,7 +189,11 @@ export function UserProfileScreen() {
       );
 
       if (result.message) {
-        Alert.alert("Đã gửi lời mời", result.message);
+        showAppToast({
+          message: result.message,
+          title: "Đã gửi lời mời",
+          type: "success",
+        });
       }
     } catch (error) {
       const isCancelAction =

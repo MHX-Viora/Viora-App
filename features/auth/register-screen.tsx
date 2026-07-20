@@ -17,6 +17,7 @@ import {
   AuthFooterLink,
   AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
+import { showAppToast } from "@/components/common/app-toast";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { register } from "@/services/auth.service";
 import { colors, spacing } from "@/theme";
@@ -60,13 +61,12 @@ export function RegisterScreen() {
         identifier: normalizedIdentifier,
         password,
       });
-      showAlert({
+      showAppToast({
         title: "Đăng ký thành công",
         message: "Tài khoản đã được tạo. Vui lòng đăng nhập để tiếp tục.",
-        kind: "success",
-        actionLabel: "Đăng nhập",
-        onAction: () => router.replace("/login"),
+        type: "success",
       });
+      router.replace("/login");
     } catch (error) {
       showAlert({
         title: "Đăng ký thất bại",

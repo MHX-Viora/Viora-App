@@ -17,6 +17,7 @@ import {
   View,
 } from "react-native";
 
+import { showAppToast } from "@/components/common/app-toast";
 import { deletePost, reportPost } from "@/services/post.service";
 import { followUser } from "@/services/user.service";
 import { colors, spacing } from "@/theme";
@@ -286,6 +287,13 @@ export function ReelCard({
       const result = await followUser(reel.authorId);
       setIsFollowingAuthor(result.isFollowing);
       if (result.isFollowing) setShowFollowSuccess(true);
+      showAppToast({
+        message: result.isFollowing
+          ? "Bạn đã theo dõi người dùng này."
+          : "Bạn đã bỏ theo dõi người dùng này.",
+        title: result.isFollowing ? "Đã theo dõi" : "Đã bỏ theo dõi",
+        type: "success",
+      });
     } catch (error) {
       Alert.alert(
         "Không thể theo dõi",
@@ -307,7 +315,11 @@ export function ReelCard({
         reason: reason.value,
       });
       setReportVisible(false);
-      Alert.alert("Đã gửi báo cáo", "Cảm ơn bạn đã giúp Viora an toàn hơn.");
+      showAppToast({
+        message: "Cảm ơn bạn đã giúp Viora an toàn hơn.",
+        title: "Đã gửi báo cáo",
+        type: "success",
+      });
     } catch (error) {
       Alert.alert(
         "Không thể báo cáo",
