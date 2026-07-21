@@ -5,26 +5,83 @@ import { AppState } from "react-native";
 import "react-native-reanimated";
 
 import { AppToastHost } from "@/components/common/app-toast";
+import { emitRealtimeSyncRequest } from "@/features/chat/chat-events";
+import { setNotificationNavigationReady } from "@/features/notifications/notification-response-navigation";
+import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import { getNotifications } from "@/services/notification.service";
 import {
   registerPushNotifications,
   setupNotificationHandling,
   setupNotificationResponseHandling,
+  setupPushTokenRefreshHandling,
 } from "@/services/push-notification.service";
 import { startRealtime, stopRealtime } from "@/services/realtime.service";
 import { getSession } from "@/stores/session-store";
+import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
+
+let appSyncPromise: Promise<void> | null = null;
+
+const synchronizeAuthenticatedApp = (reason: "cold-start" | "resume") => {
+  if (appSyncPromise) return appSyncPromise;
+
+  console.info("[ChatSync] app sync started", {
+    appState: AppState.currentState,
+    reason,
+    timestamp: new Date().toISOString(),
+  });
+  emitRealtimeSyncRequest();
+
+  appSyncPromise = Promise.all([
+    startRealtime(),
+    syncChatUnreadCount(reason),
+    getNotifications({ page: 1, pageSize: 1 })
+      .then((result) => {
+        console.info("[NotificationSync] unread count fetched", {
+          reason,
+          source: "api",
+          timestamp: new Date().toISOString(),
+          unreadCount: result.unreadCount,
+        });
+        setNotificationUnreadCount(result.unreadCount);
+      })
+      .catch((error: unknown) => {
+        console.info("[NotificationSync] unread count fetch failed", {
+          message: error instanceof Error ? error.message : String(error),
+          reason,
+          source: "api",
+          timestamp: new Date().toISOString(),
+        });
+      }),
+  ])
+    .then(() => {
+      console.info("[ChatSync] app sync completed", {
+        appState: AppState.currentState,
+        reason,
+        timestamp: new Date().toISOString(),
+      });
+    })
+    .finally(() => {
+      appSyncPromise = null;
+    });
+
+  return appSyncPromise;
+};
 
 export default function RootLayout() {
   const segments = useSegments();
   const hasRegisteredPushNotifications = useRef(false);
+  const hasHydratedAuthenticatedState = useRef(false);
 
   useEffect(() => {
     setupNotificationHandling();
     setupNotificationResponseHandling();
+    setupPushTokenRefreshHandling();
   }, []);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", async (state) => {
       const session = await getSession();
+      if (state !== AppState.currentState) return;
 
       if (!session?.accessToken || session.user === null) {
         void stopRealtime();
@@ -32,8 +89,23 @@ export default function RootLayout() {
       }
 
       if (state === "active") {
-        void startRealtime();
+        console.info("[ChatSync] app resumed", {
+          appState: state,
+          timestamp: new Date().toISOString(),
+        });
+        void synchronizeAuthenticatedApp("resume");
+        return;
       }
+
+      console.info("[ChatSync] app backgrounded", {
+        appState: state,
+        timestamp: new Date().toISOString(),
+      });
+      void stopRealtime().then(() => {
+        if (AppState.currentState === "active") {
+          void startRealtime();
+        }
+      });
     });
 
     return () => subscription.remove();
@@ -50,6 +122,8 @@ export default function RootLayout() {
 
       // Chưa đăng nhập thì chỉ cho ở login/register.
       if (!session?.accessToken) {
+        hasHydratedAuthenticatedState.current = false;
+        setNotificationNavigationReady(false);
         void stopRealtime();
         if (currentRoute !== "login" && currentRoute !== "register") {
           router.replace("/login");
@@ -59,6 +133,8 @@ export default function RootLayout() {
 
       // Đã đăng nhập nhưng chưa có user thì bắt hoàn thiện hồ sơ.
       if (session.user === null) {
+        hasHydratedAuthenticatedState.current = false;
+        setNotificationNavigationReady(false);
         void stopRealtime();
         if (currentRoute !== "complete-profile") {
           router.replace("/complete-profile");
@@ -71,16 +147,23 @@ export default function RootLayout() {
         router.replace("/");
       }
 
-      void startRealtime();
+      setNotificationNavigationReady(true);
+      if (!hasHydratedAuthenticatedState.current) {
+        hasHydratedAuthenticatedState.current = true;
+        void synchronizeAuthenticatedApp("cold-start");
+      }
       if (!hasRegisteredPushNotifications.current) {
-        hasRegisteredPushNotifications.current = true;
-        void registerPushNotifications().catch((error: unknown) => {
-          console.info(
-            "[Push] registration failed",
-            error instanceof Error ? error.message : String(error),
-          );
-          hasRegisteredPushNotifications.current = false;
-        });
+        void registerPushNotifications()
+          .then((token) => {
+            hasRegisteredPushNotifications.current = token !== null;
+          })
+          .catch((error: unknown) => {
+            console.info(
+              "[Push] registration failed",
+              error instanceof Error ? error.message : String(error),
+            );
+            hasRegisteredPushNotifications.current = false;
+          });
       }
     };
 

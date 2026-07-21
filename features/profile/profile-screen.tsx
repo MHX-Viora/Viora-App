@@ -13,6 +13,7 @@ import { logout } from "@/services/auth.service";
 import { getPosts } from "@/services/feed.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { formatReelCount, getReels } from "@/services/reel.service";
+import { unregisterCurrentDevicePushToken } from "@/services/push-notification.service";
 import { stopRealtime } from "@/services/realtime.service";
 import {
   getPostShareLink,
@@ -362,6 +363,7 @@ export function ProfileScreen() {
         onClose={() => setShowSettings(false)}
         onLogout={async () => {
           setShowSettings(false);
+          await unregisterCurrentDevicePushToken();
           try {
             await logout();
           } catch {

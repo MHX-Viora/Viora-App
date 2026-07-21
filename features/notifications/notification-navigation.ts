@@ -14,16 +14,16 @@ const getFriendNotificationTab = (notification: NotificationItemModel) => {
   const text = normalizeText(`${notification.title} ${notification.content}`);
 
   if (
-    notification.type === 6 ||
     text.includes("loi moi ket ban") ||
+    text.includes("yeu cau ket ban") ||
     text.includes("friendrequest")
   ) {
     return "requests";
   }
 
   if (
-    notification.type === 8 ||
     text.includes("chap nhan ket ban") ||
+    text.includes("chap nhan loi moi") ||
     text.includes("da ket ban") ||
     text.includes("friendaccepted")
   ) {

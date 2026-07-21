@@ -1,8 +1,7 @@
-import { Tabs, usePathname } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { Tabs } from "expo-router";
+import { useEffect, useState } from "react";
 
 import { TabIcon } from "@/components/layout/tab-icon";
-import { getNotifications } from "@/services/notification.service";
 import { colors } from "@/theme";
 import {
   getChatUnreadCount,
@@ -10,7 +9,6 @@ import {
 } from "@/utils/chat-unread-count";
 import {
   getNotificationUnreadCount,
-  setNotificationUnreadCount,
   subscribeNotificationUnreadCount,
 } from "@/utils/notification-unread-count";
 
@@ -26,7 +24,6 @@ const getBadge = (count: number) =>
   count > 0 ? (count > 99 ? "99+" : count) : undefined;
 
 export default function TabLayout() {
-  const pathname = usePathname();
   const [unreadNotificationCount, setUnreadNotificationCountState] = useState(
     getNotificationUnreadCount(),
   );
@@ -34,25 +31,12 @@ export default function TabLayout() {
     getChatUnreadCount(),
   );
 
-  const loadUnreadNotificationCount = useCallback(async () => {
-    try {
-      const result = await getNotifications({ page: 1, pageSize: 1 });
-      setNotificationUnreadCount(result.unreadCount);
-    } catch {
-      setNotificationUnreadCount(0);
-    }
-  }, []);
-
   useEffect(
     () => subscribeNotificationUnreadCount(setUnreadNotificationCountState),
     [],
   );
 
   useEffect(() => subscribeChatUnreadCount(setUnreadChatCountState), []);
-
-  useEffect(() => {
-    loadUnreadNotificationCount();
-  }, [loadUnreadNotificationCount, pathname]);
 
   return (
     <Tabs

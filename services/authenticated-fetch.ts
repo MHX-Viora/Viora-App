@@ -1,5 +1,4 @@
 import { refreshToken } from "@/services/auth.service";
-import { restartRealtime } from "@/services/realtime.service";
 import { getAccessToken, setAccessToken } from "@/stores/session-store";
 
 export const authenticatedFetch = async (
@@ -28,7 +27,9 @@ export const authenticatedFetch = async (
   // 401 Unauthorized: Token hết hạn: refresh token, lưu token mới, rồi gọi lại đúng 1 lần.
   const refreshedSession = await refreshToken();
   await setAccessToken(refreshedSession.accessToken);
-  void restartRealtime();
+  void import("@/services/realtime.service").then(({ restartRealtime }) =>
+    restartRealtime(),
+  );
 
   response = await fetch(url, {
     ...options,

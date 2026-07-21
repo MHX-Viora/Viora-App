@@ -21,15 +21,16 @@ import {
   getActiveChatConversation,
 } from "@/features/chat/chat-events";
 import { showChatRealtimeNotification } from "@/services/chat-foreground-notification.service";
+import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
 import { getAccessToken } from "@/stores/session-store";
-import { setChatUnreadCount } from "@/utils/chat-unread-count";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 let connection: HubConnection | null = null;
 let shouldRunRealtime = false;
 let startPromise: Promise<void> | null = null;
+const joinedGroups = new Set<string>();
 
 const handleNotificationPayload = (payload: unknown, eventName: string) => {
   try {
@@ -45,7 +46,11 @@ const getRealtimeConnection = () => {
   if (!connection) {
     connection = new HubConnectionBuilder()
       .withUrl(`${BASE_URL}/hubs/realtime`, {
-        accessTokenFactory: async () => (await getAccessToken()) ?? "",
+        accessTokenFactory: async () => {
+          const token = (await getAccessToken()) ?? "";
+          console.info("[Realtime] access token exists", { exists: !!token });
+          return token;
+        },
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(LogLevel.None)
@@ -60,8 +65,21 @@ const getRealtimeConnection = () => {
     });
 
     connection.onreconnected(() => {
-      console.info("[Realtime] reconnected");
+      console.info("[ChatSync] SignalR reconnected", {
+        source: "signalr",
+        timestamp: new Date().toISOString(),
+      });
       emitRealtimeSyncRequest();
+      void syncChatUnreadCount("signalr-reconnected");
+      for (const groupName of joinedGroups) {
+        console.info("[Realtime] rejoin group", { groupName });
+        void connection?.invoke("JoinGroup", groupName).catch((error: unknown) => {
+          console.info(
+            "[Realtime] rejoin group failed",
+            error instanceof Error ? error.message : String(error),
+          );
+        });
+      }
     });
 
     connection.onclose((error) => {
@@ -82,6 +100,9 @@ const getRealtimeConnection = () => {
     connection.on("ConversationRead", (payload) => {
       emitRealtimeConversationRead(payload);
     });
+    connection.on("MessageRead", (payload) => {
+      emitRealtimeConversationRead(payload);
+    });
     connection.on("MessagesRead", (payload) => {
       emitRealtimeConversationRead(payload);
     });
@@ -96,7 +117,7 @@ const getRealtimeConnection = () => {
       if (!event || getActiveChatConversation() === event.conversationId) {
         return;
       }
-      setChatUnreadCount(event.unreadCount);
+      void syncChatUnreadCount("signalr");
       void showChatRealtimeNotification(event);
     });
     connection.on("FriendRequestReceived", (payload) => {
@@ -134,9 +155,18 @@ const getRealtimeConnection = () => {
     });
     connection.on("ConversationRenamed", () => undefined);
     connection.on("ConversationAvatarChanged", () => undefined);
-    connection.on("MemberAdded", () => undefined);
-    connection.on("MemberRemoved", () => undefined);
-    connection.on("MemberLeft", () => undefined);
+    connection.on("MemberAdded", (payload) => {
+      console.info("[Realtime] MemberAdded", payload);
+      emitRealtimeSyncRequest();
+    });
+    connection.on("MemberRemoved", (payload) => {
+      console.info("[Realtime] MemberRemoved", payload);
+      emitRealtimeSyncRequest();
+    });
+    connection.on("MemberLeft", (payload) => {
+      console.info("[Realtime] MemberLeft", payload);
+      emitRealtimeSyncRequest();
+    });
   }
 
   return connection;
@@ -152,7 +182,10 @@ export const startRealtime = async () => {
     startPromise = realtimeConnection
       .start()
       .then(() => {
-        console.info("[Realtime] connected");
+        console.info("[ChatSync] SignalR connected", {
+          source: "signalr",
+          timestamp: new Date().toISOString(),
+        });
       })
       .catch((error: unknown) => {
         if (shouldRunRealtime) {
@@ -187,11 +220,30 @@ export const restartRealtime = async () => {
 };
 
 export const joinRealtimeGroup = async (groupName: string) => {
-  if (!connection || connection.state !== HubConnectionState.Connected) return;
+  if (!groupName.trim()) return;
+  joinedGroups.add(groupName);
+  await startRealtime();
+  if (!connection || connection.state !== HubConnectionState.Connected) {
+    console.info("[Realtime] JoinGroup skipped: not connected", {
+      groupName,
+      state: connection?.state,
+    });
+    return;
+  }
+  console.info("[Realtime] JoinGroup", { groupName });
   await connection.invoke("JoinGroup", groupName);
 };
 
 export const leaveRealtimeGroup = async (groupName: string) => {
-  if (!connection || connection.state !== HubConnectionState.Connected) return;
+  if (!groupName.trim()) return;
+  joinedGroups.delete(groupName);
+  if (!connection || connection.state !== HubConnectionState.Connected) {
+    console.info("[Realtime] LeaveGroup skipped: not connected", {
+      groupName,
+      state: connection?.state,
+    });
+    return;
+  }
+  console.info("[Realtime] LeaveGroup", { groupName });
   await connection.invoke("LeaveGroup", groupName);
 };

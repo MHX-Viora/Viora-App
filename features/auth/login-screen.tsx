@@ -19,6 +19,8 @@ import {
 } from "@/components/auth/auth-controls";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { login, saveAuthSession } from "@/services/auth.service";
+import { registerPushNotifications } from "@/services/push-notification.service";
+import { startRealtime } from "@/services/realtime.service";
 import { colors, spacing } from "@/theme";
 
 export function LoginScreen() {
@@ -47,6 +49,10 @@ export function LoginScreen() {
       });
 
       await saveAuthSession(session);
+      if (session.user !== null) {
+        void startRealtime();
+        void registerPushNotifications();
+      }
 
       // Chưa có user thì hoàn thiện hồ sơ; đã có user thì vào trang chủ.
       router.replace(session.user === null ? "/complete-profile" : "/");

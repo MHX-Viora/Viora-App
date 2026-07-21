@@ -14,6 +14,10 @@ const PAGE_SIZE = 20;
 export type SendStatus = "sent" | "sending" | "error";
 export type UiComment = Comment & { sendStatus?: SendStatus };
 export type UiReply = Reply & { sendStatus?: SendStatus };
+export type ReplyTarget = {
+  commentId: string;
+  user: Comment["user"];
+};
 
 export type ReplyState = {
   items: UiReply[];
@@ -56,7 +60,7 @@ export function useCommentsModal({
   const [replyStateByComment, setReplyStateByComment] = useState<
     Record<string, ReplyState>
   >({});
-  const [replyTarget, setReplyTarget] = useState<UiComment | null>(null);
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [draftComment, setDraftComment] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -186,7 +190,7 @@ export function useCommentsModal({
     }
   };
 
-  const submitReply = async (content: string, target: UiComment) => {
+  const submitReply = async (content: string, target: ReplyTarget) => {
     const tempId = `local-reply-${Date.now()}`;
     const currentUser = await getOptimisticUser();
     const optimisticReply: UiReply = {
@@ -206,17 +210,17 @@ export function useCommentsModal({
 
     setReplyStateByComment((state) => ({
       ...state,
-      [target.id]: {
-        items: [...(state[target.id]?.items ?? []), optimisticReply],
-        page: state[target.id]?.page ?? 1,
-        totalPages: state[target.id]?.totalPages ?? 1,
+      [target.commentId]: {
+        items: [...(state[target.commentId]?.items ?? []), optimisticReply],
+        page: state[target.commentId]?.page ?? 1,
+        totalPages: state[target.commentId]?.totalPages ?? 1,
         isLoading: false,
         isLoadingMore: false,
       },
     }));
     setComments((current) =>
       current.map((comment) =>
-        comment.id === target.id
+        comment.id === target.commentId
           ? { ...comment, replyCount: comment.replyCount + 1 }
           : comment,
       ),
@@ -224,32 +228,40 @@ export function useCommentsModal({
     setReplyTarget(null);
 
     try {
-      const reply = await createReply({ commentId: target.id, content });
+      const reply = await createReply({ commentId: target.commentId, content });
       setReplyStateByComment((state) => ({
         ...state,
-        [target.id]: {
-          ...(state[target.id] ?? {
+        [target.commentId]: {
+          ...(state[target.commentId] ?? {
             page: 1,
             totalPages: 1,
             isLoading: false,
             isLoadingMore: false,
           }),
-          items: (state[target.id]?.items ?? []).map((item) =>
-            item.id === tempId ? reply : item,
+          items: (state[target.commentId]?.items ?? []).map((item) =>
+            item.id === tempId
+              ? {
+                  ...reply,
+                  replyToUser: {
+                    id: target.user.id,
+                    displayName: target.user.displayName,
+                  },
+                }
+              : item,
           ),
         },
       }));
     } catch {
       setReplyStateByComment((state) => ({
         ...state,
-        [target.id]: {
-          ...(state[target.id] ?? {
+        [target.commentId]: {
+          ...(state[target.commentId] ?? {
             page: 1,
             totalPages: 1,
             isLoading: false,
             isLoadingMore: false,
           }),
-          items: (state[target.id]?.items ?? []).map((item) =>
+          items: (state[target.commentId]?.items ?? []).map((item) =>
             item.id === tempId ? { ...item, sendStatus: "error" } : item,
           ),
         },

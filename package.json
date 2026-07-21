@@ -1,6 +1,6 @@
 {
   "name": "viora",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
@@ -12,6 +12,8 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
     "@microsoft/signalr": "^10.0.0",
+    "@react-native-firebase/app": "^25.1.0",
+    "@react-native-firebase/messaging": "^25.1.0",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",

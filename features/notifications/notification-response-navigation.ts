@@ -36,23 +36,50 @@ const firstNumber = (...values: unknown[]) => {
 const isReferenceType = (value: number): value is NotificationReferenceType =>
   Number.isInteger(value) && value >= 0 && value <= 5;
 
+let navigationReady = false;
+const pendingNavigationActions: (() => void)[] = [];
+
 const navigateWhenReady = (navigate: () => void) => {
+  if (!navigationReady) {
+    pendingNavigationActions.push(navigate);
+    return;
+  }
+
   setTimeout(navigate, 0);
 };
 
+export const setNotificationNavigationReady = (ready: boolean) => {
+  navigationReady = ready;
+  if (!ready) return;
+
+  const actions = pendingNavigationActions.splice(0);
+  actions.forEach((navigate) => setTimeout(navigate, 0));
+};
+
 const navigateContentData = (data: Record<string, unknown>) => {
+  const dataType = firstString(data.type, data.notificationType)?.toLowerCase();
   const postId = firstString(data.postId, data["post.id"]);
-  if (postId) {
+  const referenceId = firstString(data.referenceId, data["reference.id"]);
+  if (postId || (dataType === "post" && referenceId)) {
     navigateWhenReady(() =>
-      router.push({ pathname: "/post/[postId]", params: { postId } }),
+      router.push({
+        pathname: "/post/[postId]",
+        params: { postId: postId ?? referenceId ?? "" },
+      }),
     );
     return true;
   }
 
   const reelId = firstString(data.reelId, data["reel.id"], data.videoId);
-  if (reelId) {
+  if (
+    reelId ||
+    ((dataType === "reel" || dataType === "video") && referenceId)
+  ) {
     navigateWhenReady(() =>
-      router.push({ pathname: "/reel/[reelId]", params: { reelId } }),
+      router.push({
+        pathname: "/reel/[reelId]",
+        params: { reelId: reelId ?? referenceId ?? "" },
+      }),
     );
     return true;
   }
@@ -87,14 +114,14 @@ export const navigateNotificationData = (data: Record<string, unknown>) => {
   const referenceId = firstString(data.referenceId, data["reference.id"]);
   const referenceType = firstNumber(data.referenceType, data["reference.type"]);
 
-  if (!notificationId) {
+  if (!notificationId && !referenceId) {
     return false;
   }
 
   const notification: NotificationItemModel = {
     content: "",
     createdAt: new Date().toISOString(),
-    id: notificationId,
+    id: notificationId ?? `push-${referenceId}`,
     imageUrl: null,
     isRead: false,
     reference:

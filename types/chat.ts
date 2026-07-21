@@ -228,6 +228,10 @@ export type ConversationsPage = {
   totalPages: number;
 };
 
+export type ChatUnreadSummary = {
+  totalUnreadCount: number;
+};
+
 export type MessagesPage = {
   conversation: Pick<
     Conversation,

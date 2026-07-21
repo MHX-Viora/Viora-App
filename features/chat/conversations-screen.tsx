@@ -1,8 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -34,11 +34,11 @@ import {
   setConversationMuted,
   setConversationPinned,
 } from "@/services/chat.service";
+import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { getUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
-import { setChatUnreadCount } from "@/utils/chat-unread-count";
 
 const PAGE_SIZE = 20;
 
@@ -256,6 +256,7 @@ export function ConversationsScreen() {
   const [actionLoadingIds, setActionLoadingIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const hasLoadedRef = useRef(false);
 
   const requestedConversationId = firstParam(params.conversationId);
   const requestedMessageId = firstParam(params.scrollToMessageId);
@@ -263,12 +264,6 @@ export function ConversationsScreen() {
   useEffect(() => {
     getUser().then((user) => setCurrentUserId(user?.id ?? null));
   }, []);
-
-  useEffect(() => {
-    setChatUnreadCount(
-      items.reduce((total, item) => total + item.unreadCount, 0),
-    );
-  }, [items]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeyword(keyword), 300);
@@ -376,6 +371,15 @@ export function ConversationsScreen() {
         setPage(result.page);
         setTotalPages(result.totalPages);
         setError("");
+        if (nextPage === 1) {
+          console.info("[ChatSync] conversations fetched", {
+            itemCount: result.items.length,
+            page: result.page,
+            source: "api",
+            timestamp: new Date().toISOString(),
+          });
+          void syncChatUnreadCount("conversation-focus");
+        }
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -391,9 +395,13 @@ export function ConversationsScreen() {
     [debouncedKeyword],
   );
 
-  useEffect(() => {
-    load(1, "initial");
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      const mode = hasLoadedRef.current ? "refresh" : "initial";
+      hasLoadedRef.current = true;
+      void load(1, mode);
+    }, [load]),
+  );
 
   useEffect(() => {
     if (
@@ -598,6 +606,13 @@ export function ConversationsScreen() {
       updateConversationLocal(conversation.id, { unreadCount: 0 });
       try {
         await markConversationRead(conversation.id);
+        console.info("[ChatSync] conversation marked read", {
+          conversationId: conversation.id,
+          source: "api",
+          timestamp: new Date().toISOString(),
+          unreadCount: 0,
+        });
+        void syncChatUnreadCount("mark-read");
       } catch (readError) {
         if (isConversationGoneError(readError)) {
           removeDissolvedConversation(conversation.id);

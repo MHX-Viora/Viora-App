@@ -21,6 +21,7 @@ import type {
   ChatSharedLinksPage,
   Conversation,
   ConversationsPage,
+  ChatUnreadSummary,
   JoinGroupResult,
   MessagesPage,
   SendMessageAttachment,
@@ -144,6 +145,27 @@ export const getConversations = async (query: {
   if (!response.ok)
     throwChatApiError(response, data, "Không thể tải cuộc trò chuyện.");
   return mapConversationsPage(data);
+};
+
+export const getChatUnreadSummary = async (): Promise<ChatUnreadSummary> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/unread-summary`,
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throwChatApiError(
+      response,
+      data,
+      "KhÃ´ng thá»ƒ táº£i sá»‘ tin nháº¯n chÆ°a Ä‘á»c.",
+    );
+  }
+
+  const payload = isRecord(data) && isRecord(data.data) ? data.data : data;
+  return {
+    totalUnreadCount: isRecord(payload)
+      ? asNumber(payload.totalUnreadCount ?? payload.unreadCount)
+      : 0,
+  };
 };
 
 export const getConversationMessages = async (

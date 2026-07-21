@@ -36,7 +36,7 @@ export const showRealtimeNotification = async (
         },
         title: notification.title,
       },
-      trigger: null,
+      trigger: { channelId: "default" },
     });
   } catch (error) {
     console.info(

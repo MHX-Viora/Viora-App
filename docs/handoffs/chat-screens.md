@@ -17,6 +17,15 @@
 - `app/chat/[conversationId].tsx`: chat room route.
 - `services/realtime.service.ts`: emits chat message/conversation/read/notification/delivered events from SignalR.
 - `services/chat-foreground-notification.service.ts`: local foreground notification for chat messages.
+
+## Push and resume synchronization
+
+- `index.js` registers the Firebase background handler before Expo Router.
+- `services/firebase-background-messaging.ts` logs background delivery and creates a local notification only for data-only payloads; Android renders notification payloads itself.
+- `services/chat-sync.service.ts` single-flights `GET /api/chat/unread-summary` and hydrates the global chat badge.
+- Root lifecycle stops SignalR outside the active state, then reconnects and refreshes HTTP state on cold start/resume.
+- The conversation list refreshes on focus; mark-read refreshes the global badge.
+- Android Force stop remains an OS delivery boundary and is intentionally not worked around.
 - `utils/chat-unread-count.ts`: tab badge unread count bridge.
 
 ## Assumptions

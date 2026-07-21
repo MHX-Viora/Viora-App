@@ -52,7 +52,8 @@ import {
   recallChatMessage,
   sendChatMessage,
 } from "@/services/chat.service";
-import { leaveRealtimeGroup } from "@/services/realtime.service";
+import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import { joinRealtimeGroup, leaveRealtimeGroup } from "@/services/realtime.service";
 import { getUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
 import { MessageType } from "@/types/chat";
@@ -69,6 +70,9 @@ const PAGE_SIZE = 30;
 const STICKERS = ["👍", "❤️", "😂", "🔥", "👏", "😍", "😮", "🙏"];
 const GOOGLE_MAPS_URL_PATTERN =
   /https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=-?\d+(\.\d+)?,-?\d+(\.\d+)?/;
+
+const getRealtimeConversationGroupName = (conversationId: string) =>
+  `conversation:${conversationId}`;
 
 const isConversationGoneError = (error: unknown) =>
   error instanceof ChatApiError && (error.status === 404 || error.status === 410);
@@ -107,9 +111,11 @@ const toNewestFirstMessages = (items: ChatMessage[]) => [...items].reverse();
 function AudioAttachment({
   attachment,
   isMine,
+  onLongPress,
 }: {
   attachment: ChatAttachment;
   isMine: boolean;
+  onLongPress: () => void;
 }) {
   const player = useAudioPlayer(attachment.url);
   const status = useAudioPlayerStatus(player);
@@ -124,6 +130,7 @@ function AudioAttachment({
   return (
     <Pressable
       accessibilityRole="button"
+      onLongPress={onLongPress}
       onPress={() => {
         if (status.playing) {
           player.pause();
@@ -172,10 +179,12 @@ function AudioAttachment({
 function ImageAttachment({
   attachment,
   onLayoutReady,
+  onLongPress,
   onOpen,
 }: {
   attachment: ChatAttachment;
   onLayoutReady: () => void;
+  onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
 }) {
   const [hasError, setHasError] = useState(false);
@@ -212,7 +221,7 @@ function ImageAttachment({
   }
 
   return (
-    <Pressable onPress={() => onOpen(attachment)}>
+    <Pressable onLongPress={onLongPress} onPress={() => onOpen(attachment)}>
       <Image
         onError={() => {
           setHasError(true);
@@ -231,12 +240,14 @@ function AttachmentView({
   attachment,
   isMine,
   onLayoutReady,
+  onLongPress,
   onOpen,
 }: {
   allowLocalPreview: boolean;
   attachment: ChatAttachment;
   isMine: boolean;
   onLayoutReady: () => void;
+  onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
 }) {
   if (attachment.type === "image") {
@@ -244,6 +255,7 @@ function AttachmentView({
       <ImageAttachment
         attachment={attachment}
         onLayoutReady={onLayoutReady}
+        onLongPress={onLongPress}
         onOpen={onOpen}
       />
     );
@@ -255,18 +267,26 @@ function AttachmentView({
         allowLocalPreview={allowLocalPreview}
         attachment={attachment}
         onLayoutReady={onLayoutReady}
+        onLongPress={onLongPress}
         onOpen={onOpen}
       />
     );
   }
 
   if (attachment.type === "audio") {
-    return <AudioAttachment attachment={attachment} isMine={isMine} />;
+    return (
+      <AudioAttachment
+        attachment={attachment}
+        isMine={isMine}
+        onLongPress={onLongPress}
+      />
+    );
   }
 
   return (
     <Pressable
       accessibilityRole="link"
+      onLongPress={onLongPress}
       onPress={async () => {
         try {
           const canOpen = await Linking.canOpenURL(attachment.url);
@@ -302,11 +322,13 @@ function VideoAttachment({
   allowLocalPreview,
   attachment,
   onLayoutReady,
+  onLongPress,
   onOpen,
 }: {
   allowLocalPreview: boolean;
   attachment: ChatAttachment;
   onLayoutReady: () => void;
+  onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
 }) {
   const isLocalCacheUrl = attachment.url.startsWith("file://");
@@ -326,7 +348,11 @@ function VideoAttachment({
   }
 
   return (
-    <Pressable onPress={() => onOpen(attachment)} style={styles.videoThumb}>
+    <Pressable
+      onLongPress={onLongPress}
+      onPress={() => onOpen(attachment)}
+      style={styles.videoThumb}
+    >
       <VideoView
         contentFit="contain"
         nativeControls={false}
@@ -410,10 +436,19 @@ function PendingAttachmentPreview({
   );
 }
 
-function LocationCard({ url, isMine }: { url: string; isMine: boolean }) {
+function LocationCard({
+  isMine,
+  onLongPress,
+  url,
+}: {
+  isMine: boolean;
+  onLongPress: () => void;
+  url: string;
+}) {
   return (
     <Pressable
       accessibilityRole="link"
+      onLongPress={onLongPress}
       onPress={() => Linking.openURL(url)}
       style={[styles.locationCard, isMine && styles.mineLocationCard]}
     >
@@ -531,7 +566,7 @@ function MessageRow({
           <Ionicons color={colors.danger} name="trash-outline" size={18} />
         </Pressable>
       ) : null}
-      {!message.isDeleted && !message.id.startsWith("pending-") ? (
+      {!message.id.startsWith("pending-") ? (
         <Pressable
           accessibilityLabel="Chuyển tiếp tin nhắn"
           onPress={() => {
@@ -550,7 +585,7 @@ function MessageRow({
     <Pressable
       onPress={onCloseActions}
       onLongPress={() => {
-        if (!message.isDeleted) onOpenActions(message);
+        onOpenActions(message);
       }}
       style={[
         styles.messageRow,
@@ -617,7 +652,11 @@ function MessageRow({
           </Pressable>
         )}
         {!message.isDeleted && locationUrl ? (
-          <LocationCard isMine={message.isMine} url={locationUrl} />
+          <LocationCard
+            isMine={message.isMine}
+            onLongPress={() => onOpenActions(message)}
+            url={locationUrl}
+          />
         ) : null}
         {!message.isDeleted && textContent ? (
           <Text style={[styles.messageText, message.isMine && styles.mineText]}>
@@ -633,6 +672,7 @@ function MessageRow({
             isMine={message.isMine}
             key={attachment.id}
             onLayoutReady={onMediaLayout}
+            onLongPress={() => onOpenActions(message)}
             onOpen={onOpenAttachment}
           />
         ))}
@@ -791,7 +831,7 @@ export function ChatScreen() {
     if (dissolvedRef.current) return;
     dissolvedRef.current = true;
     setActiveChatConversation(null);
-    void leaveRealtimeGroup(conversationId).catch(() => undefined);
+    void leaveRealtimeGroup(getRealtimeConversationGroupName(conversationId)).catch(() => undefined);
     showAppToast({ message: "Nhóm đã bị giải tán.", type: "success" });
     router.replace("/(tabs)/chat");
   }, [conversationId]);
@@ -809,7 +849,17 @@ export function ChatScreen() {
 
   const markConversationReadSafe = useCallback(() => {
     if (!conversationId || dissolvedRef.current) return;
-    void markConversationRead(conversationId).catch(handleRoomApiError);
+    void markConversationRead(conversationId)
+      .then(() => {
+        console.info("[ChatSync] conversation marked read", {
+          conversationId,
+          source: "api",
+          timestamp: new Date().toISOString(),
+          unreadCount: 0,
+        });
+        void syncChatUnreadCount("mark-read");
+      })
+      .catch(handleRoomApiError);
   }, [conversationId, handleRoomApiError]);
 
   const scrollToMessage = useCallback(
@@ -956,7 +1006,29 @@ export function ChatScreen() {
     dissolvedRef.current = false;
     setActiveChatConversation(conversationId || null);
     setMessagePermissions(null);
-    return () => setActiveChatConversation(null);
+    if (conversationId) {
+      void joinRealtimeGroup(getRealtimeConversationGroupName(conversationId)).catch(
+        (error) => {
+          console.info(
+            "[Realtime] JoinGroup failed",
+            error instanceof Error ? error.message : String(error),
+          );
+        },
+      );
+    }
+    return () => {
+      setActiveChatConversation(null);
+      if (conversationId) {
+        void leaveRealtimeGroup(getRealtimeConversationGroupName(conversationId)).catch(
+          (error) => {
+            console.info(
+              "[Realtime] LeaveGroup failed",
+              error instanceof Error ? error.message : String(error),
+            );
+          },
+        );
+      }
+    };
   }, [conversationId]);
 
   useEffect(() => {
@@ -1394,17 +1466,14 @@ export function ChatScreen() {
   );
 
   const openMessageActions = useCallback((message: ChatMessage) => {
-    if (message.isDeleted) return;
     if (message.messageType === MessageType.System) return;
-    if (!canSendInConversation && !message.isMine) return;
     setActionMessageId((current) =>
       current === message.id ? null : message.id,
     );
-  }, [canSendInConversation]);
+  }, []);
 
   const forwardMessage = useCallback((message: ChatMessage) => {
     if (
-      message.isDeleted ||
       message.messageType === MessageType.System ||
       message.id.startsWith("pending-")
     ) {

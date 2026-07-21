@@ -2,9 +2,7 @@ import * as Notifications from "expo-notifications";
 
 import { getActiveChatConversation } from "@/features/chat/chat-events";
 import type { NewMessageNotificationEvent } from "@/types/chat";
-
-const shownMessageNotifications = new Map<string, number>();
-const DEDUPE_MS = 10_000;
+import { claimChatNotification } from "@/utils/chat-notification-dedupe";
 
 const getMessagePreview = (event: NewMessageNotificationEvent) => {
   const content = event.message.content.trim();
@@ -33,10 +31,15 @@ export const showChatRealtimeNotification = async (
   if (getActiveChatConversation() === event.conversationId) return;
 
   const dedupeKey = event.message.id || event.conversationId;
-  const now = Date.now();
-  const lastShownAt = shownMessageNotifications.get(dedupeKey) ?? 0;
-  shownMessageNotifications.set(dedupeKey, now);
-  if (now - lastShownAt < DEDUPE_MS) return;
+  if (!claimChatNotification(dedupeKey)) {
+    console.info("[ChatSync] message deduped", {
+      conversationId: event.conversationId,
+      messageId: event.message.id,
+      source: "signalr",
+      timestamp: new Date().toISOString(),
+    });
+    return;
+  }
 
   try {
     await Notifications.scheduleNotificationAsync({
@@ -44,12 +47,13 @@ export const showChatRealtimeNotification = async (
         body: getMessagePreview(event),
         data: {
           conversationId: event.conversationId,
+          deliverySource: "signalr-local",
           messageId: event.message.id,
           type: "chat",
         },
         title: event.sender?.displayName ?? event.conversationName,
       },
-      trigger: null,
+      trigger: { channelId: "default" },
     });
   } catch (error) {
     console.info(

@@ -1,21 +1,26 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
+import * as SystemUI from "expo-system-ui";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import {
   type ReplyState,
+  type ReplyTarget,
   type SendStatus,
   type UiComment,
   useCommentsModal,
@@ -37,6 +42,8 @@ export function CommentsModal({
   postId: string | null;
   visible: boolean;
 }) {
+  const insets = useSafeAreaInsets();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const {
     close,
     comments,
@@ -54,119 +61,180 @@ export function CommentsModal({
     submit,
   } = useCommentsModal({ onClose, onCommentCreated, postId, visible });
 
+  useEffect(() => {
+    if (visible) {
+      void SystemUI.setBackgroundColorAsync(colors.white);
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener(
+      "keyboardDidShow",
+      (event) => {
+        setKeyboardHeight(event.endCoordinates.height);
+      },
+    );
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+    }
+  }, [visible]);
+
   return (
-    <Modal animationType="slide" onRequestClose={close} visible={visible}>
-      <SafeAreaView style={styles.screen}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.keyboardView}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Bình luận</Text>
-            <Pressable accessibilityRole="button" hitSlop={10} onPress={close}>
-              <Ionicons color={colors.text} name="close" size={26} />
-            </Pressable>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.skeletonList}>
-              <CommentSkeleton />
-              <CommentSkeleton />
-              <CommentSkeleton />
-            </View>
-          ) : (
-            <FlatList
-              contentContainerStyle={[
-                styles.listContent,
-                comments.length === 0 && styles.emptyList,
-              ]}
-              data={comments}
-              keyExtractor={(item) => item.id}
-              ListEmptyComponent={
-                <EmptyComments
-                  description={
-                    errorMessage ||
-                    "Bình luận mới nhất sẽ được hiển thị đầu tiên."
-                  }
-                  title={
-                    errorMessage ? "Không thể tải bình luận" : "Chưa có bình luận"
-                  }
-                />
-              }
-              ListFooterComponent={
-                isLoadingMore ? (
-                  <View style={styles.footer}>
-                    <ActivityIndicator color={colors.primary} />
-                  </View>
-                ) : null
-              }
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.35}
-              renderItem={({ item }) => (
-                <CommentItem
-                  comment={item}
-                  onHideReplies={() => hideReplies(item.id)}
-                  onLoadMoreReplies={() =>
-                    loadReplies(
-                      item.id,
-                      (replyStateByComment[item.id]?.page ?? 1) + 1,
-                    )
-                  }
-                  onReply={() => setReplyTarget(item)}
-                  onOpenUser={onOpenUser}
-                  onToggleReplies={() => loadReplies(item.id, 1)}
-                  replyState={replyStateByComment[item.id]}
-                />
-              )}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-
-          <View style={styles.composer}>
-            {replyTarget && (
-              <View style={styles.replyingBar}>
-                <Text numberOfLines={1} style={styles.replyingText}>
-                  Đang trả lời {replyTarget.user.displayName}
-                </Text>
-                <Pressable onPress={() => setReplyTarget(null)}>
-                  <Text style={styles.cancelReply}>Hủy</Text>
-                </Pressable>
-              </View>
-            )}
-            <View style={styles.emojiRow}>
-              {QUICK_EMOJIS.map((emoji) => (
-                <Pressable
-                  key={emoji}
-                  onPress={() => setDraftComment((current) => `${current}${emoji}`)}
-                  style={styles.emojiButton}
-                >
-                  <Text style={styles.emojiText}>{emoji}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <View style={styles.inputRow}>
-              <TextInput
-                multiline
-                onChangeText={setDraftComment}
-                placeholder={replyTarget ? "Viết trả lời..." : "Viết bình luận..."}
-                placeholderTextColor={colors.textMuted}
-                style={styles.input}
-                value={draftComment}
-              />
+    <Modal
+      animationType="slide"
+      navigationBarTranslucent
+      onRequestClose={close}
+      statusBarTranslucent
+      visible={visible}
+    >
+      <View style={styles.modalRoot}>
+        <SafeAreaView edges={["top"]} style={styles.screen}>
+          <View style={styles.keyboardView}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Bình luận</Text>
               <Pressable
-                disabled={!draftComment.trim()}
-                onPress={submit}
-                style={[
-                  styles.sendButton,
-                  !draftComment.trim() && styles.sendButtonDisabled,
-                ]}
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={close}
               >
-                <Ionicons color={colors.white} name="send" size={18} />
+                <Ionicons color={colors.text} name="close" size={26} />
               </Pressable>
             </View>
+
+            {isLoading ? (
+              <View style={styles.skeletonList}>
+                <CommentSkeleton />
+                <CommentSkeleton />
+                <CommentSkeleton />
+              </View>
+            ) : (
+              <FlatList
+                contentContainerStyle={[
+                  styles.listContent,
+                  comments.length === 0 && styles.emptyList,
+                ]}
+                data={comments}
+                keyExtractor={(item) => item.id}
+                ListEmptyComponent={
+                  <EmptyComments
+                    description={
+                      errorMessage ||
+                      "Bình luận mới nhất sẽ được hiển thị đầu tiên."
+                    }
+                    title={
+                      errorMessage
+                        ? "Không thể tải bình luận"
+                        : "Chưa có bình luận"
+                    }
+                  />
+                }
+                ListFooterComponent={
+                  isLoadingMore ? (
+                    <View style={styles.footer}>
+                      <ActivityIndicator color={colors.primary} />
+                    </View>
+                  ) : null
+                }
+                onEndReached={loadMore}
+                onEndReachedThreshold={0.35}
+                renderItem={({ item }) => (
+                  <CommentItem
+                    comment={item}
+                    onHideReplies={() => hideReplies(item.id)}
+                    onLoadMoreReplies={() =>
+                      loadReplies(
+                        item.id,
+                        (replyStateByComment[item.id]?.page ?? 1) + 1,
+                      )
+                    }
+                    onReply={setReplyTarget}
+                    onOpenUser={onOpenUser}
+                    onToggleReplies={() => loadReplies(item.id, 1)}
+                    replyState={replyStateByComment[item.id]}
+                  />
+                )}
+                showsVerticalScrollIndicator={false}
+                style={styles.list}
+              />
+            )}
+
+            <View
+              style={[
+                styles.composer,
+                {
+                  bottom:
+                    keyboardHeight > 0
+                      ? Math.max(0, keyboardHeight - insets.bottom) +
+                        KEYBOARD_COMPOSER_GAP
+                      : 0,
+                  paddingBottom:
+                    keyboardHeight > 0
+                      ? spacing.sm
+                      : Math.max(spacing.sm, insets.bottom + spacing.xs),
+                },
+              ]}
+            >
+              {replyTarget && (
+                <View style={styles.replyingBar}>
+                  <Text numberOfLines={1} style={styles.replyingText}>
+                    Đang trả lời {replyTarget.user.displayName}
+                  </Text>
+                  <Pressable onPress={() => setReplyTarget(null)}>
+                    <Text style={styles.cancelReply}>Hủy</Text>
+                  </Pressable>
+                </View>
+              )}
+              <View style={styles.emojiRow}>
+                {QUICK_EMOJIS.map((emoji) => (
+                  <Pressable
+                    key={emoji}
+                    onPress={() =>
+                      setDraftComment((current) => `${current}${emoji}`)
+                    }
+                    style={styles.emojiButton}
+                  >
+                    <Text style={styles.emojiText}>{emoji}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.inputRow}>
+                <TextInput
+                  multiline
+                  onBlur={() => setKeyboardHeight(0)}
+                  onChangeText={setDraftComment}
+                  placeholder={
+                    replyTarget ? "Viết trả lời..." : "Viết bình luận..."
+                  }
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.input}
+                  value={draftComment}
+                />
+                <Pressable
+                  disabled={!draftComment.trim()}
+                  onPress={submit}
+                  style={[
+                    styles.sendButton,
+                    !draftComment.trim() && styles.sendButtonDisabled,
+                  ]}
+                >
+                  <Ionicons color={colors.white} name="send" size={18} />
+                </Pressable>
+              </View>
+            </View>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -184,7 +252,7 @@ function CommentItem({
   onHideReplies: () => void;
   onLoadMoreReplies: () => void;
   onOpenUser?: (userId: string) => void;
-  onReply: () => void;
+  onReply: ReplyTargetSetter;
   onToggleReplies: () => void;
   replyState?: ReplyState;
 }) {
@@ -195,7 +263,7 @@ function CommentItem({
         isVerified={comment.user.isVerified}
         likeCount={comment.likeCount}
         onOpenUser={onOpenUser}
-        onReply={onReply}
+        onReply={() => onReply({ commentId: comment.id, user: comment.user })}
         sendStatus={comment.sendStatus}
         userAvatar={comment.user.avatarUrl}
         userName={comment.user.displayName}
@@ -203,7 +271,9 @@ function CommentItem({
       />
       {comment.replyCount > 0 && !replyState && (
         <Pressable onPress={onToggleReplies} style={styles.repliesButton}>
-          <Text style={styles.replyButton}>Xem {comment.replyCount} trả lời</Text>
+          <Text style={styles.replyButton}>
+            Xem {comment.replyCount} trả lời
+          </Text>
         </Pressable>
       )}
       {replyState && (
@@ -223,7 +293,7 @@ function CommentItem({
             isVerified={reply.user.isVerified}
             likeCount={reply.likeCount}
             onOpenUser={onOpenUser}
-            onReply={onReply}
+            onReply={() => onReply({ commentId: comment.id, user: reply.user })}
             replyToUser={reply.replyToUser.displayName}
             sendStatus={reply.sendStatus}
             userAvatar={reply.user.avatarUrl}
@@ -242,6 +312,8 @@ function CommentItem({
     </View>
   );
 }
+
+type ReplyTargetSetter = (target: ReplyTarget) => void;
 
 function CommentContent({
   content,
@@ -296,11 +368,17 @@ function CommentContent({
               </Text>
             </Pressable>
             {isVerified && (
-              <Ionicons color={colors.primary} name="checkmark-circle" size={16} />
+              <Ionicons
+                color={colors.primary}
+                name="checkmark-circle"
+                size={16}
+              />
             )}
           </View>
           <Text style={styles.content}>
-            {replyToUser && <Text style={styles.replyMention}>@{replyToUser} </Text>}
+            {replyToUser && (
+              <Text style={styles.replyMention}>@{replyToUser} </Text>
+            )}
             {content}
           </Text>
         </View>
@@ -342,7 +420,13 @@ function CommentSkeleton() {
   );
 }
 
-function EmptyComments({ description, title }: { description: string; title: string }) {
+function EmptyComments({
+  description,
+  title,
+}: {
+  description: string;
+  title: string;
+}) {
   return (
     <View style={styles.centerState}>
       <Ionicons color={colors.textMuted} name="chatbubble-outline" size={38} />
@@ -353,9 +437,15 @@ function EmptyComments({ description, title }: { description: string; title: str
 }
 
 const AVATAR_SIZE = 42;
+const KEYBOARD_COMPOSER_GAP = 90;
 
 const styles = StyleSheet.create({
-  author: { color: colors.text, flexShrink: 1, fontSize: 15, fontWeight: "800" },
+  author: {
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: 15,
+    fontWeight: "800",
+  },
   authorPressable: { flexShrink: 1 },
   authorRow: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
   avatar: {
@@ -365,49 +455,191 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
   },
   cancelReply: { color: colors.primary, fontSize: 13, fontWeight: "800" },
-  centerState: { alignItems: "center", flex: 1, justifyContent: "center", padding: spacing.xl },
-  centerText: { color: colors.textMuted, fontSize: 14, lineHeight: 20, marginTop: spacing.xs, textAlign: "center" },
+  centerState: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  centerText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: spacing.xs,
+    textAlign: "center",
+  },
   commentBody: { flex: 1 },
-  commentBubble: { backgroundColor: colors.background, borderRadius: 16, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+  commentBubble: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
   commentGroup: { paddingVertical: spacing.xs },
-  commentRow: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  composer: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, bottom: 0, elevation: 12, left: 0, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, position: "absolute", right: 0, zIndex: 20 },
+  commentRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  composer: {
+    backgroundColor: colors.white,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    elevation: 12,
+    left: 0,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    position: "absolute",
+    right: 0,
+    zIndex: 20,
+  },
   content: { color: colors.text, fontSize: 15, lineHeight: 22, marginTop: 3 },
-  emojiButton: { alignItems: "center", backgroundColor: colors.background, borderRadius: 16, height: 32, justifyContent: "center", width: 32 },
+  emojiButton: {
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
   emojiRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
   emojiText: { fontSize: 17 },
   emptyList: { flexGrow: 1 },
-  emptyTitle: { color: colors.text, fontSize: 17, fontWeight: "800", marginTop: spacing.sm },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "800",
+    marginTop: spacing.sm,
+  },
   errorText: { color: colors.danger, fontSize: 12, fontWeight: "700" },
   footer: { padding: spacing.md },
-  header: { alignItems: "center", borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", padding: spacing.md },
-  input: { color: colors.text, flex: 1, fontSize: 14, maxHeight: 96, minHeight: 40, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  inputRow: { alignItems: "flex-end", backgroundColor: colors.background, borderColor: colors.border, borderRadius: 22, borderWidth: 1, flexDirection: "row", gap: spacing.sm, paddingRight: 4 },
-  keyboardView: { flex: 1, position: "relative" },
+  header: {
+    alignItems: "center",
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: spacing.md,
+  },
+  input: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 14,
+    maxHeight: 96,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  inputRow: {
+    alignItems: "flex-end",
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 22,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingRight: 4,
+  },
+  keyboardView: {
+    backgroundColor: colors.white,
+    flex: 1,
+    position: "relative",
+  },
   likeAction: { alignItems: "center", flexDirection: "row", gap: 4 },
   likeCount: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  listContent: { paddingBottom: 158 },
-  metaRow: { alignItems: "center", flexDirection: "row", gap: spacing.md, paddingHorizontal: spacing.md, paddingTop: spacing.xs },
+  list: { flex: 1 },
+  listContent: { paddingBottom: 132 },
+  metaRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+  },
   metaText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
+  modalRoot: { backgroundColor: colors.white, flex: 1 },
   repliesButton: { marginLeft: 62, paddingVertical: spacing.xs },
   replyButton: { color: colors.primary, fontSize: 13, fontWeight: "800" },
-  replyingBar: { alignItems: "center", backgroundColor: colors.primarySoft, borderRadius: 12, flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  replyingText: { color: colors.text, flex: 1, fontSize: 13, fontWeight: "700" },
+  replyingBar: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  replyingText: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   replyIndent: { marginLeft: 34 },
-  replyLoading: { alignItems: "flex-start", marginLeft: 62, paddingVertical: spacing.xs },
+  replyLoading: {
+    alignItems: "flex-start",
+    marginLeft: 62,
+    paddingVertical: spacing.xs,
+  },
   replyMention: { color: colors.primary, fontWeight: "800" },
-  screen: { backgroundColor: colors.surface, flex: 1 },
-  sendButton: { alignItems: "center", backgroundColor: colors.primary, borderRadius: 18, height: 36, justifyContent: "center", marginBottom: 3, width: 36 },
+  screen: { backgroundColor: colors.white, flex: 1 },
+  sendButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    marginBottom: 3,
+    width: 36,
+  },
   sendButtonDisabled: { opacity: 0.45 },
   sendingText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  skeletonAuthor: { backgroundColor: colors.border, borderRadius: 5, height: 10, width: 112 },
-  skeletonAvatar: { backgroundColor: colors.border, borderRadius: AVATAR_SIZE / 2, height: AVATAR_SIZE, width: AVATAR_SIZE },
-  skeletonBubble: { backgroundColor: colors.background, borderRadius: 16, gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
-  skeletonLine: { backgroundColor: colors.border, borderRadius: 5, height: 10, width: "86%" },
-  skeletonLineShort: { backgroundColor: colors.border, borderRadius: 5, height: 10, width: "52%" },
-  skeletonList: { backgroundColor: colors.surface, flex: 1, paddingBottom: 158, paddingTop: spacing.sm },
-  skeletonMeta: { backgroundColor: colors.border, borderRadius: 5, height: 9, marginLeft: spacing.md, marginTop: spacing.xs, width: 74 },
+  skeletonAuthor: {
+    backgroundColor: colors.border,
+    borderRadius: 5,
+    height: 10,
+    width: 112,
+  },
+  skeletonAvatar: {
+    backgroundColor: colors.border,
+    borderRadius: AVATAR_SIZE / 2,
+    height: AVATAR_SIZE,
+    width: AVATAR_SIZE,
+  },
+  skeletonBubble: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  skeletonLine: {
+    backgroundColor: colors.border,
+    borderRadius: 5,
+    height: 10,
+    width: "86%",
+  },
+  skeletonLineShort: {
+    backgroundColor: colors.border,
+    borderRadius: 5,
+    height: 10,
+    width: "52%",
+  },
+  skeletonList: {
+    backgroundColor: colors.surface,
+    flex: 1,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  skeletonMeta: {
+    backgroundColor: colors.border,
+    borderRadius: 5,
+    height: 9,
+    marginLeft: spacing.md,
+    marginTop: spacing.xs,
+    width: 74,
+  },
   title: { color: colors.text, fontSize: 18, fontWeight: "800" },
 });
-
-

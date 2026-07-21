@@ -76,6 +76,13 @@ export function NotificationsScreen() {
         );
         setPage(result.page);
         setTotalPages(result.totalPages);
+        console.info("[NotificationScreen] unread count fetched", {
+          mode,
+          page: result.page,
+          source: "api",
+          timestamp: new Date().toISOString(),
+          unreadCount: result.unreadCount,
+        });
         updateUnreadCount(result.unreadCount);
         setErrorMessage("");
       } catch (error) {
@@ -98,12 +105,14 @@ export function NotificationsScreen() {
   useEffect(
     () =>
       subscribeRealtimeNotifications((notification) => {
-        setNotifications((current) =>
-          current.some((item) => item.id === notification.id)
-            ? current
-            : [notification, ...current],
-        );
-        setUnreadCount((current) => current + 1);
+        setNotifications((current) => {
+          if (current.some((item) => item.id === notification.id)) {
+            return current;
+          }
+
+          setUnreadCount((count) => count + 1);
+          return [notification, ...current];
+        });
       }),
     [],
   );

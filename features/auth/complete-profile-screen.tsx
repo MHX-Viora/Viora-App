@@ -17,6 +17,8 @@ import { AuthPrimaryButton } from "@/components/auth/auth-controls";
 import { ProfilePhotoPicker } from "@/components/auth/profile-photo-picker";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { getStoredAuthSession } from "@/services/auth.service";
+import { registerPushNotifications } from "@/services/push-notification.service";
+import { startRealtime } from "@/services/realtime.service";
 import { createProfile } from "@/services/user.service";
 import { updateUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
@@ -65,6 +67,8 @@ export function CompleteProfileScreen() {
 
       // Thay user null trong phiên bằng user backend vừa trả về.
       await updateUser(user);
+      void startRealtime();
+      void registerPushNotifications();
       router.replace("/");
     } catch (error) {
       showAlert({
