@@ -1,4 +1,4 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
+﻿import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -22,6 +22,10 @@ import { getPosts } from "@/services/feed.service";
 import { deleteFriend } from "@/services/friend.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { formatReelCount, getReels } from "@/services/reel.service";
+import {
+  getPostShareLink,
+  getReelShareLink,
+} from "@/services/share-link.service";
 import {
   followUser,
   getUserProfile,
@@ -284,8 +288,11 @@ export function UserProfileScreen() {
   };
 
   const handleSharePost = async (postId: string) => {
-    const link = `${process.env.EXPO_PUBLIC_API_URL}/posts/${postId}`;
-    await Share.share({ message: `Xem bài viết này trên Viora\n${link}`, url: link });
+    const link = await getPostShareLink(postId);
+    await Share.share({
+      message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+      url: link.shareUrl,
+    });
   };
 
   const handleReactReel = async (reelId: string) => {
@@ -331,8 +338,11 @@ export function UserProfileScreen() {
   };
 
   const handleShareReel = async (reel: Reel) => {
-    const link = `${process.env.EXPO_PUBLIC_API_URL}/reels/${reel.id}`;
-    await Share.share({ message: `Xem reels này trên Viora\n${link}`, url: link });
+    const link = await getReelShareLink(reel.id);
+    await Share.share({
+      message: `Xem reels này trên Viora\n${link.shareUrl}`,
+      url: link.shareUrl,
+    });
   };
 
   const openPostComments = (postId: string) => {

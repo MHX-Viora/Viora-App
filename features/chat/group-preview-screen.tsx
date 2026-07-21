@@ -13,10 +13,11 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { emitRealtimeSyncRequest } from "@/features/chat/chat-events";
 import {
   ChatApiError,
   getGroupPreview,
-  joinGroupFromPreview,
+  joinGroup,
 } from "@/services/chat.service";
 import { colors, spacing } from "@/theme";
 import type { ChatGroupPreview, ChatGroupPreviewMember } from "@/types/chat";
@@ -86,9 +87,13 @@ export function GroupPreviewScreen() {
     groupId?: string | string[];
     inviteCode?: string | string[];
   }>();
+  const inviteCode = useMemo(
+    () => firstParam(params.inviteCode).trim(),
+    [params.inviteCode],
+  );
   const identifier = useMemo(
-    () => firstParam(params.groupId).trim() || firstParam(params.inviteCode).trim(),
-    [params.groupId, params.inviteCode],
+    () => firstParam(params.groupId).trim() || inviteCode,
+    [params.groupId, inviteCode],
   );
   const [preview, setPreview] = useState<ChatGroupPreview | null>(null);
   const [error, setError] = useState("");
@@ -114,7 +119,10 @@ export function GroupPreviewScreen() {
       if (mode === "initial") setIsLoading(true);
       if (mode === "refresh") setIsRefreshing(true);
       try {
-        const result = await getGroupPreview(identifier);
+        const result = await getGroupPreview(
+          identifier,
+          inviteCode ? "inviteCode" : "groupId",
+        );
         setPreview(result);
         setRequestSent(false);
         setError("");
@@ -133,7 +141,7 @@ export function GroupPreviewScreen() {
         setIsRefreshing(false);
       }
     },
-    [identifier],
+    [identifier, inviteCode],
   );
 
   useEffect(() => {
@@ -147,9 +155,15 @@ export function GroupPreviewScreen() {
       return;
     }
 
+    const code = inviteCode || preview.inviteCode || identifier;
+    if (!code) {
+      showAppToast({ message: "Không tìm thấy mã mời nhóm.", type: "error" });
+      return;
+    }
+
     setIsJoining(true);
     try {
-      const result = await joinGroupFromPreview(identifier || preview.groupId);
+      const result = await joinGroup(code);
       if (result.status === "pending") {
         setRequestSent(true);
         showAppToast({ message: "Đã gửi yêu cầu tham gia.", type: "success" });
@@ -157,21 +171,39 @@ export function GroupPreviewScreen() {
       }
 
       showAppToast({ message: "Đã tham gia nhóm.", type: "success" });
+      emitRealtimeSyncRequest();
       openChat(result.conversationId || preview.conversationId);
     } catch (joinError) {
+      if (joinError instanceof ChatApiError && joinError.status === 409) {
+        showAppToast({ message: "Bạn đã tham gia nhóm.", type: "success" });
+        emitRealtimeSyncRequest();
+        openChat(preview.conversationId);
+        return;
+      }
+      if (joinError instanceof ChatApiError && joinError.status === 404) {
+        setError("Nhóm không tồn tại hoặc đã bị giải tán.");
+        return;
+      }
+      if (joinError instanceof ChatApiError && joinError.status === 403) {
+        showAppToast({
+          message: "Bạn không thể tham gia nhóm này.",
+          type: "error",
+        });
+        return;
+      }
       showAppToast({
-        message:
-          joinError instanceof Error ? joinError.message : "Không thể tham gia nhóm.",
+        message: "Kết nối thất bại. Vui lòng thử lại.",
         type: "error",
       });
     } finally {
       setIsJoining(false);
     }
-  }, [identifier, openChat, preview, requestSent]);
+  }, [inviteCode, openChat, preview, requestSent]);
 
   const hiddenMemberCount = preview
     ? Math.max(0, preview.memberCount - preview.members.length)
     : 0;
+  const isMissingGroupError = error.includes("không tồn tại") || error.includes("giải tán");
   const actionText = requestSent
     ? "Đã gửi yêu cầu"
     : preview?.isJoined
@@ -204,7 +236,15 @@ export function GroupPreviewScreen() {
         >
           <Ionicons color={colors.textMuted} name="alert-circle-outline" size={44} />
           <Text style={styles.errorText}>{error}</Text>
-          {error !== "Nhóm không tồn tại hoặc đã bị giải tán." ? (
+                    {isMissingGroupError ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.back()}
+              style={styles.retryButton}
+            >
+              <Text style={styles.retryText}>Quay lại</Text>
+            </Pressable>
+          ) : (
             <Pressable
               accessibilityRole="button"
               onPress={() => void load("initial")}
@@ -212,7 +252,7 @@ export function GroupPreviewScreen() {
             >
               <Text style={styles.retryText}>Thử lại</Text>
             </Pressable>
-          ) : null}
+          )}
         </ScrollView>
       ) : preview ? (
         <>

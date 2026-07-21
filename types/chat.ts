@@ -118,6 +118,7 @@ export type ChatGroupPreview = {
   avatarUrl: string | null;
   conversationId: string;
   groupId: string;
+  inviteCode: string | null;
   isJoined: boolean;
   memberCount: number;
   members: ChatGroupPreviewMember[];

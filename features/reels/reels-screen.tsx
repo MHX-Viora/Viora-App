@@ -1,4 +1,4 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
+﻿import Ionicons from "@expo/vector-icons/Ionicons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -27,6 +27,7 @@ import { ReelsSearchModal } from "@/components/reels/reels-search-modal";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { reels } from "@/features/reels/data";
 import { reactPost, savePost } from "@/services/post.service";
+import { getReelShareLink } from "@/services/share-link.service";
 import {
   createReel as createReelApi,
   formatReelCount,
@@ -337,13 +338,12 @@ export function ReelsScreen() {
   };
 
   const handleShareReel = async (reel: Reel) => {
-    const link = `${process.env.EXPO_PUBLIC_API_URL}/reels/${reel.id}`;
-
     try {
+      const link = await getReelShareLink(reel.id);
       await Share.share({
         title: "Viora",
-        message: `Xem reels này trên Viora\n${link}`,
-        url: link,
+        message: `Xem reels này trên Viora\n${link.shareUrl}`,
+        url: link.shareUrl,
       });
     } catch (error) {
       Alert.alert(

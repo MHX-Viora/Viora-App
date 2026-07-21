@@ -35,6 +35,7 @@ import {
   subscribeRealtimeConversationPinnedChanges,
 } from "@/features/chat/chat-events";
 import { openProfileByUserId } from "@/features/profile/open-profile";
+import { getGroupShareLink } from "@/services/share-link.service";
 import {
   ChatApiError,
   getConversation,
@@ -58,6 +59,7 @@ type LoadingKey =
   | "pin"
   | "mute"
   | "block"
+  | "share"
   | "leave"
   | "name"
   | "avatar"
@@ -196,6 +198,7 @@ export function ConversationSettingsScreen() {
   const [currentUserId, setCurrentUserId] = useState("");
   const [ownerPickerVisible, setOwnerPickerVisible] = useState(false);
   const [shareGroupVisible, setShareGroupVisible] = useState(false);
+  const [groupShareLink, setGroupShareLink] = useState("");
   const [ownerCandidates, setOwnerCandidates] = useState<ChatGroupMember[]>([]);
   const [ownerPickerLoading, setOwnerPickerLoading] = useState(false);
   const [ownerTransferLoadingId, setOwnerTransferLoadingId] = useState<string | null>(null);
@@ -266,7 +269,7 @@ export function ConversationSettingsScreen() {
     } catch (loadError) {
       if (routeConversation) {
         setConversation(routeConversation);
-        setGroupDetailsLoaded(false);
+        setGroupDetailsLoaded(isGroupConversation(routeConversation));
         setError("");
         return;
       }
@@ -326,10 +329,6 @@ export function ConversationSettingsScreen() {
     () => (conversation ? getConversationName(conversation) : ""),
     [conversation],
   );
-  const groupShareLink =
-    conversation && isGroupConversation(conversation)
-      ? `viora://chat/group/${conversation.id}`
-      : "";
   const otherProfileUserId = useMemo(
     () => conversation?.otherParticipant?.id || toParam(params.otherUserId),
     [conversation, params.otherUserId],
@@ -520,6 +519,28 @@ export function ConversationSettingsScreen() {
       { onPress: () => updatePermission(2), text: "Chỉ chủ nhóm" },
     ]);
   }, [conversation, loading, updatePermission]);
+
+  const openShareGroup = useCallback(async () => {
+    if (!conversation || !isGroupConversation(conversation) || loading) return;
+    setLoading("share");
+    try {
+      const link = await getGroupShareLink(conversation.id);
+      const inviteCodeFromUrl = link.shareUrl.match(/\/group\/([^/?#]+)/)?.[1];
+      const inviteCode = link.inviteCode || inviteCodeFromUrl || "";
+      const nativePreviewLink = inviteCode
+        ? `viora://chat/group-preview?inviteCode=${encodeURIComponent(inviteCode)}`
+        : `viora://chat/group-preview?groupId=${encodeURIComponent(conversation.id)}`;
+      setGroupShareLink(nativePreviewLink);
+      setShareGroupVisible(true);
+    } catch (error) {
+      setGroupShareLink(
+        `viora://chat/group-preview?groupId=${encodeURIComponent(conversation.id)}`,
+      );
+      setShareGroupVisible(true);
+    } finally {
+      setLoading(null);
+    }
+  }, [conversation, loading]);
 
   const shareGroupLink = useCallback(async () => {
     if (!groupShareLink) return;
@@ -880,7 +901,7 @@ export function ConversationSettingsScreen() {
               />
               <SettingRow
                 icon="qr-code-outline"
-                onPress={() => setShareGroupVisible(true)}
+                onPress={() => void openShareGroup()}
                 title="Chia sẻ nhóm"
               />
               {canManageLoadedGroup ? (

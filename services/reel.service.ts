@@ -131,7 +131,7 @@ export const formatReelCount = (value: number) => {
   return String(value);
 };
 
-const mapReel = (
+export const mapReel = (
   reel: ApiReel,
   currentUserId?: string | null,
 ): Reel => {
@@ -206,6 +206,22 @@ export const getReels = async ({
       .filter((reel) => reel.videoUrl),
     totalPages: reelsResponse.totalPages,
   };
+};
+
+export const getReelById = async (reelId: string): Promise<Reel> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/reels/${encodeURIComponent(reelId)}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const text = await response.text();
+  const data = parseResponseText(text);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, "KhÃ´ng thá»ƒ táº£i reels."));
+  }
+
+  const currentUser = await getUser();
+  return mapReel(data as ApiReel, currentUser?.id);
 };
 
 export const createReel = async ({

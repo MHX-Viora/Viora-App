@@ -93,6 +93,12 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="friends" />
+        <Stack.Screen name="account-settings" />
+        <Stack.Screen name="profile-activity" />
+        <Stack.Screen name="user/[userId]" />
+        <Stack.Screen name="post/[postId]" />
+        <Stack.Screen name="reel/[reelId]" />
+        <Stack.Screen name="group/[inviteCode]" />
         <Stack.Screen name="chat/[conversationId]" />
         <Stack.Screen name="chat/group/[groupId]" />
         <Stack.Screen name="chat/group-preview" />

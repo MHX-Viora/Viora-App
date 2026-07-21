@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +34,8 @@ const REPORT_REASONS = [
   { description: "Nội dung người lớn hoặc phản cảm", label: "Nhạy cảm", value: 3 },
   { description: "Lý do khác", label: "Khác", value: 4 },
 ];
+const BODY_COLLAPSE_LINE_LIMIT = 5;
+const BODY_COLLAPSE_CHAR_THRESHOLD = 220;
 
 const getVisibilityInfo = (visibility: number) => {
   if (visibility === 1) {
@@ -121,6 +123,7 @@ type Props = {
   onComment?: (postId: string) => void;
   onDeleted?: (postId: string) => void;
   onOpenAuthor?: (userId: string) => void;
+  onOpenPost?: (postId: string) => void;
   onReact?: (postId: string, reactionType: number) => void;
   onSave?: (postId: string) => void;
   onShare?: (postId: string) => void;
@@ -131,6 +134,7 @@ export function PostCard({
   onComment,
   onDeleted,
   onOpenAuthor,
+  onOpenPost,
   onReact,
   onSave,
   onShare,
@@ -141,6 +145,8 @@ export function PostCard({
   const [reportVisible, setReportVisible] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [reportingReason, setReportingReason] = useState<number | null>(null);
+  const [isBodyExpanded, setIsBodyExpanded] = useState(false);
+  const [isBodyExpandable, setIsBodyExpandable] = useState(false);
   const [pressedReactionType, setPressedReactionType] = useState<number | null>(
     null,
   );
@@ -149,6 +155,14 @@ export function PostCard({
   const currentReaction = reactions.find(
     (reaction) => reaction.type === post.reactionType,
   );
+  const bodyLikelyExpandable = useMemo(() => {
+    const text = post.body.trim();
+    if (!text) return false;
+    return (
+      text.length > BODY_COLLAPSE_CHAR_THRESHOLD ||
+      text.split(/\r\n|\r|\n/).length > BODY_COLLAPSE_LINE_LIMIT
+    );
+  }, [post.body]);
 
   useEffect(() => {
     Animated.spring(reactionAnimation, {
@@ -183,6 +197,11 @@ export function PostCard({
   };
 
   const activeReaction = post.isReacted ? currentReaction : undefined;
+
+  useEffect(() => {
+    setIsBodyExpanded(false);
+    setIsBodyExpandable(bodyLikelyExpandable);
+  }, [bodyLikelyExpandable, post.id, post.body]);
 
   const openReport = () => {
     setOptionsVisible(false);
@@ -251,7 +270,11 @@ export function PostCard({
   };
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      accessibilityRole={onOpenPost ? "button" : undefined}
+      onPress={onOpenPost ? () => onOpenPost(post.id) : undefined}
+      style={styles.card}
+    >
       <View style={styles.header}>
         <Pressable
           accessibilityRole="button"
@@ -313,7 +336,37 @@ export function PostCard({
         </Pressable>
       </View>
 
-      <Text style={styles.body}>{post.body}</Text>
+      {post.body ? (
+        <View style={styles.bodyWrap}>
+          <Text
+            onTextLayout={(event) => {
+              if (event.nativeEvent.lines.length > BODY_COLLAPSE_LINE_LIMIT) {
+                setIsBodyExpandable(true);
+              }
+            }}
+            style={[styles.body, styles.bodyMeasure]}
+          >
+            {post.body}
+          </Text>
+          <Text
+            numberOfLines={isBodyExpanded ? undefined : 5}
+            style={styles.body}
+          >
+            {post.body}
+          </Text>
+          {isBodyExpandable ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setIsBodyExpanded((current) => !current)}
+              style={styles.bodyToggle}
+            >
+              <Text style={styles.bodyToggleText}>
+                {isBodyExpanded ? "Ẩn bớt" : "Xem thêm"}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {post.images.length > 0 && (
         <View style={styles.mediaGrid}>
@@ -517,7 +570,7 @@ export function PostCard({
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </Pressable>
   );
 }
 
@@ -554,6 +607,24 @@ const styles = StyleSheet.create({
   body: {
     ...typography.body,
     color: colors.text,
+  },
+  bodyMeasure: {
+    left: spacing.md,
+    opacity: 0,
+    position: "absolute",
+    right: spacing.md,
+    zIndex: -1,
+  },
+  bodyToggle: {
+    alignSelf: "flex-start",
+    paddingTop: spacing.xs,
+  },
+  bodyToggleText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  bodyWrap: {
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.md,
   },

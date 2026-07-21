@@ -495,6 +495,7 @@ export const mapGroupPreview = (
     avatarUrl: asString(data.avatarUrl ?? data.avatar, "") || null,
     conversationId: asString(data.conversationId ?? data.id, groupId),
     groupId,
+    inviteCode: asString(data.inviteCode, "") || null,
     isJoined: asBoolean(data.isJoined ?? data.joined),
     memberCount: asNumber(data.memberCount ?? data.membersCount),
     members: asArray(data.members ?? data.membersPreview)

@@ -172,6 +172,7 @@ const getProfileIdFromQr = (data: string) => {
   const trimmed = data.trim();
   const prefixes = [
     "viora://profile/",
+    "https://viora.app/user/",
     "https://viora.app/profile/",
     "https://viora.app/users/",
   ];

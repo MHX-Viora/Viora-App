@@ -136,6 +136,22 @@ export const getPosts = async ({
   };
 };
 
+export const getPostById = async (postId: string): Promise<FeedPost> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/posts/${encodeURIComponent(postId)}`,
+    { headers: { Accept: "application/json" } },
+  );
+  const text = await response.text();
+  const data = parseResponseText(text);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, "KhÃ´ng thá»ƒ táº£i bÃ i viáº¿t."));
+  }
+
+  const currentUser = await getUser();
+  return mapFeedPost(data as ApiPost, currentUser);
+};
+
 export const createPost = async (
   payload: CreatePostInput,
 ): Promise<FeedPost> => {

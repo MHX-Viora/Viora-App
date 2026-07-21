@@ -1,4 +1,4 @@
-import * as ImagePicker from "expo-image-picker";
+﻿import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -26,6 +26,7 @@ import {
   reactPost,
   savePost,
 } from "@/services/post.service";
+import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
 import type { CreatePostInput, FeedPost } from "@/types/feed";
@@ -197,13 +198,12 @@ export function FeedScreen() {
   };
 
   const handleSharePost = async (postId: string) => {
-    const link = `${process.env.EXPO_PUBLIC_API_URL}/posts/${postId}`;
-
     try {
+      const link = await getPostShareLink(postId);
       await Share.share({
         title: "Viora",
-        message: `Xem bài viết này trên Viora\n${link}`,
-        url: link,
+        message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+        url: link.shareUrl,
       });
     } catch (error) {
       Alert.alert(

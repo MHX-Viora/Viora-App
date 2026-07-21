@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+﻿import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 
@@ -14,6 +14,11 @@ import { getPosts } from "@/services/feed.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { formatReelCount, getReels } from "@/services/reel.service";
 import { stopRealtime } from "@/services/realtime.service";
+import {
+  getPostShareLink,
+  getReelShareLink,
+  getUserShareLink,
+} from "@/services/share-link.service";
 import { getMyStatistics } from "@/services/user.service";
 import { clearSession, getSession } from "@/stores/session-store";
 import { colors } from "@/theme";
@@ -51,6 +56,7 @@ export function ProfileScreen() {
   ]);
   const [showQr, setShowQr] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [profileShareUrl, setProfileShareUrl] = useState("");
 
   useEffect(() => {
     const loadUser = async () => {
@@ -72,7 +78,7 @@ export function ProfileScreen() {
       setIsLoading(false);
 
       try {
-        const [statistics, postsResponse, reelsResponse] = await Promise.all([
+        const [statistics, postsResponse, reelsResponse, shareLink] = await Promise.all([
           getMyStatistics(),
           getPosts({
             page: 1,
@@ -85,6 +91,7 @@ export function ProfileScreen() {
             sort: "popular",
             userId: session.user.id,
           }),
+          getUserShareLink(session.user.id).catch(() => null),
         ]);
 
         setProfileStats([
@@ -101,6 +108,7 @@ export function ProfileScreen() {
         ]);
         setProfilePosts(postsResponse.posts);
         setProfileReels(reelsResponse.reels);
+        setProfileShareUrl(shareLink?.shareUrl ?? "");
       } catch {
         setProfileStats((current) => current);
       } finally {
@@ -197,13 +205,12 @@ export function ProfileScreen() {
   };
 
   const handleSharePost = async (postId: string) => {
-    const link = `${process.env.EXPO_PUBLIC_API_URL}/posts/${postId}`;
-
     try {
+      const link = await getPostShareLink(postId);
       await Share.share({
         title: "Viora",
-        message: `Xem bài viết này trên Viora\n${link}`,
-        url: link,
+        message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+        url: link.shareUrl,
       });
     } catch (error) {
       Alert.alert(
@@ -251,13 +258,12 @@ export function ProfileScreen() {
   };
 
   const handleShareReel = async (reel: Reel) => {
-    const link = `${process.env.EXPO_PUBLIC_API_URL}/reels/${reel.id}`;
-
     try {
+      const link = await getReelShareLink(reel.id);
       await Share.share({
         title: "Viora",
-        message: `Xem reels này trên Viora\n${link}`,
-        url: link,
+        message: `Xem reels này trên Viora\n${link.shareUrl}`,
+        url: link.shareUrl,
       });
     } catch (error) {
       Alert.alert(
@@ -349,7 +355,7 @@ export function ProfileScreen() {
         onOpenProfile={(nextUserId) => {
           void openProfileByUserId(router, nextUserId);
         }}
-        qrValue={`viora://profile/${user.id}`}
+        qrValue={profileShareUrl}
         visible={showQr}
       />
       <ProfileSettingsSheet
@@ -364,6 +370,24 @@ export function ProfileScreen() {
           await stopRealtime();
           await clearSession();
           router.replace("/login");
+        }}
+        onOpenAccountSettings={() => {
+          setShowSettings(false);
+          router.push("/account-settings");
+        }}
+        onOpenLikedActivity={() => {
+          setShowSettings(false);
+          router.push({
+            pathname: "/profile-activity",
+            params: { kind: "reacted" },
+          });
+        }}
+        onOpenSavedActivity={() => {
+          setShowSettings(false);
+          router.push({
+            pathname: "/profile-activity",
+            params: { kind: "saved" },
+          });
         }}
         visible={showSettings}
       />

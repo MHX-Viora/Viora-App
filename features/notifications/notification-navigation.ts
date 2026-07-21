@@ -33,6 +33,15 @@ const getFriendNotificationTab = (notification: NotificationItemModel) => {
   return null;
 };
 
+const isReelNotification = (notification: NotificationItemModel) => {
+  const text = normalizeText(`${notification.title} ${notification.content}`);
+  return (
+    text.includes("reel") ||
+    text.includes("video") ||
+    text.includes("short")
+  );
+};
+
 export const navigateNotification = (
   notification: NotificationItemModel,
   appRouter: AppRouter,
@@ -67,11 +76,16 @@ export const navigateNotification = (
     return;
   }
 
+  if (isReelNotification(notification)) {
+    appRouter.push({
+      pathname: "/reel/[reelId]",
+      params: { reelId: reference.id },
+    });
+    return;
+  }
+
   appRouter.push({
-    pathname: "/",
-    params: {
-      commentId: reference.type === 2 ? reference.id : undefined,
-      postId: reference.id,
-    },
+    pathname: "/post/[postId]",
+    params: { postId: reference.id },
   });
 };

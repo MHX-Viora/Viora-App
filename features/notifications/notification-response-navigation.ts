@@ -40,8 +40,32 @@ const navigateWhenReady = (navigate: () => void) => {
   setTimeout(navigate, 0);
 };
 
+const navigateContentData = (data: Record<string, unknown>) => {
+  const postId = firstString(data.postId, data["post.id"]);
+  if (postId) {
+    navigateWhenReady(() =>
+      router.push({ pathname: "/post/[postId]", params: { postId } }),
+    );
+    return true;
+  }
+
+  const reelId = firstString(data.reelId, data["reel.id"], data.videoId);
+  if (reelId) {
+    navigateWhenReady(() =>
+      router.push({ pathname: "/reel/[reelId]", params: { reelId } }),
+    );
+    return true;
+  }
+
+  return false;
+};
+
 export const navigateNotificationData = (data: Record<string, unknown>) => {
   console.info("[Push] notification response data", data);
+
+  if (navigateContentData(data)) {
+    return true;
+  }
 
   const chatConversationId = firstString(
     data.conversationId,

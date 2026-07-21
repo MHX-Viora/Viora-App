@@ -54,6 +54,7 @@ export function ReelsGridViewer({
   onCommentCreated,
   onDelete,
   onOpenAuthor,
+  onOpenReel,
   onReact,
   onSave,
   onShare,
@@ -66,6 +67,7 @@ export function ReelsGridViewer({
   onCommentCreated?: { id: string; nonce: number } | null;
   onDelete?: (reelId: string) => void;
   onOpenAuthor?: (userId: string) => void;
+  onOpenReel?: (reelId: string) => void;
   onReact?: (reelId: string) => void;
   onSave?: (reelId: string) => void;
   onShare?: (reel: Reel) => void;
@@ -171,7 +173,7 @@ export function ReelsGridViewer({
             accessibilityLabel={`Video của ${reel.author}: ${reel.caption}`}
             accessibilityRole="button"
             key={reel.id}
-            onPress={() => openViewer(reel)}
+            onPress={() => (onOpenReel ? onOpenReel(reel.id) : openViewer(reel))}
             style={[
               styles.videoTile,
               (index + 1) % 3 !== 0 && styles.videoTileGap,

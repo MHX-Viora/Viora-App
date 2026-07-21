@@ -100,7 +100,11 @@ const mapGroupMember = (value: unknown): ChatGroupMember | null => {
 const getPageItems = (data: unknown) => {
   if (!isRecord(data)) return [];
   if (Array.isArray(data.items)) return data.items;
+  if (isRecord(data.data) && Array.isArray(data.data.items))
+    return data.data.items;
   if (Array.isArray(data.data)) return data.data;
+  if (isRecord(data.result) && Array.isArray(data.result.items))
+    return data.result.items;
   if (Array.isArray(data.results)) return data.results;
   return [];
 };
@@ -109,9 +113,16 @@ const mapGroupMembersPage = (data: unknown): ChatGroupMembersPage => ({
   items: getPageItems(data)
     .map(mapGroupMember)
     .filter((item): item is ChatGroupMember => item !== null),
-  page: isRecord(data) ? asNumber(data.page, 1) : 1,
+  page: isRecord(data)
+    ? asNumber(data.page ?? (isRecord(data.data) ? data.data.page : undefined), 1)
+    : 1,
   totalPages: isRecord(data)
-    ? asNumber(data.totalPages, asNumber(data.totalPage, 1))
+    ? asNumber(
+        data.totalPages ??
+          data.totalPage ??
+          (isRecord(data.data) ? data.data.totalPages ?? data.data.totalPage : undefined),
+        1,
+      )
     : 1,
 });
 
@@ -213,10 +224,15 @@ export const getGroupMembers = async (
 
 export const getGroupPreview = async (
   groupIdOrInviteCode: string,
+  mode: "groupId" | "inviteCode" = "groupId",
 ): Promise<ChatGroupPreview> => {
   const encodedId = encodeURIComponent(groupIdOrInviteCode);
+  const previewUrl =
+    mode === "inviteCode"
+      ? `${BASE_URL}/api/chat/groups/preview?inviteCode=${encodedId}`
+      : `${BASE_URL}/api/chat/groups/preview/${encodedId}`;
   const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/groups/preview/${encodedId}`,
+    previewUrl,
   );
   const data = parseResponseText(await response.text());
   if (!response.ok) {
@@ -230,13 +246,13 @@ export const getGroupPreview = async (
   return preview;
 };
 
-export const joinGroupFromPreview = async (
-  groupIdOrInviteCode: string,
+export const joinGroup = async (
+  inviteCode: string,
 ): Promise<JoinGroupResult> => {
-  const encodedId = encodeURIComponent(groupIdOrInviteCode);
   const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/groups/${encodedId}/join`,
+    `${BASE_URL}/api/chat/groups/join`,
     {
+      body: JSON.stringify({ inviteCode }),
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -260,7 +276,7 @@ export const joinGroupFromPreview = async (
     statusText.includes("request");
 
   return {
-    conversationId: asString(payload.conversationId ?? payload.id, groupIdOrInviteCode),
+    conversationId: asString(payload.conversationId ?? payload.id),
     status: isPending ? "pending" : "joined",
   };
 };

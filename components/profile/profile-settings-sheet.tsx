@@ -12,21 +12,31 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing } from "@/theme";
 
 const SETTINGS = [
-  { icon: "bookmark-outline", label: "Đã lưu" },
-  { icon: "heart-outline", label: "Yêu thích" },
+  { action: "saved", icon: "bookmark-outline", label: "Đã lưu" },
+  { action: "reacted", icon: "heart-outline", label: "Yêu thích" },
   { icon: "help-circle-outline", label: "Hỗ trợ" },
   { icon: "shield-checkmark-outline", label: "Bảo mật & quyền" },
-  { icon: "person-circle-outline", label: "Cài đặt tài khoản" },
+  {
+    action: "account-settings",
+    icon: "person-circle-outline",
+    label: "Cài đặt tài khoản",
+  },
   { icon: "document-text-outline", label: "Chính sách & điều khoản" },
 ] as const;
 
 export function ProfileSettingsSheet({
   onClose,
   onLogout,
+  onOpenAccountSettings,
+  onOpenLikedActivity,
+  onOpenSavedActivity,
   visible,
 }: {
   onClose: () => void;
   onLogout: () => void;
+  onOpenAccountSettings: () => void;
+  onOpenLikedActivity: () => void;
+  onOpenSavedActivity: () => void;
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -70,6 +80,15 @@ export function ProfileSettingsSheet({
               <Pressable
                 accessibilityRole="button"
                 key={item.label}
+                onPress={
+                  "action" in item
+                    ? item.action === "account-settings"
+                      ? onOpenAccountSettings
+                      : item.action === "saved"
+                        ? onOpenSavedActivity
+                        : onOpenLikedActivity
+                    : undefined
+                }
                 style={({ pressed }) => [
                   styles.row,
                   pressed && styles.rowPressed,

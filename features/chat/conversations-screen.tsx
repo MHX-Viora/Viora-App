@@ -315,13 +315,25 @@ export function ConversationsScreen() {
       if (!qrScanning) return;
       setQrScanning(false);
       const trimmed = data.trim();
+      let inviteCode = "";
+      try {
+        const parsedUrl = new URL(trimmed);
+        if (parsedUrl.protocol === "viora:" && parsedUrl.pathname === "/group-preview") {
+          inviteCode = parsedUrl.searchParams.get("inviteCode")?.trim() ?? "";
+        }
+        if (parsedUrl.protocol === "https:" && parsedUrl.host === "viora.app") {
+          inviteCode = parsedUrl.pathname.match(/^\/group\/([^/?#]+)/i)?.[1] ?? "";
+        }
+      } catch {
+        inviteCode = trimmed.match(/^https:\/\/viora\.app\/group\/([^/?#]+)/i)?.[1] ?? "";
+      }
       const conversationId =
         trimmed.match(/^viora:\/\/chat\/group\/([^/?#]+)/i)?.[1] ??
         trimmed.match(/^viora:\/\/group\/([^/?#]+)/i)?.[1] ??
         trimmed.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)?.[0] ??
         "";
 
-      if (!conversationId) {
+      if (!inviteCode && !conversationId) {
         setQrScanMessage("Mã QR nhóm không hợp lệ.");
         return;
       }
@@ -329,10 +341,17 @@ export function ConversationsScreen() {
       setQrScanMessage("Đã tìm thấy nhóm.");
       setTimeout(() => {
         closeQrScanner();
-        router.push({
-          pathname: "/chat/group/[groupId]",
-          params: { groupId: conversationId },
-        });
+        if (inviteCode) {
+          router.push({
+            pathname: "/chat/group-preview",
+            params: { inviteCode },
+          });
+        } else {
+          router.push({
+            pathname: "/chat/group/[groupId]",
+            params: { groupId: conversationId },
+          });
+        }
       }, 450);
     },
     [closeQrScanner, qrScanning],
