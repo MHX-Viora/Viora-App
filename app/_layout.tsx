@@ -94,6 +94,8 @@ export default function RootLayout() {
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="friends" />
         <Stack.Screen name="chat/[conversationId]" />
+        <Stack.Screen name="chat/group/[groupId]" />
+        <Stack.Screen name="chat/group-preview" />
         <Stack.Screen name="chat/settings/[conversationId]" />
         <Stack.Screen name="chat/settings/[conversationId]-attachments" />
         <Stack.Screen name="chat/settings/attachments" />

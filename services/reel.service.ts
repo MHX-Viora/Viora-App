@@ -134,33 +134,38 @@ export const formatReelCount = (value: number) => {
 const mapReel = (
   reel: ApiReel,
   currentUserId?: string | null,
-): Reel => ({
-  id: reel.id,
-  authorId: reel.user?.id ?? null,
-  author: reel.user?.displayName?.trim() || "Người dùng Viora",
-  avatar: reel.user?.avatarUrl || DEFAULT_AVATAR,
-  caption: reel.content || "",
-  comments: formatReelCount(reel.commentCount ?? 0),
-  hashtags: (reel.hashtags ?? [])
-    .map(getHashtagName)
-    .filter(Boolean)
-    .map((tag) => `#${tag}`)
-    .join("  "),
-  isAuthorVerified: reel.user?.isVerified ?? false,
-  isFollowing: reel.user?.isFollowing ?? false,
-  isMine: !!currentUserId && reel.user?.id === currentUserId,
-  isReacted: reel.isReacted ?? false,
-  isSaved: reel.isSaved ?? false,
-  reactionCount: reel.reactionCount ?? 0,
-  reactionType: reel.reactionType ?? 0,
-  saveCount: reel.saveCount ?? 0,
-  shareCount: reel.shareCount ?? 0,
-  thumbnailUrl:
-    reel.media?.find((media) => media.thumbnailUrl)?.thumbnailUrl || "",
-  likes: formatReelCount(reel.reactionCount ?? 0),
-  sourceSize: reel.location?.trim() || "Video",
-  videoUrl: reel.media?.find((media) => media.mediaUrl)?.mediaUrl || "",
-});
+): Reel => {
+  const videoMedia = reel.media?.find((media) => media.mediaUrl);
+  const thumbnailMedia =
+    videoMedia ?? reel.media?.find((media) => media.thumbnailUrl);
+
+  return {
+    id: reel.id,
+    authorId: reel.user?.id ?? null,
+    author: reel.user?.displayName?.trim() || "Người dùng Viora",
+    avatar: reel.user?.avatarUrl || DEFAULT_AVATAR,
+    caption: reel.content || "",
+    comments: formatReelCount(reel.commentCount ?? 0),
+    hashtags: (reel.hashtags ?? [])
+      .map(getHashtagName)
+      .filter(Boolean)
+      .map((tag) => `#${tag}`)
+      .join("  "),
+    isAuthorVerified: reel.user?.isVerified ?? false,
+    isFollowing: reel.user?.isFollowing ?? false,
+    isMine: !!currentUserId && reel.user?.id === currentUserId,
+    isReacted: reel.isReacted ?? false,
+    isSaved: reel.isSaved ?? false,
+    reactionCount: reel.reactionCount ?? 0,
+    reactionType: reel.reactionType ?? 0,
+    saveCount: reel.saveCount ?? 0,
+    shareCount: reel.shareCount ?? 0,
+    thumbnailUrl: thumbnailMedia?.thumbnailUrl || "",
+    likes: formatReelCount(reel.reactionCount ?? 0),
+    sourceSize: reel.location?.trim() || "Video",
+    videoUrl: videoMedia?.mediaUrl || "",
+  };
+};
 
 export const getReels = async ({
   keyword = "",

@@ -14,7 +14,14 @@ import { colors, spacing } from "@/theme";
 
 type AuthFieldProps = Pick<
   TextInputProps,
-  "autoCapitalize" | "autoComplete" | "keyboardType" | "onChangeText" | "value"
+  | "autoCapitalize"
+  | "autoComplete"
+  | "keyboardType"
+  | "onChangeText"
+  | "onSubmitEditing"
+  | "returnKeyType"
+  | "textContentType"
+  | "value"
 > & {
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;

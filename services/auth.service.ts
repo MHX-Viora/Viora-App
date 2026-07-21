@@ -18,6 +18,13 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
 
+const getAuthRequestError = (error: unknown) => {
+  if (error instanceof TypeError) {
+    return new Error("Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.");
+  }
+  return error;
+};
+
 type ApiError = {
   message?: unknown;
   title?: unknown;
@@ -250,13 +257,22 @@ export const register = async (
 };
 
 export const login = async (payload: Credentials): Promise<LoginResponse> => {
+  if (!BASE_URL) {
+    throw new Error("Thiếu cấu hình API đăng nhập.");
+  }
+
   //  Gọi API đăng nhập.
-  const response = await fetch(`${BASE_URL}/api/accounts/login`, {
-    method: "POST",
-    headers: JSON_HEADERS,
-    body: JSON.stringify(payload),
-    credentials: "include",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}/api/accounts/login`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+  } catch (error) {
+    throw getAuthRequestError(error);
+  }
 
   //  Parse JSON ngay tại đây.
   const data = await parseResponseText(response);
@@ -304,3 +320,4 @@ export const refreshToken = async (): Promise<AccessTokenResponse> => {
 
   return data;
 };
+

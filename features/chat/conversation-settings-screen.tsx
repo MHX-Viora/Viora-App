@@ -978,7 +978,10 @@ export function ConversationSettingsScreen() {
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={styles.shareSheet}
+            style={[
+              styles.shareSheet,
+              { paddingBottom: Math.max(spacing.md, insets.bottom + spacing.md) },
+            ]}
           >
             <View style={styles.shareHandle} />
             <Text style={styles.shareTitle}>Chia sẻ nhóm</Text>
@@ -1336,6 +1339,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
+    marginTop: -spacing.xs,
     minHeight: 44,
   },
   shareButtonText: { color: colors.white, fontSize: 15, fontWeight: "900" },

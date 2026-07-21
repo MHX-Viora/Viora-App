@@ -1,6 +1,7 @@
 import {
   mapConversation,
   mapConversationsPage,
+  mapGroupPreview,
   mapMessage,
   mapMessagesPage,
   mapSearchResultsPage,
@@ -14,11 +15,13 @@ import type {
   ChatMessage,
   ChatGroupMember,
   ChatGroupMembersPage,
+  ChatGroupPreview,
   ChatSearchResultsPage,
   ChatSharedAttachmentsPage,
   ChatSharedLinksPage,
   Conversation,
   ConversationsPage,
+  JoinGroupResult,
   MessagesPage,
   SendMessageAttachment,
 } from "@/types/chat";
@@ -206,6 +209,60 @@ export const getGroupMembers = async (
   }
 
   return mapGroupMembersPage(data);
+};
+
+export const getGroupPreview = async (
+  groupIdOrInviteCode: string,
+): Promise<ChatGroupPreview> => {
+  const encodedId = encodeURIComponent(groupIdOrInviteCode);
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/preview/${encodedId}`,
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throwChatApiError(response, data, "Không thể tải thông tin nhóm.");
+  }
+
+  const preview = mapGroupPreview(data, groupIdOrInviteCode);
+  if (!preview) {
+    throw new Error("Backend trả về thông tin nhóm không hợp lệ.");
+  }
+  return preview;
+};
+
+export const joinGroupFromPreview = async (
+  groupIdOrInviteCode: string,
+): Promise<JoinGroupResult> => {
+  const encodedId = encodeURIComponent(groupIdOrInviteCode);
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/chat/groups/${encodedId}/join`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    },
+  );
+  const data = parseResponseText(await response.text());
+  if (!response.ok) {
+    throwChatApiError(response, data, "Không thể tham gia nhóm.");
+  }
+
+  const payload = isRecord(data) ? data : {};
+  const statusText = asString(payload.status).toLowerCase();
+  const isPending =
+    response.status === 202 ||
+    payload.isPending === true ||
+    payload.requiresApproval === true ||
+    payload.needApproval === true ||
+    statusText.includes("pending") ||
+    statusText.includes("request");
+
+  return {
+    conversationId: asString(payload.conversationId ?? payload.id, groupIdOrInviteCode),
+    status: isPending ? "pending" : "joined",
+  };
 };
 
 export const createPrivateConversation = async (

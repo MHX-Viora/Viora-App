@@ -1,6 +1,8 @@
 import { MessageType } from "@/types/chat";
 import type {
   ChatAttachment,
+  ChatGroupPreview,
+  ChatGroupPreviewMember,
   ChatMessage,
   ChatParticipant,
   ChatReaction,
@@ -466,3 +468,39 @@ export const mapSearchResultsPage = (data: unknown): ChatSearchResultsPage => ({
     ? asNumber(data.totalPages, asNumber(data.totalPage, 1))
     : 1,
 });
+
+const mapPreviewMember = (value: unknown): ChatGroupPreviewMember | null => {
+  if (!isRecord(value)) return null;
+  const id = asString(value.id ?? value.userId);
+  if (!id) return null;
+
+  return {
+    avatarUrl: asString(value.avatarUrl ?? value.avatar, "") || null,
+    displayName: asString(value.displayName ?? value.name ?? value.fullName, "Người dùng"),
+    id,
+    isFriend: asBoolean(value.isFriend),
+    isVerified: asBoolean(value.isVerified),
+  };
+};
+
+export const mapGroupPreview = (
+  data: unknown,
+  fallbackGroupId: string,
+): ChatGroupPreview | null => {
+  if (!isRecord(data)) return null;
+  const groupId = asString(data.groupId ?? data.id ?? data.conversationId, fallbackGroupId);
+  if (!groupId) return null;
+
+  return {
+    avatarUrl: asString(data.avatarUrl ?? data.avatar, "") || null,
+    conversationId: asString(data.conversationId ?? data.id, groupId),
+    groupId,
+    isJoined: asBoolean(data.isJoined ?? data.joined),
+    memberCount: asNumber(data.memberCount ?? data.membersCount),
+    members: asArray(data.members ?? data.membersPreview)
+      .map(mapPreviewMember)
+      .filter((item): item is ChatGroupPreviewMember => item !== null)
+      .slice(0, 5),
+    name: asString(data.name ?? data.title, "Nhóm"),
+  };
+};

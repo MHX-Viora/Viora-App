@@ -330,8 +330,8 @@ export function ConversationsScreen() {
       setTimeout(() => {
         closeQrScanner();
         router.push({
-          pathname: "/chat/[conversationId]",
-          params: { conversationId, conversationType: "Group" },
+          pathname: "/chat/group/[groupId]",
+          params: { groupId: conversationId },
         });
       }, 450);
     },

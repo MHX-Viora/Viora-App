@@ -23,7 +23,7 @@ import { followUser } from "@/services/user.service";
 import { colors, spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 
-const PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const;
+const PLAYBACK_RATES = [0.5, 1, 1.25, 1.5, 2] as const;
 const VIDEO_TOP_OFFSET = 30;
 
 const REPORT_REASONS = [
@@ -100,6 +100,7 @@ export function ReelCard({
   onSave,
   onShare,
   reel,
+  safeBottomInset = 0,
   videoTopOffset = VIDEO_TOP_OFFSET,
 }: {
   active: boolean;
@@ -112,6 +113,7 @@ export function ReelCard({
   onSave?: (reelId: string) => void;
   onShare?: (reel: Reel) => void;
   reel: Reel;
+  safeBottomInset?: number;
   videoTopOffset?: number;
 }) {
   const wasActive = useRef(false);
@@ -398,7 +400,13 @@ export function ReelCard({
         </Pressable>
       )}
 
-      <View style={styles.safeContent} pointerEvents="box-none">
+      <View
+        style={[
+          styles.safeContent,
+          { paddingBottom: Math.max(spacing.md, safeBottomInset + spacing.md) },
+        ]}
+        pointerEvents="box-none"
+      >
         <View pointerEvents="box-none" style={styles.bottomContent}>
           <View style={styles.copy}>
             <View style={styles.authorLine}>
@@ -931,7 +939,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   reportTitle: { color: colors.text, fontSize: 15, fontWeight: "800" },
-  safeContent: { flex: 1, paddingBottom: 10, zIndex: 2 },
+  safeContent: { flex: 1, zIndex: 2 },
   sheetHandle: {
     alignSelf: "center",
     backgroundColor: "rgba(255,255,255,0.32)",
@@ -998,7 +1006,7 @@ const styles = StyleSheet.create({
   timeText: { color: colors.white, fontSize: 12, minWidth: 34 },
   tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.reelOverlay,
+    backgroundColor: "rgba(8, 16, 26, 0)",
   },
   topMask: {
     backgroundColor: colors.reelBackground,

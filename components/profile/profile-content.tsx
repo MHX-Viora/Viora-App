@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   Animated,
   Pressable,
@@ -54,7 +54,15 @@ export function ProfileContent({
   stats: readonly { label: string; value: string }[];
 }) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
+  const [, startTabTransition] = useTransition();
   const isPostsTab = activeTab === "posts";
+  const changeTab = useCallback(
+    (tab: ProfileTab) => {
+      if (tab === activeTab) return;
+      startTabTransition(() => setActiveTab(tab));
+    },
+    [activeTab, startTabTransition],
+  );
   const emptyText = isPostsTab
     ? "Bài viết của bạn sẽ xuất hiện tại đây"
     : "Video của bạn sẽ xuất hiện tại đây";
@@ -75,12 +83,12 @@ export function ProfileContent({
         <ProfileTabButton
           active={isPostsTab}
           label="Bài viết"
-          onPress={() => setActiveTab("posts")}
+          onPress={() => changeTab("posts")}
         />
         <ProfileTabButton
           active={!isPostsTab}
           label="Video"
-          onPress={() => setActiveTab("videos")}
+          onPress={() => changeTab("videos")}
         />
       </View>
 
@@ -184,7 +192,7 @@ function ProfileContentSkeleton({ activeTab }: { activeTab: ProfileTab }) {
   );
 }
 
-function ProfileTabButton({
+const ProfileTabButton = memo(function ProfileTabButton({
   active,
   label,
   onPress,
@@ -206,7 +214,7 @@ function ProfileTabButton({
       {active && <View style={styles.activeIndicator} />}
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   activeIndicator: {

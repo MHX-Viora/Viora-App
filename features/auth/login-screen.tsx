@@ -28,6 +28,8 @@ export function LoginScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async () => {
+    if (isSubmitting) return;
+
     const normalizedIdentifier = identifier.trim();
     if (!normalizedIdentifier || !password) {
       return showAlert({
@@ -84,12 +86,14 @@ export function LoginScreen() {
             <View style={styles.card}>
               <AuthField
                 autoCapitalize="none"
-                autoComplete="email"
+                autoComplete="username"
                 icon="person-outline"
-                keyboardType="email-address"
+                keyboardType="default"
                 label="Email hoặc Tên đăng nhập"
                 placeholder="example@email.com"
                 onChangeText={setIdentifier}
+                returnKeyType="next"
+                textContentType="username"
                 value={identifier}
               />
               <AuthField
@@ -100,6 +104,9 @@ export function LoginScreen() {
                 placeholder="••••••••"
                 secure
                 onChangeText={setPassword}
+                onSubmitEditing={handleLogin}
+                returnKeyType="go"
+                textContentType="password"
                 value={password}
               />
               <Pressable

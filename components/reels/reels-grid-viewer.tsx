@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import {
   Dimensions,
@@ -21,6 +21,32 @@ import type { Reel } from "@/types/reel";
 const ITEM_GAP = 1;
 const GRID_GAP = 2;
 const VIDEO_TILE_WIDTH = (Dimensions.get("window").width - GRID_GAP * 2) / 3;
+
+const InactiveReelPage = memo(function InactiveReelPage({
+  height,
+  reel,
+}: {
+  height: number;
+  reel: Reel;
+}) {
+  return (
+    <View style={[styles.inactivePage, { height }]}>
+      {reel.thumbnailUrl ? (
+        <Image
+          accessibilityLabel={`Ảnh bìa video của ${reel.author}`}
+          contentFit="cover"
+          source={{ uri: reel.thumbnailUrl }}
+          style={styles.inactivePoster}
+        />
+      ) : (
+        <View style={styles.inactiveFallback}>
+          <Ionicons color={colors.white} name="play" size={36} />
+        </View>
+      )}
+      <View style={styles.inactiveShade} />
+    </View>
+  );
+});
 
 export function ReelsGridViewer({
   header,
@@ -48,7 +74,6 @@ export function ReelsGridViewer({
   reels: Reel[];
 }) {
   const insets = useSafeAreaInsets();
-  const viewerListRef = useRef<FlatList<Reel>>(null);
   const [items, setItems] = useState(reels);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [viewerHeight, setViewerHeight] = useState(0);
@@ -77,20 +102,14 @@ export function ReelsGridViewer({
     );
   }, [onCommentCreated]);
 
-  const openViewer = (reel: Reel) => {
+  const openViewer = useCallback((reel: Reel) => {
     const index = Math.max(
       0,
       items.findIndex((item) => item.id === reel.id),
     );
 
     setViewerIndex(index);
-    requestAnimationFrame(() => {
-      viewerListRef.current?.scrollToOffset({
-        animated: false,
-        offset: (viewerHeight + ITEM_GAP) * index,
-      });
-    });
-  };
+  }, [items]);
 
   const updateReel = (reelId: string, updater: (reel: Reel) => Reel) => {
     setItems((current) =>
@@ -205,11 +224,13 @@ export function ReelsGridViewer({
               contentContainerStyle={{ rowGap: ITEM_GAP }}
               data={items}
               decelerationRate="fast"
+              extraData={{ paused, viewerIndex }}
               getItemLayout={(_, index) => ({
                 index,
                 length: viewerHeight + ITEM_GAP,
                 offset: (viewerHeight + ITEM_GAP) * index,
               })}
+              initialScrollIndex={viewerIndex}
               keyExtractor={(item) => item.id}
               onMomentumScrollEnd={(event) =>
                 setViewerIndex(
@@ -220,23 +241,25 @@ export function ReelsGridViewer({
                 )
               }
               pagingEnabled
-              ref={viewerListRef}
               renderItem={({ index, item }) => (
-                <ReelCard
-                  active={!paused && index === viewerIndex}
-                  height={viewerHeight}
-                  onComment={onComment}
-                  onDelete={handleDelete}
-                  onInteractionLockChange={
-                    index === viewerIndex ? setIsViewerLocked : undefined
-                  }
-                  onOpenAuthor={onOpenAuthor}
-                  onReact={handleReact}
-                  onSave={handleSave}
-                  onShare={onShare}
-                  reel={item}
-                  videoTopOffset={-24}
-                />
+                index === viewerIndex ? (
+                  <ReelCard
+                    active={!paused}
+                    height={viewerHeight}
+                    onComment={onComment}
+                    onDelete={handleDelete}
+                    onInteractionLockChange={setIsViewerLocked}
+                    onOpenAuthor={onOpenAuthor}
+                    onReact={handleReact}
+                    onSave={handleSave}
+                    onShare={onShare}
+                    reel={item}
+                    safeBottomInset={insets.bottom}
+                    videoTopOffset={-24}
+                  />
+                ) : (
+                  <InactiveReelPage height={viewerHeight} reel={item} />
+                )
               )}
               scrollEnabled={!isViewerLocked}
               showsVerticalScrollIndicator={false}
@@ -255,6 +278,21 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: "center",
     width: 40,
+  },
+  inactiveFallback: {
+    alignItems: "center",
+    backgroundColor: colors.reelBackground,
+    flex: 1,
+    justifyContent: "center",
+  },
+  inactivePage: {
+    backgroundColor: colors.reelBackground,
+    overflow: "hidden",
+  },
+  inactivePoster: { height: "100%", width: "100%" },
+  inactiveShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.18)",
   },
   videoFallback: {
     alignItems: "center",

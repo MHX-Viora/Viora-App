@@ -106,6 +106,29 @@ export type ChatGroupMembersPage = {
   totalPages: number;
 };
 
+export type ChatGroupPreviewMember = {
+  avatarUrl: string | null;
+  displayName: string;
+  id: string;
+  isFriend: boolean;
+  isVerified: boolean;
+};
+
+export type ChatGroupPreview = {
+  avatarUrl: string | null;
+  conversationId: string;
+  groupId: string;
+  isJoined: boolean;
+  memberCount: number;
+  members: ChatGroupPreviewMember[];
+  name: string;
+};
+
+export type JoinGroupResult = {
+  conversationId: string;
+  status: "joined" | "pending";
+};
+
 export type ChatSearchResult = {
   id: string;
   conversationId: string;
