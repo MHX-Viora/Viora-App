@@ -27,9 +27,8 @@ export default function TabLayout() {
   const [unreadNotificationCount, setUnreadNotificationCountState] = useState(
     getNotificationUnreadCount(),
   );
-  const [unreadChatCount, setUnreadChatCountState] = useState(
-    getChatUnreadCount(),
-  );
+  const [unreadChatCount, setUnreadChatCountState] =
+    useState(getChatUnreadCount());
 
   useEffect(
     () => subscribeNotificationUnreadCount(setUnreadNotificationCountState),
@@ -100,13 +99,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="utilities"
         options={{
-          tabBarAccessibilityLabel: "Tiện ích",
-          tabBarIcon: ({ focused }) => (
-            <TabIcon
-              focused={focused}
-              name={focused ? "grid" : "grid-outline"}
-            />
-          ),
+          href: null,
           title: "Tiện ích",
         }}
       />

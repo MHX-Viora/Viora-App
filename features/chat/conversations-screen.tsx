@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Image } from "expo-image";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -16,7 +15,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ConversationRow } from "@/components/chat/conversation-row";
 import { showAppToast } from "@/components/common/app-toast";
+import { CONVERSATIONS_PAGE_SIZE } from "@/constants/conversations";
 import {
   subscribeRealtimeConversationDissolved,
   subscribeRealtimeConversationMutedChanges,
@@ -27,7 +28,6 @@ import {
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
 import {
-  ChatApiError,
   getConversation,
   getConversations,
   markConversationRead,
@@ -38,196 +38,15 @@ import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { getUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
-import { formatChatTime } from "@/utils/chat-time";
-
-const PAGE_SIZE = 20;
-
-const isConversationGoneError = (error: unknown) =>
-  error instanceof ChatApiError &&
-  (error.status === 404 || error.status === 410);
-
-const firstParam = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
-
-const getLastMessageTime = (conversation: Conversation) => {
-  const value = conversation.lastMessage?.createdAt;
-  const time = value ? new Date(value).getTime() : 0;
-  return Number.isFinite(time) ? time : 0;
-};
-
-const sortConversations = (items: Conversation[]) =>
-  [...items].sort((left, right) => {
-    if (left.isPinned !== right.isPinned) return left.isPinned ? -1 : 1;
-    return getLastMessageTime(right) - getLastMessageTime(left);
-  });
-
-const mergeConversations = (
-  current: Conversation[],
-  incoming: Conversation[],
-) => {
-  const byId = new Map(current.map((item) => [item.id, item]));
-  incoming.forEach((item) => byId.set(item.id, item));
-  return sortConversations(
-    current
-      .map((item) => byId.get(item.id) ?? item)
-      .concat(
-        incoming.filter((item) => !current.some((old) => old.id === item.id)),
-      ),
-  );
-};
-
-const getTitle = (conversation: Conversation) =>
-  conversation.conversationType === "Private"
-    ? (conversation.otherParticipant?.displayName ?? conversation.name)
-    : conversation.name;
-
-const getAvatar = (conversation: Conversation) =>
-  conversation.conversationType === "Private"
-    ? (conversation.otherParticipant?.avatarUrl ?? conversation.avatarUrl)
-    : conversation.avatarUrl;
-
-const getConversationRouteParams = (
-  conversation: Conversation,
-  scrollToMessageId?: string,
-) => {
-  const avatar = getAvatar(conversation);
-  return {
-    conversationAvatarUrl: avatar ?? "",
-    conversationId: conversation.id,
-    conversationName: getTitle(conversation),
-    conversationType: conversation.conversationType,
-    isMuted: String(conversation.isMuted),
-    isPinned: String(conversation.isPinned),
-    isVerified: String(conversation.otherParticipant?.isVerified ?? false),
-    memberCount: String(conversation.memberCount ?? ""),
-    otherAvatarUrl: conversation.otherParticipant?.avatarUrl ?? "",
-    otherUserId: conversation.otherParticipant?.id ?? "",
-    otherUserName: conversation.otherParticipant?.displayName ?? "",
-    role: String(conversation.role ?? 0),
-    scrollToMessageId,
-  };
-};
-
-const getLastMessageText = (conversation: Conversation) => {
-  const lastMessage = conversation.lastMessage;
-  if (!lastMessage) return "Chưa có tin nhắn.";
-
-  if (lastMessage.isDeleted || lastMessage.messageType === 7) {
-    return `${lastMessage.isMine ? "Bạn: " : ""}Tin nhắn đã được thu hồi`;
-  }
-
-  const content = lastMessage.content.trim();
-  if (content) return `${lastMessage.isMine ? "Bạn: " : ""}${content}`;
-
-  const attachmentType = lastMessage.attachments[0]?.type;
-  const mediaText =
-    attachmentType === "image" || lastMessage.messageType === 1
-      ? "Ảnh"
-      : attachmentType === "video" || lastMessage.messageType === 2
-        ? "Video"
-        : attachmentType === "audio" || lastMessage.messageType === 4
-          ? "Âm thanh"
-          : attachmentType === "file" || lastMessage.messageType === 3
-            ? "Tài liệu"
-            : "Tin nhắn";
-
-  return `${lastMessage.isMine ? "Bạn: " : ""}${mediaText}`;
-};
-
-function ConversationRow({
-  conversation,
-  isPinLoading,
-  onOpen,
-  onOpenMenu,
-}: {
-  conversation: Conversation;
-  isPinLoading: boolean;
-  onOpen: (conversation: Conversation) => void;
-  onOpenMenu: (conversation: Conversation) => void;
-}) {
-  const title = getTitle(conversation);
-  const avatar = getAvatar(conversation);
-  const isPrivate = conversation.conversationType === "Private";
-  const otherParticipant = conversation.otherParticipant;
-  const showVerified = isPrivate && otherParticipant?.isVerified === true;
-  const showStrangerBadge = isPrivate && otherParticipant?.isStranger === true;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onLongPress={() => onOpenMenu(conversation)}
-      onPress={() => onOpen(conversation)}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-    >
-      {avatar ? (
-        <Image source={{ uri: avatar }} style={styles.avatar} />
-      ) : (
-        <View style={styles.avatarFallback}>
-          <Ionicons
-            color={colors.primary}
-            name="chatbubble-ellipses"
-            size={22}
-          />
-        </View>
-      )}
-      <View style={styles.rowBody}>
-        <View style={styles.titleLine}>
-          <Text numberOfLines={1} style={styles.title}>
-            {title}
-          </Text>
-          {showVerified ? (
-            <Ionicons
-              color={colors.primary}
-              name="checkmark-circle"
-              size={16}
-            />
-          ) : null}
-          {conversation.isMuted && (
-            <Ionicons
-              color={colors.textMuted}
-              name="notifications-off"
-              size={18}
-            />
-          )}
-        </View>
-        {showStrangerBadge ? (
-          <View style={styles.strangerBadge}>
-            <Text style={styles.strangerBadgeText}>Người lạ</Text>
-          </View>
-        ) : null}
-        <Text
-          numberOfLines={1}
-          style={[
-            styles.preview,
-            conversation.unreadCount > 0 && styles.unreadPreview,
-          ]}
-        >
-          {getLastMessageText(conversation)}
-        </Text>
-      </View>
-      <View style={styles.meta}>
-        {conversation.isPinned && (
-          <Ionicons color={colors.primary} name="pricetag" size={15} />
-        )}
-        <Text style={styles.time}>
-          {conversation.lastMessage
-            ? formatChatTime(conversation.lastMessage.createdAt)
-            : ""}
-        </Text>
-        {conversation.unreadCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
-            </Text>
-          </View>
-        )}
-        {isPinLoading && (
-          <ActivityIndicator color={colors.primary} size="small" />
-        )}
-      </View>
-    </Pressable>
-  );
-}
+import {
+  firstParam,
+  getConversationRouteParams,
+  getConversationTitle,
+  getLastMessageText,
+  isConversationGoneError,
+  mergeConversations,
+  sortConversations,
+} from "@/utils/conversation-list";
 
 export function ConversationsScreen() {
   const insets = useSafeAreaInsets();
@@ -361,7 +180,7 @@ export function ConversationsScreen() {
         const result = await getConversations({
           keyword: debouncedKeyword,
           page: nextPage,
-          pageSize: PAGE_SIZE,
+          pageSize: CONVERSATIONS_PAGE_SIZE,
         });
         setItems((current) =>
           nextPage === 1
@@ -894,7 +713,7 @@ export function ConversationsScreen() {
               <>
                 <View style={styles.menuHandle} />
                 <Text numberOfLines={1} style={styles.menuTitle}>
-                  {getTitle(selectedConversation)}
+                  {getConversationTitle(selectedConversation)}
                 </Text>
                 <Text numberOfLines={1} style={styles.menuSubtitle}>
                   {getLastMessageText(selectedConversation)}
@@ -1001,24 +820,6 @@ export function ConversationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  avatar: { borderRadius: 28, height: 56, width: 56 },
-  avatarFallback: {
-    alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderRadius: 28,
-    height: 56,
-    justifyContent: "center",
-    width: 56,
-  },
-  badge: {
-    alignItems: "center",
-    backgroundColor: colors.danger,
-    borderRadius: 999,
-    minWidth: 24,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  badgeText: { color: colors.white, fontSize: 11, fontWeight: "800" },
   empty: { alignItems: "center", gap: spacing.sm, justifyContent: "center" },
   emptyContent: { flexGrow: 1, justifyContent: "center" },
   emptyText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
@@ -1209,22 +1010,8 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   menuTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
-  meta: { alignItems: "flex-end", gap: 4, minWidth: 42 },
-  preview: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   reportMenuIcon: { backgroundColor: "rgba(240, 68, 56, 0.12)" },
   reportText: { color: colors.danger },
-  row: {
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    flexDirection: "row",
-    gap: spacing.md,
-    minHeight: 82,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  rowBody: { flex: 1, gap: 4 },
   rowPressed: { opacity: 0.72 },
   screen: { backgroundColor: colors.background, flex: 1 },
   searchBox: {
@@ -1244,22 +1031,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 0,
   },
-  strangerBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  strangerBadgeText: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  time: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  title: { color: colors.text, flex: 1, fontSize: 16, fontWeight: "800" },
-  titleLine: { alignItems: "center", flexDirection: "row", gap: 3 },
-  unreadPreview: { color: colors.text, fontWeight: "800" },
 });

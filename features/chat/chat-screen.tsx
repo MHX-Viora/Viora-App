@@ -19,7 +19,6 @@ import {
   Alert,
   FlatList,
   Image,
-  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -34,7 +33,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddMembersModal } from "@/components/chat/add-members-modal";
+import { ChatComposerNotice } from "@/components/chat/chat-composer-notice";
+import { ChatMediaViewer } from "@/components/chat/chat-media-viewer";
+import { PendingAttachmentPreview } from "@/components/chat/pending-attachment-preview";
 import { showAppToast } from "@/components/common/app-toast";
+import {
+  CHAT_PAGE_SIZE,
+  CHAT_STICKERS,
+  GOOGLE_MAPS_URL_PATTERN,
+} from "@/constants/chat";
 import {
   setActiveChatConversation,
   subscribeRealtimeConversationBlockedChanges,
@@ -45,7 +52,6 @@ import {
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
 import {
-  ChatApiError,
   getConversation,
   getConversationMessages,
   markConversationRead,
@@ -65,48 +71,16 @@ import type {
   SendMessageAttachment,
 } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
-
-const PAGE_SIZE = 30;
-const STICKERS = ["👍", "❤️", "😂", "🔥", "👏", "😍", "😮", "🙏"];
-const GOOGLE_MAPS_URL_PATTERN =
-  /https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=-?\d+(\.\d+)?,-?\d+(\.\d+)?/;
-
-const getRealtimeConversationGroupName = (conversationId: string) =>
-  `conversation:${conversationId}`;
-
-const isConversationGoneError = (error: unknown) =>
-  error instanceof ChatApiError && (error.status === 404 || error.status === 410);
-
-const mergeOlder = (current: ChatMessage[], older: ChatMessage[]) => {
-  const seen = new Set(current.map((item) => item.id));
-  return [...current, ...older.filter((item) => !seen.has(item.id))];
-};
-
-const pendingAttachmentToViewerAttachment = (
-  attachment: SendMessageAttachment,
-): ChatAttachment => ({
-  id: attachment.id,
-  name: attachment.name,
-  thumbnailUrl: null,
-  type: attachment.kind,
-  url: attachment.uri,
-});
-
-const markMessageRecalled = (
-  message: ChatMessage,
-  deletedBy?: string,
-): ChatMessage => ({
-  ...message,
-  attachments: [],
-  content: "",
-  isDeleted: true,
-  messageType: MessageType.Recall,
-  reactions: [],
-  sendStatus: "sent",
-  deletedBy,
-});
-
-const toNewestFirstMessages = (items: ChatMessage[]) => [...items].reverse();
+import {
+  getRealtimeConversationGroupName,
+  isConversationGoneError,
+  markMessageRecalled,
+  mergeOlder,
+  pendingAttachmentToViewerAttachment,
+  toNewestFirstMessages,
+} from "@/utils/chat-message";
+import { useKeyboardVisible } from "@/hooks/chat/use-keyboard-visible";
+import { useChatPermissions } from "@/hooks/chat/use-chat-permissions";
 
 function AudioAttachment({
   attachment,
@@ -367,75 +341,6 @@ function VideoAttachment({
   );
 }
 
-function PendingAttachmentPreview({
-  attachment,
-  onOpen,
-  onRemove,
-}: {
-  attachment: SendMessageAttachment;
-  onOpen: (attachment: SendMessageAttachment) => void;
-  onRemove: (id: string) => void;
-}) {
-  const videoPlayer = useVideoPlayer(
-    attachment.kind === "video" ? attachment.uri : null,
-  );
-  const label =
-    attachment.kind === "image"
-      ? "Ảnh"
-      : attachment.kind === "video"
-        ? "Video"
-        : attachment.kind === "audio"
-          ? "Âm thanh"
-          : "Tài liệu";
-
-  return (
-    <View style={styles.attachmentPreview}>
-      {attachment.kind === "image" ? (
-        <Pressable onPress={() => onOpen(attachment)}>
-          <Image
-            resizeMode="cover"
-            source={{ uri: attachment.uri }}
-            style={styles.attachmentThumb}
-          />
-        </Pressable>
-      ) : attachment.kind === "video" ? (
-        <Pressable
-          onPress={() => onOpen(attachment)}
-          style={styles.attachmentThumb}
-        >
-          <VideoView
-            contentFit="cover"
-            nativeControls={false}
-            player={videoPlayer}
-            style={styles.attachmentThumbVideo}
-          />
-          <View style={styles.attachmentThumbOverlay}>
-            <Ionicons color={colors.white} name="play" size={16} />
-          </View>
-        </Pressable>
-      ) : (
-        <View style={styles.attachmentIcon}>
-          <Ionicons
-            color={colors.primary}
-            name={attachment.kind === "audio" ? "mic" : "document-attach"}
-            size={22}
-          />
-        </View>
-      )}
-      <Text numberOfLines={1} style={styles.attachmentPreviewName}>
-        {label}
-      </Text>
-      <Pressable
-        accessibilityLabel="Loại bỏ tệp đã chọn"
-        onPress={() => onRemove(attachment.id)}
-        style={styles.removeAttachmentButton}
-      >
-        <Ionicons color={colors.white} name="close" size={12} />
-      </Pressable>
-    </View>
-  );
-}
-
 function LocationCard({
   isMine,
   onLongPress,
@@ -533,6 +438,12 @@ function MessageRow({
     message.reactions.length === 0;
   const canRecall =
     message.isMine && !message.isDeleted && !message.id.startsWith("pending-");
+  const sendStatusLabel =
+    message.isMine && message.sendStatus && message.sendStatus !== "sent"
+      ? message.sendStatus === "sending"
+        ? "Đang gửi..."
+        : "Gửi lỗi"
+      : "";
   const actions = (
     <View
       style={[
@@ -603,6 +514,17 @@ function MessageRow({
           <View style={styles.avatarSpace} />
         ))}
       {message.isMine && isActionsOpen ? actions : null}
+      {sendStatusLabel ? (
+        <Text
+          style={[
+            styles.sendStatus,
+            isMediaOnly && styles.mediaSendStatus,
+            message.sendStatus === "failed" && styles.failedSendStatus,
+          ]}
+        >
+          {sendStatusLabel}
+        </Text>
+      ) : null}
       <View
         style={[
           styles.bubble,
@@ -694,70 +616,9 @@ function MessageRow({
         >
           {formatChatTime(message.createdAt)}
         </Text>
-        {message.isMine && message.sendStatus && message.sendStatus !== "sent" ? (
-          <Text
-            style={[
-              styles.sendStatus,
-              isMediaOnly && styles.mediaSendStatus,
-              message.sendStatus === "failed" && styles.failedSendStatus,
-            ]}
-          >
-            {message.sendStatus === "sending" ? "Đang gửi..." : "Gửi lỗi"}
-          </Text>
-        ) : null}
       </View>
       {!message.isMine && isActionsOpen ? actions : null}
     </Pressable>
-  );
-}
-
-function MediaViewer({
-  attachment,
-  onClose,
-}: {
-  attachment: ChatAttachment | null;
-  onClose: () => void;
-}) {
-  const videoPlayer = useVideoPlayer(
-    attachment?.type === "video" ? attachment.url : null,
-    (player) => {
-      player.loop = false;
-      player.play();
-    },
-  );
-
-  return (
-    <Modal
-      animationType="fade"
-      onRequestClose={onClose}
-      transparent={false}
-      visible={attachment !== null}
-    >
-      <View style={styles.viewer}>
-        <Pressable
-          accessibilityLabel="Đóng trình xem"
-          onPress={onClose}
-          style={styles.viewerClose}
-        >
-          <Ionicons color={colors.white} name="close" size={26} />
-        </Pressable>
-        {attachment?.type === "image" ? (
-          <Image
-            resizeMode="contain"
-            source={{ uri: attachment.url }}
-            style={styles.viewerImage}
-          />
-        ) : attachment?.type === "video" ? (
-          <VideoView
-            contentFit="contain"
-            fullscreenOptions={{ enable: true }}
-            nativeControls
-            player={videoPlayer}
-            style={styles.viewerVideo}
-          />
-        ) : null}
-      </View>
-    </Modal>
   );
 }
 
@@ -782,6 +643,51 @@ export function ChatScreen() {
     scrollToMessageId?: string;
   }>();
   const conversationId = params.conversationId ?? "";
+  const initialConversationDetails = useMemo<Conversation | null>(() => {
+    if (!conversationId && !params.conversationName) return null;
+
+    const conversationType = params.conversationType ?? "Private";
+    const memberCount = Number.parseInt(params.memberCount ?? "", 10);
+    const role = Number.parseInt(params.role ?? "0", 10);
+    const otherParticipant =
+      conversationType === "Private"
+        ? {
+            avatarUrl:
+              params.otherAvatarUrl || params.conversationAvatarUrl || null,
+            displayName:
+              params.otherUserName || params.conversationName || "Chat",
+            id: params.otherUserId || "",
+            isVerified: params.isVerified === "true",
+          }
+        : null;
+
+    return {
+      avatarUrl: params.conversationAvatarUrl || null,
+      conversationType,
+      id: conversationId,
+      isMuted: params.isMuted === "true",
+      isPinned: params.isPinned === "true",
+      lastMessage: null,
+      memberCount: Number.isNaN(memberCount) ? undefined : memberCount,
+      name: params.conversationName || "Chat",
+      otherParticipant,
+      role: Number.isNaN(role) ? 0 : role,
+      unreadCount: 0,
+    };
+  }, [
+    conversationId,
+    params.conversationAvatarUrl,
+    params.conversationName,
+    params.conversationType,
+    params.isMuted,
+    params.isPinned,
+    params.isVerified,
+    params.memberCount,
+    params.otherAvatarUrl,
+    params.otherUserId,
+    params.otherUserName,
+    params.role,
+  ]);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const pendingScrollToEndRef = useRef(false);
   const pendingScrollAnimatedRef = useRef(false);
@@ -799,11 +705,11 @@ export function ChatScreen() {
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [actionMessageId, setActionMessageId] = useState<string | null>(null);
   const [showStickers, setShowStickers] = useState(false);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const isKeyboardVisible = useKeyboardVisible();
   const [isBlocked, setIsBlocked] = useState(params.isBlocked === "true");
   const [blockedBy, setBlockedBy] = useState<ChatParticipant | null>(null);
   const [conversationDetails, setConversationDetails] =
-    useState<Conversation | null>(null);
+    useState<Conversation | null>(initialConversationDetails);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [viewingAttachment, setViewingAttachment] =
@@ -888,7 +794,7 @@ export function ChatScreen() {
       try {
         const result = await getConversationMessages(conversationId, {
           page: nextPage,
-          pageSize: PAGE_SIZE,
+          pageSize: CHAT_PAGE_SIZE,
         });
         const nextItems = toNewestFirstMessages(
           result.items.map(normalizeMessage),
@@ -957,7 +863,7 @@ export function ChatScreen() {
       try {
         const result = await getConversationMessages(conversationId, {
           page: nextPage,
-          pageSize: PAGE_SIZE,
+          pageSize: CHAT_PAGE_SIZE,
         });
         const olderMessages = toNewestFirstMessages(
           result.items.map(normalizeMessage),
@@ -1006,6 +912,7 @@ export function ChatScreen() {
     dissolvedRef.current = false;
     setActiveChatConversation(conversationId || null);
     setMessagePermissions(null);
+    setConversationDetails(initialConversationDetails);
     if (conversationId) {
       void joinRealtimeGroup(getRealtimeConversationGroupName(conversationId)).catch(
         (error) => {
@@ -1029,7 +936,7 @@ export function ChatScreen() {
         );
       }
     };
-  }, [conversationId]);
+  }, [conversationId, initialConversationDetails]);
 
   useEffect(() => {
     getUser().then((user) => setCurrentUserId(user?.id ?? null));
@@ -1041,6 +948,7 @@ export function ChatScreen() {
 
   useEffect(() => {
     if (!conversationId) return;
+    if (params.conversationName && params.conversationType) return;
     let isMounted = true;
     void getConversation(conversationId)
       .then((conversation) => {
@@ -1062,21 +970,7 @@ export function ChatScreen() {
     return () => {
       isMounted = false;
     };
-  }, [conversationId, handleRoomApiError]);
-
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener("keyboardDidShow", () => {
-      setIsKeyboardVisible(true);
-    });
-    const hideSubscription = Keyboard.addListener("keyboardDidHide", () => {
-      setIsKeyboardVisible(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
+  }, [conversationId, handleRoomApiError, params.conversationName, params.conversationType]);
 
   useEffect(
     () =>
@@ -1163,36 +1057,31 @@ export function ChatScreen() {
   }, [messages.length, params.scrollToMessageId, scrollToMessage]);
 
   const title = useMemo(() => {
+    if (params.conversationName) return params.conversationName;
     if (conversationDetails) {
       return conversationDetails.conversationType === "Private"
         ? (conversationDetails.otherParticipant?.displayName ??
             conversationDetails.name)
         : conversationDetails.name;
     }
-    if (params.conversationName) return params.conversationName;
     const other = messages.find((item) => !item.isMine)?.sender.displayName;
     return other ?? "Chat";
   }, [conversationDetails, messages, params.conversationName]);
 
-  const conversationType =
-    conversationDetails?.conversationType ?? params.conversationType ?? "Private";
-  const routeRole = Number.parseInt(params.role ?? "0", 10);
-  const currentUserRole = conversationDetails?.role ?? (Number.isNaN(routeRole) ? 0 : routeRole);
-  const canAddMembers = conversationType === "Group";
-  const hasGroupMessagePermission =
-    conversationType !== "Group" || messagePermissions !== null;
-  const canSendInConversation =
-    conversationType === "Group"
-      ? messagePermissions?.canSendMessage === true
-      : messagePermissions?.canSendMessage ?? true;
-  const shouldRenderComposer =
-    isBlocked ||
-    (conversationType === "Group" ? hasGroupMessagePermission : true);
-  const showAdminOnlyMessage =
-    conversationType === "Group" &&
-    messagePermissions?.onlyAdminCanSend === true &&
-    !canSendInConversation &&
-    !isBlocked;
+  const {
+    canAddMembers,
+    canSendInConversation,
+    conversationType,
+    currentUserRole,
+    shouldRenderComposer,
+    showAdminOnlyMessage,
+  } = useChatPermissions({
+    conversationDetails,
+    isBlocked,
+    messagePermissions,
+    paramsConversationType: params.conversationType,
+    paramsRole: params.role,
+  });
 
   const blockedComposerMessage = useMemo(() => {
     if (!isBlocked) return "";
@@ -1737,12 +1626,7 @@ export function ChatScreen() {
         ]}
       >
         {isBlocked ? (
-          <View style={styles.blockedComposer}>
-            <Ionicons color={colors.danger} name="ban-outline" size={18} />
-            <Text style={styles.blockedComposerText}>
-              {blockedComposerMessage}
-            </Text>
-          </View>
+          <ChatComposerNotice message={blockedComposerMessage} type="blocked" />
         ) : !canSendInConversation ? (
           showAdminOnlyMessage ? (
             <View style={styles.permissionComposer}>
@@ -1798,7 +1682,7 @@ export function ChatScreen() {
         </ScrollView>
         {showStickers && (
           <View style={styles.stickerTray}>
-            {STICKERS.map((sticker) => (
+            {CHAT_STICKERS.map((sticker) => (
               <Pressable
                 accessibilityLabel={`Chọn sticker ${sticker}`}
                 key={sticker}
@@ -1896,7 +1780,7 @@ export function ChatScreen() {
         )}
       </View>
       ) : null}
-      <MediaViewer
+      <ChatMediaViewer
         attachment={viewingAttachment}
         onClose={() => setViewingAttachment(null)}
       />
@@ -1913,55 +1797,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     justifyContent: "space-around",
   },
-  attachmentIcon: {
-    alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderRadius: 7,
-    height: 64,
-    justifyContent: "center",
-    width: 64,
-  },
-  attachmentPreview: {
-    alignItems: "flex-start",
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: "column",
-    gap: spacing.xs,
-    marginRight: spacing.sm,
-    minHeight: 92,
-    padding: spacing.xs,
-    position: "relative",
-    width: 76,
-  },
   attachmentPreviewList: { gap: spacing.sm, paddingRight: spacing.md },
-  attachmentPreviewName: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center",
-    width: "100%",
-  },
-  attachmentThumb: {
-    backgroundColor: colors.border,
-    borderRadius: 7,
-    height: 64,
-    overflow: "hidden",
-    width: 64,
-  },
-  attachmentThumbOverlay: {
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.38)",
-    borderRadius: 999,
-    height: 26,
-    justifyContent: "center",
-    left: 19,
-    position: "absolute",
-    top: 19,
-    width: 26,
-  },
-  attachmentThumbVideo: { height: "100%", width: "100%" },
   audioBody: { flex: 1, gap: 4 },
   audioLabel: {
     color: colors.textMuted,
@@ -2078,6 +1914,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: 3,
+    position: "relative",
   },
   messageText: { color: colors.text, fontSize: 16, lineHeight: 22 },
   messageTime: {
@@ -2197,17 +2034,6 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   recordingText: { color: colors.danger, fontSize: 12, fontWeight: "800" },
-  removeAttachmentButton: {
-    alignItems: "center",
-    backgroundColor: colors.danger,
-    borderRadius: 999,
-    height: 20,
-    justifyContent: "center",
-    position: "absolute",
-    right: -6,
-    top: -6,
-    width: 20,
-  },
   replyBox: {
     borderLeftColor: colors.primary,
     borderLeftWidth: 3,
@@ -2225,11 +2051,16 @@ const styles = StyleSheet.create({
   replyText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
   screen: { backgroundColor: colors.background, flex: 1 },
   sendStatus: {
-    alignSelf: "flex-end",
-    color: colors.primarySoft,
-    fontSize: 11,
-    fontWeight: "800",
-    marginTop: 2,
+    backgroundColor: colors.background,
+    borderRadius: 999,
+    bottom: -8,
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: "900",
+    paddingHorizontal: spacing.xs,
+    position: "absolute",
+    right: spacing.md,
+    zIndex: 2,
   },
   emptyMessages: {
     alignItems: "center",
@@ -2254,28 +2085,10 @@ const styles = StyleSheet.create({
     width: 40,
   },
   sendButtonDisabled: { opacity: 0.45 },
-  blockedComposer: {
-    alignItems: "center",
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  blockedComposerText: {
-    color: colors.textMuted,
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "800",
-    lineHeight: 18,
-  },
   permissionComposer: {
     alignItems: "center",
-    backgroundColor: colors.background,
-    borderColor: colors.border,
+    backgroundColor: "rgba(239, 71, 111, 0.1)",
+    borderColor: "rgba(239, 71, 111, 0.35)",
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: "center",
@@ -2284,7 +2097,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   permissionComposerText: {
-    color: colors.textMuted,
+    color: colors.danger,
     fontSize: 14,
     fontWeight: "800",
     textAlign: "center",
@@ -2363,26 +2176,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
   },
-  viewer: {
-    alignItems: "center",
-    backgroundColor: colors.reelBackground,
-    flex: 1,
-    justifyContent: "center",
-  },
-  viewerClose: {
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    borderRadius: 999,
-    height: 44,
-    justifyContent: "center",
-    position: "absolute",
-    right: spacing.lg,
-    top: spacing.xl,
-    width: 44,
-    zIndex: 2,
-  },
-  viewerImage: { height: "100%", width: "100%" },
-  viewerVideo: { height: "100%", width: "100%" },
   waveBar: {
     backgroundColor: colors.primary,
     borderRadius: 999,

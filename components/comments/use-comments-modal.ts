@@ -5,6 +5,7 @@ import {
   createReply,
   getComments,
   getReplies,
+  likeComment,
 } from "@/services/comment.service";
 import { getUser } from "@/stores/session-store";
 import type { Comment, Reply } from "@/types/comment";
@@ -320,6 +321,42 @@ export function useCommentsModal({
     await submitComment(content, postId);
   };
 
+  const toggleCommentLike = async (commentId: string) => {
+    const result = await likeComment(commentId);
+
+    setComments((current) =>
+      current.map((comment) =>
+        comment.id === result.commentId
+          ? {
+              ...comment,
+              isLiked: result.isLiked,
+              likeCount: result.likeCount,
+            }
+          : comment,
+      ),
+    );
+    setReplyStateByComment((state) => {
+      let hasChanged = false;
+      const next = Object.fromEntries(
+        Object.entries(state).map(([parentId, replyState]) => {
+          const items = replyState.items.map((reply) => {
+            if (reply.id !== result.commentId) return reply;
+            hasChanged = true;
+            return {
+              ...reply,
+              isLiked: result.isLiked,
+              likeCount: result.likeCount,
+            };
+          });
+
+          return [parentId, hasChanged ? { ...replyState, items } : replyState];
+        }),
+      );
+
+      return hasChanged ? next : state;
+    });
+  };
+
   return {
     close,
     comments,
@@ -335,6 +372,7 @@ export function useCommentsModal({
     setDraftComment,
     setReplyTarget,
     submit,
+    toggleCommentLike,
   };
 }
 

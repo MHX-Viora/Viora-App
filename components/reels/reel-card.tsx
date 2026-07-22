@@ -18,76 +18,17 @@ import {
 } from "react-native";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { ReelAction } from "@/components/reels/reel-action";
+import {
+  REEL_PLAYBACK_RATES,
+  REEL_REPORT_REASONS,
+  REEL_VIDEO_TOP_OFFSET,
+} from "@/constants/reels";
 import { deletePost, reportPost } from "@/services/post.service";
 import { followUser } from "@/services/user.service";
 import { colors, spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
-
-const PLAYBACK_RATES = [0.5, 1, 1.25, 1.5, 2] as const;
-const VIDEO_TOP_OFFSET = 30;
-
-const REPORT_REASONS = [
-  { description: "Nội dung spam hoặc gây hiểu nhầm", label: "Spam", value: 0 },
-  {
-    description: "Nội dung quấy rối hoặc công kích",
-    label: "Quấy rối",
-    value: 1,
-  },
-  {
-    description: "Nội dung bạo lực hoặc nguy hiểm",
-    label: "Bạo lực",
-    value: 2,
-  },
-  {
-    description: "Nội dung người lớn hoặc phản cảm",
-    label: "Nhạy cảm",
-    value: 3,
-  },
-  { description: "Lý do khác", label: "Khác", value: 4 },
-];
-
-function ReelAction({
-  icon,
-  label,
-  onPress,
-  selected,
-  value,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>["name"];
-  label: string;
-  onPress?: () => void;
-  selected?: boolean;
-  value?: string;
-}) {
-  const selectedColor = icon === "heart" ? colors.danger : colors.primary;
-
-  return (
-    <View style={styles.actionGroup}>
-      <Pressable
-        accessibilityLabel={label}
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
-        onPress={onPress}
-        style={styles.circleAction}
-      >
-        <Ionicons
-          color={selected ? selectedColor : colors.white}
-          name={icon}
-          size={31}
-        />
-      </Pressable>
-      {value && <Text style={styles.actionValue}>{value}</Text>}
-    </View>
-  );
-}
-
-function formatTime(seconds: number) {
-  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
-  const minutes = Math.floor(safeSeconds / 60);
-  return `${minutes}:${Math.floor(safeSeconds % 60)
-    .toString()
-    .padStart(2, "0")}`;
-}
+import { formatReelTime } from "@/utils/reel-time";
 
 export function ReelCard({
   active,
@@ -101,7 +42,7 @@ export function ReelCard({
   onShare,
   reel,
   safeBottomInset = 0,
-  videoTopOffset = VIDEO_TOP_OFFSET,
+  videoTopOffset = REEL_VIDEO_TOP_OFFSET,
 }: {
   active: boolean;
   height: number;
@@ -306,7 +247,7 @@ export function ReelCard({
     }
   };
 
-  const handleReport = async (reason: (typeof REPORT_REASONS)[number]) => {
+  const handleReport = async (reason: (typeof REEL_REPORT_REASONS)[number]) => {
     if (reportingReason !== null) return;
 
     setReportingReason(reason.value);
@@ -570,7 +511,7 @@ export function ReelCard({
             </View>
 
             <View style={styles.seekRow}>
-              <Text style={styles.timeText}>{formatTime(displayedTime)}</Text>
+              <Text style={styles.timeText}>{formatReelTime(displayedTime)}</Text>
               <View
                 accessibilityLabel="Tua video"
                 accessibilityRole="adjustable"
@@ -596,7 +537,7 @@ export function ReelCard({
                   style={[styles.seekThumb, { left: `${progress * 100}%` }]}
                 />
               </View>
-              <Text style={styles.timeText}>{formatTime(duration)}</Text>
+              <Text style={styles.timeText}>{formatReelTime(duration)}</Text>
             </View>
 
             <View style={styles.utilityRow}>
@@ -628,7 +569,7 @@ export function ReelCard({
 
             <Text style={styles.speedLabel}>Tốc độ phát</Text>
             <View style={styles.speedRow}>
-              {PLAYBACK_RATES.map((rate) => (
+              {REEL_PLAYBACK_RATES.map((rate) => (
                 <Pressable
                   accessibilityLabel={`Tốc độ ${rate} lần`}
                   accessibilityRole="button"
@@ -697,7 +638,7 @@ export function ReelCard({
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.reportSheetTitle}>Báo cáo video</Text>
-            {REPORT_REASONS.map((reason) => (
+            {REEL_REPORT_REASONS.map((reason) => (
               <Pressable
                 disabled={reportingReason !== null}
                 key={reason.value}
@@ -729,13 +670,6 @@ export function ReelCard({
 }
 
 const styles = StyleSheet.create({
-  actionGroup: { alignItems: "center", gap: 0 },
-  actionValue: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: -1,
-  },
   author: { color: colors.white, fontSize: 18, fontWeight: "800" },
   authorLine: {
     alignItems: "center",
@@ -773,13 +707,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     justifyContent: "center",
-  },
-  circleAction: {
-    alignItems: "center",
-    borderRadius: 28,
-    height: 56,
-    justifyContent: "center",
-    width: 56,
   },
   controlsBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -1010,7 +937,7 @@ const styles = StyleSheet.create({
   },
   topMask: {
     backgroundColor: colors.reelBackground,
-    height: VIDEO_TOP_OFFSET,
+    height: REEL_VIDEO_TOP_OFFSET,
     left: 0,
     position: "absolute",
     right: 0,
@@ -1027,7 +954,7 @@ const styles = StyleSheet.create({
   utilityRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
   videoGestureArea: {
     ...StyleSheet.absoluteFillObject,
-    top: VIDEO_TOP_OFFSET,
+    top: REEL_VIDEO_TOP_OFFSET,
     zIndex: 1,
   },
   videoLayer: {
@@ -1038,7 +965,7 @@ const styles = StyleSheet.create({
     left: 0,
     position: "absolute",
     right: 0,
-    top: VIDEO_TOP_OFFSET,
+    top: REEL_VIDEO_TOP_OFFSET,
   },
   videoFrame: {
     aspectRatio: 9 / 16,

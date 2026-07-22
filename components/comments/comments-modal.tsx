@@ -59,6 +59,7 @@ export function CommentsModal({
     setDraftComment,
     setReplyTarget,
     submit,
+    toggleCommentLike,
   } = useCommentsModal({ onClose, onCommentCreated, postId, visible });
 
   useEffect(() => {
@@ -161,6 +162,7 @@ export function CommentsModal({
                     onReply={setReplyTarget}
                     onOpenUser={onOpenUser}
                     onToggleReplies={() => loadReplies(item.id, 1)}
+                    onToggleLike={toggleCommentLike}
                     replyState={replyStateByComment[item.id]}
                   />
                 )}
@@ -246,6 +248,7 @@ function CommentItem({
   onOpenUser,
   onReply,
   onToggleReplies,
+  onToggleLike,
   replyState,
 }: {
   comment: UiComment;
@@ -253,6 +256,7 @@ function CommentItem({
   onLoadMoreReplies: () => void;
   onOpenUser?: (userId: string) => void;
   onReply: ReplyTargetSetter;
+  onToggleLike: (commentId: string) => Promise<void>;
   onToggleReplies: () => void;
   replyState?: ReplyState;
 }) {
@@ -261,7 +265,9 @@ function CommentItem({
       <CommentContent
         content={comment.content}
         isVerified={comment.user.isVerified}
+        isLiked={comment.isLiked}
         likeCount={comment.likeCount}
+        onLike={() => onToggleLike(comment.id)}
         onOpenUser={onOpenUser}
         onReply={() => onReply({ commentId: comment.id, user: comment.user })}
         sendStatus={comment.sendStatus}
@@ -291,7 +297,9 @@ function CommentItem({
           <CommentContent
             content={reply.content}
             isVerified={reply.user.isVerified}
+            isLiked={reply.isLiked}
             likeCount={reply.likeCount}
+            onLike={() => onToggleLike(reply.id)}
             onOpenUser={onOpenUser}
             onReply={() => onReply({ commentId: comment.id, user: reply.user })}
             replyToUser={reply.replyToUser.displayName}
@@ -318,7 +326,9 @@ type ReplyTargetSetter = (target: ReplyTarget) => void;
 function CommentContent({
   content,
   isVerified,
+  isLiked,
   likeCount,
+  onLike,
   onOpenUser,
   onReply,
   replyToUser,
@@ -329,7 +339,9 @@ function CommentContent({
 }: {
   content: string;
   isVerified: boolean;
+  isLiked: boolean;
   likeCount: number;
+  onLike: () => Promise<void>;
   onOpenUser?: (userId: string) => void;
   onReply: () => void;
   replyToUser?: string;
@@ -340,6 +352,18 @@ function CommentContent({
 }) {
   const isPending = sendStatus === "sending";
   const isError = sendStatus === "error";
+  const [isLikeSubmitting, setIsLikeSubmitting] = useState(false);
+
+  const toggleLike = async () => {
+    if (isLikeSubmitting) return;
+
+    try {
+      setIsLikeSubmitting(true);
+      await onLike();
+    } finally {
+      setIsLikeSubmitting(false);
+    }
+  };
 
   return (
     <View style={styles.commentRow}>
@@ -389,9 +413,27 @@ function CommentContent({
             <Text style={styles.errorText}>Không thể gửi bình luận đi</Text>
           ) : (
             <>
-              <Pressable style={styles.likeAction}>
-                <Text style={styles.metaText}>Thích</Text>
-                <Text style={styles.likeCount}>{likeCount}</Text>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isLikeSubmitting}
+                onPress={() => void toggleLike()}
+                style={styles.likeAction}
+              >
+                {isLiked ? (
+                  <Ionicons color={colors.primary} name="thumbs-up" size={14} />
+                ) : (
+                  <Text style={styles.metaText}>Thích</Text>
+                )}
+                {likeCount > 0 ? (
+                  <Text
+                    style={[
+                      styles.likeCount,
+                      isLiked && styles.likedCount,
+                    ]}
+                  >
+                    {likeCount}
+                  </Text>
+                ) : null}
               </Pressable>
               <Pressable onPress={onReply}>
                 <Text style={styles.metaText}>Trả lời</Text>
@@ -548,6 +590,7 @@ const styles = StyleSheet.create({
   },
   likeAction: { alignItems: "center", flexDirection: "row", gap: 4 },
   likeCount: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
+  likedCount: { color: colors.primary, fontWeight: "800" },
   list: { flex: 1 },
   listContent: { paddingBottom: 132 },
   metaRow: {

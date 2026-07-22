@@ -108,7 +108,10 @@ export function AppToastHost() {
           )}
         </View>
         <View style={styles.copy}>
-          <Text numberOfLines={1} style={styles.message}>
+          <Text
+            numberOfLines={1}
+            style={[styles.message, type === "error" && styles.errorMessage]}
+          >
             {toast.message}
           </Text>
         </View>
@@ -134,6 +137,7 @@ const styles = StyleSheet.create({
     width: 12,
   },
   errorIcon: { backgroundColor: "rgba(239, 71, 111, 0.16)" },
+  errorMessage: { color: colors.danger },
   host: {
     alignItems: "center",
     left: 0,

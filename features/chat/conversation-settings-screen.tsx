@@ -2,7 +2,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,6 +22,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 
 import { AddMembersModal } from "@/components/chat/add-members-modal";
+import { SettingsRow as SettingRow } from "@/components/chat/settings-row";
+import { SettingsSection as Section } from "@/components/chat/settings-section";
+import { SettingsSkeleton } from "@/components/chat/settings-skeleton";
 import { showAppToast } from "@/components/common/app-toast";
 import {
   emitRealtimeConversation,
@@ -54,6 +56,17 @@ import {
 import { getUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
 import type { ChatGroupMember, Conversation } from "@/types/chat";
+import {
+  canManageGroup,
+  getConversationAvatar,
+  getConversationName,
+  getPermissionLabel,
+  isGroupConversation,
+  isGroupOwner,
+  isPrivateConversation,
+  normalizeConversationId,
+  toParam,
+} from "@/utils/conversation-settings";
 
 type LoadingKey =
   | "pin"
@@ -65,110 +78,6 @@ type LoadingKey =
   | "avatar"
   | "permission"
   | "delete";
-
-const isGroupConversation = (conversation: Conversation) =>
-  conversation.conversationType === "Group";
-
-const isPrivateConversation = (conversation: Conversation) =>
-  conversation.conversationType === "Private";
-
-const canManageGroup = (conversation: Conversation) =>
-  isGroupConversation(conversation) &&
-  (conversation.role === 1 || conversation.role === 2);
-
-const isGroupOwner = (conversation: Conversation) =>
-  isGroupConversation(conversation) && conversation.role === 2;
-
-const getConversationName = (conversation: Conversation) =>
-  isPrivateConversation(conversation)
-    ? (conversation.otherParticipant?.displayName ?? conversation.name)
-    : conversation.name;
-
-const getConversationAvatar = (conversation: Conversation) =>
-  isPrivateConversation(conversation)
-    ? (conversation.otherParticipant?.avatarUrl ?? conversation.avatarUrl)
-    : conversation.avatarUrl;
-
-const getPermissionLabel = (value?: boolean | number) => {
-  if (typeof value !== "number") return "Mọi người";
-  if (value === 1) return "Quản trị viên và chủ nhóm";
-  if (value === 2) return "Chỉ chủ nhóm";
-  return "Mọi người";
-};
-
-const toParam = (value: string | string[] | undefined) =>
-  Array.isArray(value) ? value[0] ?? "" : value ?? "";
-
-const normalizeConversationId = (value: string) =>
-  value.replace(/-(attachments|links|report|search)(?:-|$).*/, "");
-
-function Section({ children, title }: { children: React.ReactNode; title?: string }) {
-  return (
-    <View style={styles.section}>
-      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
-      <View style={styles.sectionBody}>{children}</View>
-    </View>
-  );
-}
-
-function SettingRow({
-  danger,
-  icon,
-  isLoading,
-  onPress,
-  right,
-  title,
-}: {
-  danger?: boolean;
-  icon: keyof typeof Ionicons.glyphMap;
-  isLoading?: boolean;
-  onPress?: () => void;
-  right?: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <Pressable
-      accessibilityRole={onPress ? "button" : undefined}
-      disabled={!onPress || isLoading}
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && onPress && styles.rowPressed]}
-    >
-      <View style={[styles.rowIcon, danger && styles.dangerIcon]}>
-        <Ionicons
-          color={danger ? colors.danger : colors.primary}
-          name={icon}
-          size={20}
-        />
-      </View>
-      <Text style={[styles.rowTitle, danger && styles.dangerText]}>
-        {title}
-      </Text>
-      {isLoading ? (
-        <ActivityIndicator color={danger ? colors.danger : colors.primary} />
-      ) : (
-        right ?? <Ionicons color={colors.textMuted} name="chevron-forward" size={18} />
-      )}
-    </Pressable>
-  );
-}
-
-function SettingsSkeleton() {
-  return (
-    <View style={styles.skeletonContent}>
-      <View style={styles.skeletonAvatar} />
-      <View style={styles.skeletonTitle} />
-      <View style={styles.skeletonSection}>
-        <View style={styles.skeletonRow} />
-        <View style={styles.skeletonRow} />
-        <View style={styles.skeletonRow} />
-      </View>
-      <View style={styles.skeletonSection}>
-        <View style={styles.skeletonRow} />
-        <View style={styles.skeletonRow} />
-      </View>
-    </View>
-  );
-}
 
 export function ConversationSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -1168,8 +1077,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   content: { gap: spacing.lg, padding: spacing.md },
-  dangerIcon: { backgroundColor: "rgba(239, 71, 111, 0.12)" },
-  dangerText: { color: colors.danger },
   disabledAction: { opacity: 0.65 },
   errorText: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   header: {
@@ -1328,22 +1235,6 @@ const styles = StyleSheet.create({
   },
   renameSecondaryText: { color: colors.text, fontSize: 14, fontWeight: "800" },
   renameTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
-  row: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md,
-    minHeight: 58,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  rowIcon: {
-    alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderRadius: 10,
-    height: 38,
-    justifyContent: "center",
-    width: 38,
-  },
   groupQrBox: {
     alignItems: "center",
     alignSelf: "center",
@@ -1414,44 +1305,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   rowPressed: { opacity: 0.72 },
-  rowTitle: { color: colors.text, flex: 1, fontSize: 15, fontWeight: "800" },
   rowValue: { color: colors.textMuted, fontSize: 13, fontWeight: "800" },
   screen: { backgroundColor: colors.background, flex: 1 },
-  section: { gap: spacing.sm },
-  sectionBody: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  sectionTitle: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0,
-    paddingHorizontal: spacing.xs,
-    textTransform: "uppercase",
-  },
-  skeletonAvatar: {
-    alignSelf: "center",
-    backgroundColor: colors.border,
-    borderRadius: 44,
-    height: 88,
-    width: 88,
-  },
-  skeletonContent: { gap: spacing.lg, padding: spacing.md },
-  skeletonRow: {
-    backgroundColor: colors.border,
-    borderRadius: 8,
-    height: 54,
-  },
-  skeletonSection: { gap: spacing.sm },
-  skeletonTitle: {
-    alignSelf: "center",
-    backgroundColor: colors.border,
-    borderRadius: 8,
-    height: 20,
-    width: 180,
-  },
 });

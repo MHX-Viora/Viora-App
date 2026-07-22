@@ -33,6 +33,12 @@ export type Reply = {
   };
 };
 
+export type CommentLikeResult = {
+  commentId: string;
+  isLiked: boolean;
+  likeCount: number;
+};
+
 export type CommentsResponse = {
   page: number;
   pageSize: number;

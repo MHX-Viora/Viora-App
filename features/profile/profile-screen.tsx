@@ -384,12 +384,24 @@ export function ProfileScreen() {
             params: { kind: "reacted" },
           });
         }}
+        onOpenPoliciesTerms={() => {
+          setShowSettings(false);
+          router.push("/policies-terms");
+        }}
         onOpenSavedActivity={() => {
           setShowSettings(false);
           router.push({
             pathname: "/profile-activity",
             params: { kind: "saved" },
           });
+        }}
+        onOpenSecurityPrivacy={() => {
+          setShowSettings(false);
+          router.push("/security-privacy");
+        }}
+        onOpenSupport={() => {
+          setShowSettings(false);
+          router.push("/support");
         }}
         visible={showSettings}
       />

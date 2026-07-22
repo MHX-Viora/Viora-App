@@ -14,14 +14,22 @@ import { colors, spacing } from "@/theme";
 const SETTINGS = [
   { action: "saved", icon: "bookmark-outline", label: "Đã lưu" },
   { action: "reacted", icon: "heart-outline", label: "Yêu thích" },
-  { icon: "help-circle-outline", label: "Hỗ trợ" },
-  { icon: "shield-checkmark-outline", label: "Bảo mật & quyền" },
+  { action: "support", icon: "help-circle-outline", label: "Hỗ trợ" },
+  {
+    action: "security-privacy",
+    icon: "shield-checkmark-outline",
+    label: "Bảo mật & quyền",
+  },
   {
     action: "account-settings",
     icon: "person-circle-outline",
     label: "Cài đặt tài khoản",
   },
-  { icon: "document-text-outline", label: "Chính sách & điều khoản" },
+  {
+    action: "policies-terms",
+    icon: "document-text-outline",
+    label: "Chính sách & điều khoản",
+  },
 ] as const;
 
 export function ProfileSettingsSheet({
@@ -29,14 +37,20 @@ export function ProfileSettingsSheet({
   onLogout,
   onOpenAccountSettings,
   onOpenLikedActivity,
+  onOpenPoliciesTerms,
   onOpenSavedActivity,
+  onOpenSecurityPrivacy,
+  onOpenSupport,
   visible,
 }: {
   onClose: () => void;
   onLogout: () => void;
   onOpenAccountSettings: () => void;
   onOpenLikedActivity: () => void;
+  onOpenPoliciesTerms: () => void;
   onOpenSavedActivity: () => void;
+  onOpenSecurityPrivacy: () => void;
+  onOpenSupport: () => void;
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
@@ -81,13 +95,17 @@ export function ProfileSettingsSheet({
                 accessibilityRole="button"
                 key={item.label}
                 onPress={
-                  "action" in item
-                    ? item.action === "account-settings"
-                      ? onOpenAccountSettings
-                      : item.action === "saved"
-                        ? onOpenSavedActivity
-                        : onOpenLikedActivity
-                    : undefined
+                  item.action === "account-settings"
+                    ? onOpenAccountSettings
+                    : item.action === "saved"
+                      ? onOpenSavedActivity
+                      : item.action === "reacted"
+                        ? onOpenLikedActivity
+                        : item.action === "security-privacy"
+                          ? onOpenSecurityPrivacy
+                          : item.action === "policies-terms"
+                            ? onOpenPoliciesTerms
+                            : onOpenSupport
                 }
                 style={({ pressed }) => [
                   styles.row,

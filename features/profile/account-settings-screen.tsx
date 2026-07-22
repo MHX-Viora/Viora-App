@@ -129,6 +129,25 @@ export function AccountSettingsScreen() {
                 />
               </View>
             </Section>
+            <Section title="Bảo mật">
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push("/change-password")}
+                style={({ pressed }) => [styles.row, pressed && styles.pressedRow]}
+              >
+                <View style={styles.rowCopy}>
+                  <Text style={styles.rowTitle}>Đổi mật khẩu</Text>
+                  <Text style={styles.rowDescription}>
+                    Cập nhật mật khẩu đăng nhập cho tài khoản của bạn.
+                  </Text>
+                </View>
+                <Ionicons
+                  color={colors.textMuted}
+                  name="chevron-forward"
+                  size={20}
+                />
+              </Pressable>
+            </Section>
           </ScrollView>
 
           {isDirty ? (
@@ -189,6 +208,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 40,
   },
+  pressedRow: { opacity: 0.72 },
   retryButton: {
     backgroundColor: colors.primary,
     borderRadius: 8,

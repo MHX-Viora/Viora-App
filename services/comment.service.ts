@@ -1,5 +1,11 @@
 import { authenticatedFetch } from "@/services/authenticated-fetch";
-import type { Comment, CommentsResponse, RepliesResponse, Reply } from "@/types/comment";
+import type {
+  Comment,
+  CommentLikeResult,
+  CommentsResponse,
+  RepliesResponse,
+  Reply,
+} from "@/types/comment";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -158,4 +164,39 @@ export const createReply = async ({
   }
 
   return data as Reply;
+};
+
+export const likeComment = async (
+  commentId: string,
+): Promise<CommentLikeResult> => {
+  const response = await authenticatedFetch(
+    `${BASE_URL}/api/comments/${commentId}/like`,
+    {
+      method: "POST",
+      headers: { Accept: "application/json, text/plain" },
+    },
+  );
+  const text = await response.text();
+  const data = parseResponseText(text);
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, "Không thể thích bình luận."));
+  }
+
+  const payload = isRecord(data) && isRecord(data.data) ? data.data : data;
+
+  return {
+    commentId:
+      isRecord(payload) && typeof payload.commentId === "string"
+        ? payload.commentId
+        : commentId,
+    isLiked:
+      isRecord(payload) && typeof payload.isLiked === "boolean"
+        ? payload.isLiked
+        : false,
+    likeCount:
+      isRecord(payload) && typeof payload.likeCount === "number"
+        ? payload.likeCount
+        : 0,
+  };
 };

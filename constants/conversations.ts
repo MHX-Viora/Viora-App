@@ -1,0 +1,1 @@
+export const CONVERSATIONS_PAGE_SIZE = 20;
