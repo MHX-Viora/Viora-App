@@ -94,7 +94,7 @@ export function LoginScreen() {
                 autoComplete="username"
                 icon="person-outline"
                 keyboardType="default"
-                label="Email hoặc Tên đăng nhập"
+                label="Email hoặc số điện thoại"
                 placeholder="example@email.com"
                 onChangeText={setIdentifier}
                 returnKeyType="next"

@@ -105,8 +105,8 @@ export function RegisterScreen() {
                 autoComplete="email"
                 icon="mail-outline"
                 keyboardType="email-address"
-                label="Email công việc"
-                placeholder="example@domain.com"
+                label="Email hoặc số điện thoại"
+                placeholder="example@gmail.com"
                 onChangeText={setIdentifier}
                 value={identifier}
               />

@@ -93,7 +93,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/images/viora_logo.png",
           "color": "#2868D7"
         }
       ],
