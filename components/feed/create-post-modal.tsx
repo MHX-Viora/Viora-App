@@ -158,29 +158,28 @@ export function CreatePostModal({
         style={styles.backdrop}
       >
         <View style={styles.sheet}>
+          <View style={styles.handle} />
           <View style={styles.header}>
             <View style={styles.headerTop}>
               <Pressable
                 accessibilityLabel="Đóng hộp tạo bài viết"
                 accessibilityRole="button"
                 onPress={onClose}
+                style={styles.headerIconButton}
               >
-                <Ionicons color={colors.text} name="close" size={28} />
+                <Ionicons color={colors.text} name="close" size={22} />
               </Pressable>
               <Text style={styles.title}>Tạo bài viết</Text>
               <Pressable
                 accessibilityRole="button"
                 disabled={!canSubmit}
                 onPress={submitPost}
+                style={[styles.submitButton, !canSubmit && styles.submitDisabled]}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator color={colors.primary} size="small" />
+                  <ActivityIndicator color={colors.white} size="small" />
                 ) : (
-                  <Text
-                    style={[styles.submit, !canSubmit && styles.submitDisabled]}
-                  >
-                    Đăng
-                  </Text>
+                  <Text style={styles.submit}>Đăng</Text>
                 )}
               </Pressable>
             </View>
@@ -435,29 +434,50 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: "center",
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
+    backgroundColor: colors.surface,
+    borderTopColor: "rgba(226, 230, 236, 0.8)",
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md,
   },
   footerButton: {
     alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderRadius: 12,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
     flex: 1,
     flexDirection: "row",
     gap: spacing.xs,
     justifyContent: "center",
-    minHeight: 42,
+    minHeight: 40,
+    paddingHorizontal: spacing.sm,
   },
   footerButtonDisabled: { opacity: 0.55 },
   footerButtonText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
+  handle: {
+    alignSelf: "center",
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    height: 4,
+    marginTop: spacing.sm,
+    width: 42,
+  },
   header: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    borderBottomColor: "rgba(226, 230, 236, 0.8)",
+    borderBottomWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  headerIconButton: {
+    alignItems: "center",
+    backgroundColor: colors.background,
+    borderRadius: 999,
+    height: 38,
+    justifyContent: "center",
+    width: 38,
   },
   headerTop: {
     alignItems: "center",
@@ -506,14 +526,23 @@ const styles = StyleSheet.create({
   scrollContent: { padding: spacing.lg },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     height: "88%",
     overflow: "hidden",
   },
   singleTile: { height: 220 },
-  submit: { color: colors.primary, fontSize: 16, fontWeight: "700" },
-  submitDisabled: { opacity: 0.4 },
+  submit: { color: colors.white, fontSize: 15, fontWeight: "900" },
+  submitButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    justifyContent: "center",
+    minHeight: 38,
+    minWidth: 68,
+    paddingHorizontal: spacing.md,
+  },
+  submitDisabled: { opacity: 0.42 },
   title: { ...typography.title, color: colors.text },
   visibilityButton: {
     alignItems: "center",

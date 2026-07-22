@@ -6,6 +6,8 @@ import {
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+import { getCurrentNotificationData } from "@/utils/push-notification-time";
+
 const firstText = (...values: unknown[]) => {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) return value;
@@ -20,11 +22,11 @@ if (Platform.OS !== "web") {
 
   setBackgroundMessageHandler(getMessaging(getApp()), async (remoteMessage) => {
     const data = remoteMessage.data ?? {};
-    const notificationData = Object.fromEntries(
+    const notificationData = getCurrentNotificationData(Object.fromEntries(
       Object.entries(data).filter(
         (entry): entry is [string, string] => typeof entry[1] === "string",
       ),
-    );
+    ));
     console.info("[FCM background] message received", {
       collapseKey: remoteMessage.collapseKey,
       data,
@@ -67,7 +69,7 @@ if (Platform.OS !== "web") {
         sound: "default",
         title: title || "Viora",
       },
-      trigger: { channelId: "default" },
+      trigger: null,
     });
     console.info("[FCM background] local notification scheduled", {
       messageId: remoteMessage.messageId,

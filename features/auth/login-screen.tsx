@@ -1,21 +1,20 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
-    AuthField,
-    AuthFooterLink,
-    AuthPrimaryButton,
+  AuthField,
+  AuthFooterLink,
+  AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { login, saveAuthSession } from "@/services/auth.service";
@@ -128,13 +127,13 @@ export function LoginScreen() {
                 onPress={handleLogin}
               />
 
-              <View style={styles.separator}>
+              {/* <View style={styles.separator}>
                 <View style={styles.separatorLine} />
                 <Text style={styles.separatorText}>Hoặc tiếp tục với</Text>
                 <View style={styles.separatorLine} />
-              </View>
+              </View> */}
 
-              <Pressable
+              {/* <Pressable
                 accessibilityRole="button"
                 onPress={() =>
                   showAlert({
@@ -149,7 +148,7 @@ export function LoginScreen() {
               >
                 <Ionicons color="#4285F4" name="logo-google" size={22} />
                 <Text style={styles.googleText}>Đăng nhập Google</Text>
-              </Pressable>
+              </Pressable> */}
             </View>
 
             <AuthFooterLink

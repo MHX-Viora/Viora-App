@@ -2,6 +2,7 @@ import * as Notifications from "expo-notifications";
 
 import { getActiveChatConversation } from "@/features/chat/chat-events";
 import type { NotificationItemModel } from "@/types/notification";
+import { getCurrentNotificationData } from "@/utils/push-notification-time";
 
 const shownNotifications = new Map<string, number>();
 const DEDUPE_MS = 10_000;
@@ -28,15 +29,15 @@ export const showRealtimeNotification = async (
     await Notifications.scheduleNotificationAsync({
       content: {
         body: notification.content || undefined,
-        data: {
+        data: getCurrentNotificationData({
           notificationId: notification.id,
           notificationType: notification.type,
           referenceId: notification.reference?.id,
           referenceType: notification.reference?.type,
-        },
+        }),
         title: notification.title,
       },
-      trigger: { channelId: "default" },
+      trigger: null,
     });
   } catch (error) {
     console.info(

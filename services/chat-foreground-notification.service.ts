@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import { getActiveChatConversation } from "@/features/chat/chat-events";
 import type { NewMessageNotificationEvent } from "@/types/chat";
 import { claimChatNotification } from "@/utils/chat-notification-dedupe";
+import { getCurrentNotificationData } from "@/utils/push-notification-time";
 
 const getMessagePreview = (event: NewMessageNotificationEvent) => {
   const content = event.message.content.trim();
@@ -45,15 +46,15 @@ export const showChatRealtimeNotification = async (
     await Notifications.scheduleNotificationAsync({
       content: {
         body: getMessagePreview(event),
-        data: {
+        data: getCurrentNotificationData({
           conversationId: event.conversationId,
           deliverySource: "signalr-local",
           messageId: event.message.id,
           type: "chat",
-        },
+        }),
         title: event.sender?.displayName ?? event.conversationName,
       },
-      trigger: { channelId: "default" },
+      trigger: null,
     });
   } catch (error) {
     console.info(

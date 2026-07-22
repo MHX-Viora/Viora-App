@@ -16,6 +16,33 @@ const toNumber = (value: unknown, fallback = 0) =>
 const toString = (value: unknown, fallback = "") =>
   typeof value === "string" ? value : fallback;
 
+const normalizeCreatedAt = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value !== "string" && typeof value !== "number") continue;
+
+    const text = String(value).trim();
+    if (!text) continue;
+
+    const numericValue = Number(text);
+    const timestamp =
+      Number.isFinite(numericValue) && /^\d+$/.test(text)
+        ? new Date(text.length <= 10 ? numericValue * 1000 : numericValue).getTime()
+        : new Date(text).getTime();
+
+    if (!Number.isFinite(timestamp)) continue;
+
+    const now = Date.now();
+    const maxFutureDriftMs = 5 * 60 * 1000;
+    if (timestamp > now + maxFutureDriftMs) {
+      return new Date(now).toISOString();
+    }
+
+    return new Date(timestamp).toISOString();
+  }
+
+  return new Date().toISOString();
+};
+
 const isReferenceType = (value: number): value is NotificationReferenceType =>
   value >= 0 && value <= 5;
 
@@ -58,7 +85,12 @@ export const mapNotification = (value: unknown): NotificationItemModel => {
 
   return {
     content: toString(value.content),
-    createdAt: toString(value.createdAt),
+    createdAt: normalizeCreatedAt(
+      value.createdAt,
+      value.created_at,
+      value.sentTime,
+      value.timestamp,
+    ),
     id: toString(value.id, toString(value.notificationId)),
     imageUrl: typeof value.imageUrl === "string" ? value.imageUrl : null,
     isRead: value.isRead === true || value.read === true,
@@ -102,7 +134,7 @@ export const mapRealtimeNotification = (
   payload: NotificationPayload,
 ): NotificationItemModel => ({
   content: payload.content ?? "",
-  createdAt: payload.createdAt,
+  createdAt: normalizeCreatedAt(payload.createdAt),
   id: payload.notificationId,
   imageUrl: payload.imageUrl,
   isRead: false,
