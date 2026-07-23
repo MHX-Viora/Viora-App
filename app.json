@@ -42,7 +42,8 @@
           "data": [
             {
               "scheme": "https",
-              "host": "viora.app"
+              "host": "viora.app",
+              "pathPrefix": "/post"
             }
           ],
           "category": [

@@ -47,11 +47,17 @@ export default function TabLayout() {
         tabBarLabelPosition: "below-icon",
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 2 },
         tabBarStyle: {
-          backgroundColor: "#F7F9FC",
+          backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          borderTopWidth: 1,
+          elevation: 10,
           height: 100,
           paddingBottom: 20,
           paddingTop: 6,
+          shadowColor: colors.primary,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
         },
       }}
     >

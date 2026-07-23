@@ -51,12 +51,16 @@ const getVisibilityInfo = (visibility: number) => {
 
 function PostAction({
   active,
+  activeColor = colors.primary,
+  activeValueColor,
   icon,
   label,
   onPress,
   value,
 }: {
   active?: boolean;
+  activeColor?: string;
+  activeValueColor?: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
   onPress?: () => void;
@@ -70,12 +74,18 @@ function PostAction({
       style={styles.action}
     >
       <Ionicons
-        color={active ? colors.primary : colors.textMuted}
+        color={active ? activeColor : colors.textMuted}
         name={icon}
         size={25}
       />
       {value !== undefined && (
-        <Text style={[styles.actionText, active && styles.actionTextActive]}>
+        <Text
+          style={[
+            styles.actionText,
+            active && styles.actionTextActive,
+            active && { color: activeValueColor ?? activeColor },
+          ]}
+        >
           {value}
         </Text>
       )}
@@ -482,6 +492,8 @@ export function PostCard({
         <View style={styles.spacer} />
         <PostAction
           active={post.isSaved}
+          activeColor="#F5B400"
+          activeValueColor={colors.textMuted}
           icon={post.isSaved ? "bookmark" : "bookmark-outline"}
           label="Lưu"
           onPress={() => onSave?.(post.id)}

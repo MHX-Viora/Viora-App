@@ -115,7 +115,7 @@ function AudioAttachment({
       style={[styles.audioPill, isMine && styles.mineAudioPill]}
     >
       <Ionicons
-        color={isMine ? colors.white : colors.primary}
+        color="#0068FF"
         name={status.playing ? "pause-circle" : "play-circle"}
         size={26}
       />
@@ -276,18 +276,25 @@ function AttachmentView({
           );
         }
       }}
-      style={styles.filePill}
+      style={[styles.filePill, isMine && styles.mineFilePill]}
     >
-      <View style={styles.fileIcon}>
-        <Ionicons color={colors.primary} name="document-text" size={22} />
+      <View style={[styles.fileIcon, isMine && styles.mineFileIcon]}>
+        <Ionicons color="#0068FF" name="document-text-outline" size={22} />
       </View>
       <View style={styles.fileText}>
-        <Text numberOfLines={1} style={styles.fileName}>
+        <Text
+          numberOfLines={1}
+          style={[styles.fileName, isMine && styles.mineFileName]}
+        >
           {attachment.name}
         </Text>
-        <Text style={styles.fileMeta}>Tệp</Text>
+        <Text style={[styles.fileMeta, isMine && styles.mineFileMeta]}>Tệp</Text>
       </View>
-      <Ionicons color={colors.textMuted} name="open-outline" size={18} />
+      <Ionicons
+        color="#0068FF"
+        name="open-outline"
+        size={18}
+      />
     </Pressable>
   );
 }
@@ -358,17 +365,17 @@ function LocationCard({
       style={[styles.locationCard, isMine && styles.mineLocationCard]}
     >
       <Ionicons
-        color={isMine ? colors.white : colors.primary}
+        color="#0068FF"
         name="location"
         size={18}
       />
       <View style={styles.locationTextWrap}>
-        <Text style={[styles.locationTitle, isMine && styles.mineText]}>
+        <Text style={styles.locationTitle}>
           Vị trí hiện tại
         </Text>
         <Text
           numberOfLines={1}
-          style={[styles.locationSubtitle, isMine && styles.mineTime]}
+          style={styles.locationSubtitle}
         >
           Mở bằng Google Maps
         </Text>
@@ -427,15 +434,9 @@ function MessageRow({
   const recallText = message.isMine
     ? "Bạn đã thu hồi một tin nhắn."
     : `${message.sender.displayName} đã thu hồi một tin nhắn.`;
-  const hasMediaAttachment = message.attachments.some(
-    (attachment) => attachment.type === "image" || attachment.type === "video",
-  );
-  const isMediaOnly =
-    hasMediaAttachment &&
-    !textContent &&
-    !locationUrl &&
-    message.reply === null &&
-    message.reactions.length === 0;
+  const hasBubbleBackground =
+    message.isDeleted ||
+    Boolean(textContent);
   const canRecall =
     message.isMine && !message.isDeleted && !message.id.startsWith("pending-");
   const sendStatusLabel =
@@ -518,7 +519,7 @@ function MessageRow({
         <Text
           style={[
             styles.sendStatus,
-            isMediaOnly && styles.mediaSendStatus,
+            !hasBubbleBackground && styles.mediaSendStatus,
             message.sendStatus === "failed" && styles.failedSendStatus,
           ]}
         >
@@ -528,7 +529,7 @@ function MessageRow({
       <View
         style={[
           styles.bubble,
-          isMediaOnly
+          !hasBubbleBackground
             ? styles.mediaBubble
             : message.isMine
               ? styles.mineBubble
@@ -610,8 +611,8 @@ function MessageRow({
         <Text
           style={[
             styles.messageTime,
-            message.isMine && !isMediaOnly && styles.mineTime,
-            isMediaOnly && styles.mediaTime,
+            message.isMine && hasBubbleBackground && styles.mineTime,
+            !hasBubbleBackground && styles.mediaTime,
           ]}
         >
           {formatChatTime(message.createdAt)}
@@ -705,6 +706,7 @@ export function ChatScreen() {
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [actionMessageId, setActionMessageId] = useState<string | null>(null);
   const [showStickers, setShowStickers] = useState(false);
+  const [showChatTools, setShowChatTools] = useState(false);
   const isKeyboardVisible = useKeyboardVisible();
   const [isBlocked, setIsBlocked] = useState(params.isBlocked === "true");
   const [blockedBy, setBlockedBy] = useState<ChatParticipant | null>(null);
@@ -1301,6 +1303,7 @@ export function ChatScreen() {
 
   const shareLocation = useCallback(async () => {
     if (!canSendInConversation) return;
+    let pendingLocationId = "";
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
@@ -1310,14 +1313,65 @@ export function ChatScreen() {
       const location = await Location.getCurrentPositionAsync({});
       const { latitude, longitude } = location.coords;
       const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
-      setContent((current) => [current.trim(), url].filter(Boolean).join(" "));
+      const optimisticId = `pending-location-${Date.now()}`;
+      pendingLocationId = optimisticId;
+      const currentUser = await getUser();
+      const optimisticMessage: ChatMessage = {
+        attachments: [],
+        content: url,
+        conversationId,
+        createdAt: new Date().toISOString(),
+        id: optimisticId,
+        isDeleted: false,
+        isEdited: false,
+        isMine: true,
+        messageType: 0,
+        reactions: [],
+        reply: null,
+        sendStatus: "sending",
+        sender: {
+          avatarUrl: currentUser?.avatarUrl ?? null,
+          displayName: currentUser?.displayName ?? "Báº¡n",
+          id: currentUser?.id ?? "current-user",
+          isVerified: currentUser?.isVerified,
+        },
+      };
+
+      setMessages((current) => [optimisticMessage, ...current]);
+      scrollToEndAfterLayout(true);
+
+      const message = await sendChatMessage({
+        attachments: [],
+        content: url,
+        conversationId,
+      });
+      const sentMessage = {
+        ...normalizeMessage(message),
+        isMine: true,
+        sendStatus: "sent" as const,
+      };
+      setMessages((current) =>
+        current.some((item) => item.id === sentMessage.id)
+          ? current.filter((item) => item.id !== optimisticId)
+          : current.map((item) =>
+              item.id === optimisticId ? sentMessage : item,
+            ),
+      );
+      scrollToEndAfterLayout(true);
     } catch (error) {
+      if (pendingLocationId) {
+        setMessages((current) =>
+          current.map((item) =>
+            item.id === pendingLocationId ? { ...item, sendStatus: "failed" } : item,
+          ),
+        );
+      }
       Alert.alert(
         "Không thể lấy vị trí",
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
-  }, [canSendInConversation]);
+  }, [canSendInConversation, conversationId, normalizeMessage, scrollToEndAfterLayout]);
 
   const recallMessage = useCallback(
     async (message: ChatMessage) => {
@@ -1697,63 +1751,131 @@ export function ChatScreen() {
             ))}
           </View>
         )}
+        {showChatTools && (
         <View style={styles.actionRow}>
           <Pressable
             accessibilityLabel="Chụp ảnh nhanh"
-            onPress={takePhoto}
+            onPress={() => {
+              setShowChatTools(false);
+              takePhoto();
+            }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="camera" size={20} />
+            <Ionicons color="#0068FF" name="camera-outline" size={21} />
+            <Text style={styles.toolLabel}>Camera</Text>
           </Pressable>
           <Pressable
             accessibilityLabel="Chọn ảnh hoặc video"
-            onPress={pickMedia}
+            onPress={() => {
+              setShowChatTools(false);
+              pickMedia();
+            }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="image" size={20} />
+            <Ionicons color="#0068FF" name="image-outline" size={21} />
+            <Text style={styles.toolLabel}>Ảnh</Text>
           </Pressable>
           <Pressable
             accessibilityLabel="Chọn file"
-            onPress={pickFiles}
+            onPress={() => {
+              setShowChatTools(false);
+              pickFiles();
+            }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="document-attach" size={20} />
+            <Ionicons color="#0068FF" name="document-text-outline" size={21} />
+            <Text style={styles.toolLabel}>Tệp</Text>
           </Pressable>
           <Pressable
             accessibilityLabel={recorderState.isRecording ? "Dừng ghi âm" : "Ghi âm"}
-            onPress={toggleRecording}
+            onPress={() => {
+              setShowChatTools(false);
+              toggleRecording();
+            }}
             style={[
               styles.toolButton,
               recorderState.isRecording && styles.recordingButton,
             ]}
           >
             <Ionicons
-              color={recorderState.isRecording ? colors.white : colors.primary}
-              name={recorderState.isRecording ? "stop" : "mic"}
-              size={20}
+              color={recorderState.isRecording ? colors.white : "#0068FF"}
+              name={recorderState.isRecording ? "stop" : "mic-outline"}
+              size={21}
             />
+            <Text
+              style={[
+                styles.toolLabel,
+                recorderState.isRecording && styles.recordingToolLabel,
+              ]}
+            >
+              Ghi âm
+            </Text>
           </Pressable>
           <Pressable
             accessibilityLabel="Chọn sticker"
-            onPress={() => setShowStickers((current) => !current)}
+            onPress={() => {
+              setShowStickers((current) => !current);
+              setShowChatTools(false);
+            }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="happy" size={20} />
+            <Ionicons color="#0068FF" name="happy-outline" size={21} />
+            <Text style={styles.toolLabel}>Sticker</Text>
           </Pressable>
           <Pressable
             accessibilityLabel="Chia sẻ vị trí hiện tại"
-            onPress={shareLocation}
+            onPress={() => {
+              setShowChatTools(false);
+              shareLocation();
+            }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="location" size={20} />
+            <Ionicons color="#0068FF" name="location-outline" size={21} />
+            <Text style={styles.toolLabel}>Vị trí</Text>
           </Pressable>
         </View>
+        )}
         {recorderState.isRecording && (
           <Text style={styles.recordingText}>
             Đang ghi âm {Math.floor(recorderState.durationMillis / 1000)}s
           </Text>
         )}
         <View style={styles.inputRow}>
+          <Pressable
+            accessibilityLabel={
+              showChatTools ? "Ẩn chức năng chat" : "Mở chức năng chat"
+            }
+            onPress={() => {
+              setShowChatTools((current) => {
+                if (current) setShowStickers(false);
+                return !current;
+              });
+            }}
+            style={[
+              styles.moreToolButton,
+              showChatTools && styles.moreToolButtonActive,
+            ]}
+          >
+            <Ionicons
+              color={showChatTools ? colors.white : "#0068FF"}
+              name={showChatTools ? "close" : "add-circle-outline"}
+              size={24}
+            />
+            <Text
+              style={styles.hidden}
+            >
+              Ghi âm
+            </Text>
+          </Pressable>
+          {recorderState.isRecording && (
+            <Pressable
+              accessibilityLabel="Dừng ghi âm"
+              onPress={toggleRecording}
+              style={styles.stopRecordButton}
+            >
+              <Ionicons color={colors.white} name="stop" size={18} />
+            </Pressable>
+          )}
           <TextInput
             multiline
             onChangeText={setContent}
@@ -1790,32 +1912,37 @@ export function ChatScreen() {
 
 const styles = StyleSheet.create({
   attachmentSummary: { display: "none" },
-  activeWaveBar: { backgroundColor: colors.danger },
+  activeWaveBar: { backgroundColor: "#0068FF" },
   actionRow: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm,
-    justifyContent: "space-around",
+    justifyContent: "space-between",
+    padding: spacing.sm,
   },
   attachmentPreviewList: { gap: spacing.sm, paddingRight: spacing.md },
   audioBody: { flex: 1, gap: 4 },
   audioLabel: {
-    color: colors.textMuted,
+    color: colors.text,
     fontSize: 12,
     fontWeight: "800",
   },
   audioPill: {
     alignItems: "center",
-    backgroundColor: colors.white,
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: "#EAF5FF",
+    borderColor: "#D8EAFF",
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
-    minHeight: 44,
+    minHeight: 46,
     minWidth: 210,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
+    paddingVertical: spacing.sm,
   },
   avatarSpace: { width: 32 },
   bubble: {
@@ -1833,8 +1960,8 @@ const styles = StyleSheet.create({
   },
   fileIcon: {
     alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderRadius: 8,
+    backgroundColor: colors.white,
+    borderRadius: 12,
     height: 40,
     justifyContent: "center",
     width: 40,
@@ -1843,9 +1970,9 @@ const styles = StyleSheet.create({
   fileName: { color: colors.text, fontSize: 14, fontWeight: "800" },
   filePill: {
     alignItems: "center",
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: "#EAF5FF",
+    borderColor: "#D8EAFF",
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
@@ -1871,9 +1998,9 @@ const styles = StyleSheet.create({
     width: 36,
   },
   input: {
-    backgroundColor: colors.white,
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: "#F4F8FC",
+    borderColor: "#D8EAFF",
+    borderRadius: 18,
     borderWidth: 1,
     color: colors.text,
     flex: 1,
@@ -1916,14 +2043,23 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     position: "relative",
   },
-  messageText: { color: colors.text, fontSize: 16, lineHeight: 22 },
+  messageText: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: "500",
+    lineHeight: 22,
+  },
   messageTime: {
     alignSelf: "flex-end",
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: "700",
   },
-  messagesContent: { paddingVertical: spacing.md },
+  messagesContent: {
+    backgroundColor: "#F4F9FF",
+    flexGrow: 1,
+    paddingVertical: spacing.md,
+  },
   mediaBubble: {
     backgroundColor: "transparent",
     padding: 0,
@@ -1963,29 +2099,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
-  mineBubble: { backgroundColor: colors.primary },
-  mineActiveWaveBar: { backgroundColor: colors.primarySoft },
-  mineAudioLabel: { color: colors.primarySoft },
+  mineBubble: { backgroundColor: "#DCEEFF" },
+  mineActiveWaveBar: { backgroundColor: "#0068FF" },
+  mineAudioLabel: { color: colors.text },
   mineAudioPill: {
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
-    borderColor: "rgba(255, 255, 255, 0.24)",
+    backgroundColor: "#EAF5FF",
+    borderColor: "#D8EAFF",
   },
-  mineLocationCard: { borderColor: colors.primarySoft },
+  mineFileIcon: { backgroundColor: colors.white },
+  mineFileMeta: { color: colors.textMuted },
+  mineFileName: { color: colors.text },
+  mineFilePill: {
+    backgroundColor: "#EAF5FF",
+    borderColor: "#D8EAFF",
+  },
+  mineLocationCard: {
+    backgroundColor: "#EAF5FF",
+    borderColor: "#D8EAFF",
+  },
   mineMessageActionMenu: { marginRight: spacing.xs },
   mineRow: { justifyContent: "flex-end" },
   mineReplyBox: {
-    backgroundColor: "rgba(255, 255, 255, 0.14)",
-    borderLeftColor: colors.white,
+    backgroundColor: "rgba(0, 104, 255, 0.08)",
+    borderLeftColor: "#0068FF",
     borderRadius: 6,
     paddingBottom: spacing.xs,
     paddingRight: spacing.sm,
     paddingTop: spacing.xs,
   },
-  mineReplyName: { color: colors.white },
-  mineReplyText: { color: colors.primarySoft },
-  mineRecalledMessageText: { color: colors.primarySoft },
-  mineText: { color: colors.white },
-  mineTime: { color: colors.primarySoft },
+  mineReplyName: { color: "#0068FF" },
+  mineReplyText: { color: colors.textMuted },
+  mineRecalledMessageText: { color: colors.textMuted },
+  mineText: { color: colors.text },
+  mineTime: { color: colors.textMuted },
   newMessageButton: {
     alignSelf: "center",
     backgroundColor: colors.primary,
@@ -1995,10 +2141,26 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   newMessageText: { color: colors.white, fontSize: 13, fontWeight: "800" },
+  moreToolButton: {
+    alignItems: "center",
+    backgroundColor: "#EEF6FF",
+    borderColor: "#D7E9FF",
+    borderRadius: 999,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    overflow: "hidden",
+    width: 40,
+  },
+  moreToolButtonActive: {
+    backgroundColor: "#2D8CFF",
+    borderColor: "#2D8CFF",
+  },
   locationCard: {
     alignItems: "center",
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: "#EAF5FF",
+    borderColor: "#D8EAFF",
+    borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
@@ -2032,8 +2194,13 @@ const styles = StyleSheet.create({
   recordingButton: {
     backgroundColor: colors.danger,
     borderColor: colors.danger,
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   recordingText: { color: colors.danger, fontSize: 12, fontWeight: "800" },
+  recordingToolLabel: { color: colors.white },
   replyBox: {
     borderLeftColor: colors.primary,
     borderLeftWidth: 3,
@@ -2049,7 +2216,7 @@ const styles = StyleSheet.create({
   replyComposerText: { flex: 1 },
   replyName: { color: colors.primary, fontSize: 12, fontWeight: "900" },
   replyText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  screen: { backgroundColor: colors.background, flex: 1 },
+  screen: { backgroundColor: "#F4F9FF", flex: 1 },
   sendStatus: {
     backgroundColor: colors.background,
     borderRadius: 999,
@@ -2142,16 +2309,26 @@ const styles = StyleSheet.create({
   },
   stickerText: { fontSize: 20 },
   stickerTray: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  stopRecordButton: {
+    alignItems: "center",
+    backgroundColor: colors.danger,
+    borderRadius: 999,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
   toolButton: {
     alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: "#EEF6FF",
+    borderColor: "#D7E9FF",
+    borderRadius: 14,
     borderWidth: 1,
-    height: 38,
+    gap: 4,
+    height: 64,
     justifyContent: "center",
-    width: 38,
+    width: "30.5%",
   },
+  toolLabel: { color: colors.text, fontSize: 11, fontWeight: "800" },
   videoPlayOverlay: {
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.35)",
@@ -2187,7 +2364,7 @@ const styles = StyleSheet.create({
     gap: 3,
     height: 22,
   },
-  mineWaveBar: { backgroundColor: colors.white },
+  mineWaveBar: { backgroundColor: "#8BC7FF" },
 });
 
 

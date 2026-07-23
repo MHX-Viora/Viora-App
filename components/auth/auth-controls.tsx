@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   field: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: "#CBD3E1",
+    borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   fieldGroup: { gap: spacing.xs },
-  footerLink: { color: "#0B3AA4", fontSize: 14, fontWeight: "800" },
+  footerLink: { color: colors.primary, fontSize: 14, fontWeight: "800" },
   footerRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -151,13 +151,18 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.82 },
   primaryButton: {
     alignItems: "center",
-    backgroundColor: "#1239A6",
+    backgroundColor: colors.primary,
     borderRadius: 24,
+    elevation: 3,
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
     minHeight: 56,
     paddingHorizontal: spacing.xl,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
   },
   primaryButtonText: { color: colors.white, fontSize: 16, fontWeight: "800" },
 });

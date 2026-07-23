@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   metaText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
   modalRoot: { backgroundColor: colors.white, flex: 1 },
   repliesButton: { marginLeft: 62, paddingVertical: spacing.xs },
-  replyButton: { color: colors.primary, fontSize: 13, fontWeight: "800" },
+  replyButton: { color: colors.textMuted, fontSize: 13, fontWeight: "800" },
   replyingBar: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,

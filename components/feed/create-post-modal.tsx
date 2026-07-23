@@ -349,7 +349,9 @@ export function CreatePostModal({
                   styles.footerButtonDisabled,
               ]}
             >
-              <Ionicons color={colors.primary} name="images" size={22} />
+              <View style={[styles.footerIconWrap, styles.photoIconWrap]}>
+                <Ionicons color="#00B140" name="image" size={19} />
+              </View>
               <Text style={styles.footerButtonText}>Ảnh {imageUris.length}/4</Text>
             </Pressable>
             <Pressable
@@ -361,7 +363,9 @@ export function CreatePostModal({
                 isSubmitting && styles.footerButtonDisabled,
               ]}
             >
-              <Ionicons color={colors.primary} name="link" size={22} />
+              <View style={[styles.footerIconWrap, styles.linkIconWrap]}>
+                <Ionicons color="#0068FF" name="link" size={19} />
+              </View>
               <Text style={styles.footerButtonText}>Link</Text>
             </Pressable>
             <Pressable
@@ -374,7 +378,9 @@ export function CreatePostModal({
                   styles.footerButtonDisabled,
               ]}
             >
-              <Ionicons color={colors.primary} name="location" size={22} />
+              <View style={[styles.footerIconWrap, styles.locationIconWrap]}>
+                <Ionicons color="#0068FF" name="location" size={19} />
+              </View>
               <Text style={styles.footerButtonText}>
                 {isGettingLocation ? "Đang lấy..." : "Vị trí"}
               </Text>
@@ -388,15 +394,15 @@ export function CreatePostModal({
 
 const styles = StyleSheet.create({
   backdrop: {
-    backgroundColor: "rgba(15,23,42,0.45)",
+    backgroundColor: "rgba(15,23,42,0.34)",
     flex: 1,
     justifyContent: "flex-end",
   },
   attachmentCard: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 14,
+    borderRadius: 10,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
@@ -435,18 +441,18 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderTopColor: "rgba(226, 230, 236, 0.8)",
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md,
   },
   footerButton: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    borderWidth: 1,
     flex: 1,
     flexDirection: "row",
     gap: spacing.xs,
@@ -455,7 +461,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   footerButtonDisabled: { opacity: 0.55 },
-  footerButtonText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
+  footerButtonText: { color: colors.text, fontSize: 13, fontWeight: "800" },
+  footerIconWrap: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 28,
+    justifyContent: "center",
+    width: 28,
+  },
+  linkIconWrap: { backgroundColor: "#E7F1FF" },
+  locationIconWrap: { backgroundColor: "#E7F1FF" },
+  photoIconWrap: { backgroundColor: "#E8F8EE" },
   handle: {
     alignSelf: "center",
     backgroundColor: colors.border,
@@ -465,15 +481,16 @@ const styles = StyleSheet.create({
     width: 42,
   },
   header: {
-    borderBottomColor: "rgba(226, 230, 236, 0.8)",
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     paddingTop: spacing.sm,
   },
   headerIconButton: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: "#E4E6EB",
     borderRadius: 999,
     height: 38,
     justifyContent: "center",
@@ -486,8 +503,9 @@ const styles = StyleSheet.create({
   },
   input: {
     color: colors.text,
-    fontSize: 17,
-    minHeight: 120,
+    fontSize: 19,
+    lineHeight: 26,
+    minHeight: 150,
     paddingBottom: spacing.lg,
     textAlignVertical: "top",
   },
@@ -523,12 +541,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 30,
   },
-  scrollContent: { padding: spacing.lg },
+  scrollContent: {
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+  },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: "88%",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    height: "92%",
     overflow: "hidden",
   },
   singleTile: { height: 220 },
@@ -543,11 +564,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   submitDisabled: { opacity: 0.42 },
-  title: { ...typography.title, color: colors.text },
+  title: { ...typography.title, color: colors.text, fontSize: 18 },
   visibilityButton: {
     alignItems: "center",
-    backgroundColor: colors.background,
-    borderColor: colors.border,
+    backgroundColor: "#F0F2F5",
+    borderColor: "#F0F2F5",
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: "row",
