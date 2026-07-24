@@ -4,7 +4,9 @@ import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 import "react-native-reanimated";
 
+import { ActiveCallBanner } from "@/components/calls/active-call-banner";
 import { AppToastHost } from "@/components/common/app-toast";
+import { IncomingCallHost } from "@/components/calls/incoming-call-host";
 import { emitRealtimeSyncRequest } from "@/features/chat/chat-events";
 import { setNotificationNavigationReady } from "@/features/notifications/notification-response-navigation";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
@@ -186,6 +188,7 @@ export default function RootLayout() {
         <Stack.Screen name="post/[postId]" />
         <Stack.Screen name="reel/[reelId]" />
         <Stack.Screen name="group/[inviteCode]" />
+        <Stack.Screen name="call/[callId]" />
         <Stack.Screen name="chat/[conversationId]" />
         <Stack.Screen name="chat/group/[groupId]" />
         <Stack.Screen name="chat/group-preview" />
@@ -202,6 +205,8 @@ export default function RootLayout() {
         <Stack.Screen name="complete-profile" />
       </Stack>
       <StatusBar style="auto" />
+      <ActiveCallBanner />
+      <IncomingCallHost />
       <AppToastHost />
     </>
   );

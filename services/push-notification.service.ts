@@ -23,6 +23,10 @@ import {
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { navigateNotificationData } from "@/features/notifications/notification-response-navigation";
 import { getActiveChatConversation } from "@/features/chat/chat-events";
+import {
+  emitCallLifecycle,
+  emitIncomingCall,
+} from "@/features/calls/call-events";
 import { claimChatNotification } from "@/utils/chat-notification-dedupe";
 
 const DEVICE_ID_KEY = "viora.device-id";
@@ -218,6 +222,9 @@ const handleRemoteMessageNavigation = (
   );
   if (!claimNotificationResponse(responseKey)) return;
   logNotificationLifecycle(eventName, data);
+  if (data.type === "MissedCall") {
+    emitCallLifecycle("CallMissed", data);
+  }
   navigateNotificationData(data);
 };
 
@@ -412,13 +419,26 @@ export const setupNotificationHandling = () => {
       source: "fcm",
       timestamp: new Date().toISOString(),
     });
+    if (data.type === "IncomingCall") {
+      emitIncomingCall(data);
+      return;
+    }
+    if (data.type === "MissedCall") {
+      emitCallLifecycle("CallMissed", data);
+      return;
+    }
     if (data.type === "chat") void syncChatUnreadCount("fcm-foreground");
   });
 
   Notifications.setNotificationHandler({
     handleNotification: async (notification) => {
       const data = notification.request.content.data as Record<string, unknown>;
-      logNotificationLifecycle("foreground notification received", data);
+    logNotificationLifecycle("foreground notification received", data);
+      if (data.type === "IncomingCall") {
+        emitIncomingCall(data);
+      } else if (data.type === "MissedCall") {
+        emitCallLifecycle("CallMissed", data);
+      }
       const shouldSuppress = shouldSuppressForegroundNotification(data);
       return {
         shouldPlaySound: !shouldSuppress,
@@ -544,6 +564,9 @@ export const setupNotificationResponseHandling = () => {
     );
     if (!claimNotificationResponse(responseKey)) return;
     logNotificationLifecycle("notification opened", data);
+    if (data.type === "MissedCall") {
+      emitCallLifecycle("CallMissed", data);
+    }
     const didNavigate = navigateNotificationData(data);
     if (didNavigate) {
       void Notifications.clearLastNotificationResponseAsync();

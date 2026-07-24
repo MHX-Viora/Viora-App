@@ -21,7 +21,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -43,6 +42,11 @@ import {
   GOOGLE_MAPS_URL_PATTERN,
 } from "@/constants/chat";
 import {
+  getActiveVoiceCall,
+  subscribeActiveVoiceCall,
+  type ActiveVoiceCall,
+} from "@/features/calls/call-events";
+import {
   setActiveChatConversation,
   subscribeRealtimeConversationBlockedChanges,
   subscribeRealtimeConversationDissolved,
@@ -58,10 +62,13 @@ import {
   recallChatMessage,
   sendChatMessage,
 } from "@/services/chat.service";
+import { createVoiceCall } from "@/services/call.service";
+import { startCallRealtime } from "@/services/call-realtime.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { joinRealtimeGroup, leaveRealtimeGroup } from "@/services/realtime.service";
 import { getUser } from "@/stores/session-store";
 import { colors, spacing } from "@/theme";
+import { CallType } from "@/types/call";
 import { MessageType } from "@/types/chat";
 import type {
   ChatAttachment,
@@ -384,11 +391,61 @@ function LocationCard({
   );
 }
 
-function SystemMessage({ content }: { content: string }) {
+function SystemMessage({ message }: { message: ChatMessage }) {
+  const isVideoCall = message.content.startsWith("Cuộc gọi video");
+  const isCallHistory =
+    isVideoCall || message.content.startsWith("Cuộc gọi thoại");
+
+  if (isCallHistory) {
+    return (
+      <View
+        style={[
+          styles.messageRow,
+          message.isMine ? styles.mineRow : styles.theirRow,
+        ]}
+      >
+        {!message.isMine &&
+          (message.sender.avatarUrl ? (
+            <Image
+              source={{ uri: message.sender.avatarUrl }}
+              style={styles.smallAvatar}
+            />
+          ) : (
+            <View style={styles.avatarSpace} />
+          ))}
+        <View
+          style={[
+            styles.callHistoryMessage,
+            message.isMine
+              ? styles.mineCallHistoryMessage
+              : styles.theirCallHistoryMessage,
+          ]}
+        >
+          {!message.isMine ? (
+            <Text numberOfLines={1} style={styles.senderName}>
+              {message.sender.displayName}
+            </Text>
+          ) : null}
+          <View style={styles.callHistoryContent}>
+            <Ionicons
+              color={colors.primary}
+              name={isVideoCall ? "videocam" : "call"}
+              size={18}
+            />
+            <Text style={styles.callHistoryMessageText}>{message.content}</Text>
+          </View>
+          <Text style={styles.messageTime}>
+            {formatChatTime(message.createdAt)}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.systemMessageRow}>
       <View style={styles.systemMessageBubble}>
-        <Text style={styles.systemMessageText}>{content}</Text>
+        <Text style={styles.systemMessageText}>{message.content}</Text>
       </View>
     </View>
   );
@@ -424,7 +481,7 @@ function MessageRow({
   onOpenAttachment: (attachment: ChatAttachment) => void;
 }) {
   if (message.messageType === MessageType.System) {
-    return <SystemMessage content={message.content} />;
+    return <SystemMessage message={message} />;
   }
 
   const locationUrl = message.content.match(GOOGLE_MAPS_URL_PATTERN)?.[0] ?? "";
@@ -717,6 +774,10 @@ export function ChatScreen() {
   const [viewingAttachment, setViewingAttachment] =
     useState<ChatAttachment | null>(null);
   const [addMembersVisible, setAddMembersVisible] = useState(false);
+  const [isStartingCall, setIsStartingCall] = useState(false);
+  const [activeVoiceCall, setActiveVoiceCallState] = useState<ActiveVoiceCall | null>(
+    () => getActiveVoiceCall(),
+  );
   const [messagePermissions, setMessagePermissions] = useState<{
     canSendMessage: boolean;
     onlyAdminCanSend: boolean;
@@ -1513,6 +1574,48 @@ export function ChatScreen() {
     }
   }, [attachments, canSendInConversation, content, conversationId, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
 
+  const startCall = useCallback(async (callType: CallType) => {
+    if (conversationDetails?.conversationType !== "Private" || isStartingCall) return;
+    if (activeVoiceCall) {
+      router.push({
+        pathname: "/call/[callId]",
+        params: {
+          avatarUrl: activeVoiceCall.avatarUrl ?? "",
+          callId: activeVoiceCall.callId,
+          callType: String(activeVoiceCall.callType),
+          conversationId: activeVoiceCall.conversationId,
+          displayName: activeVoiceCall.displayName,
+          mode: activeVoiceCall.mode,
+        },
+      });
+      return;
+    }
+    try {
+      setIsStartingCall(true);
+      await startCallRealtime();
+      const callId = await createVoiceCall(conversationId, callType);
+      router.push({
+        pathname: "/call/[callId]",
+        params: {
+          avatarUrl: conversationDetails.otherParticipant?.avatarUrl ?? conversationDetails.avatarUrl ?? "",
+          callId,
+          callType: String(callType),
+          conversationId,
+          displayName: conversationDetails.otherParticipant?.displayName ?? title,
+          mode: "caller",
+        },
+      });
+    } catch (error) {
+      Alert.alert("Không thể gọi", error instanceof Error ? error.message : "Vui lòng thử lại.");
+    } finally {
+      setIsStartingCall(false);
+    }
+  }, [activeVoiceCall, conversationDetails, conversationId, isStartingCall, title]);
+  const startVoiceCall = useCallback(() => startCall(CallType.Audio), [startCall]);
+  const startVideoCall = useCallback(() => startCall(CallType.Video), [startCall]);
+
+  useEffect(() => subscribeActiveVoiceCall(setActiveVoiceCallState), []);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1529,7 +1632,13 @@ export function ChatScreen() {
         <Pressable
           accessibilityLabel="Quay lại"
           hitSlop={10}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+              return;
+            }
+            router.replace("/(tabs)/chat");
+          }}
           style={styles.iconButton}
         >
           <Ionicons color={colors.text} name="chevron-back" size={24} />
@@ -1537,6 +1646,28 @@ export function ChatScreen() {
         <Text numberOfLines={1} style={styles.headerTitle}>
           {title}
         </Text>
+        {conversationDetails?.conversationType === "Private" && !conversationDetails.isBlocked ? (
+          <>
+            <Pressable
+              accessibilityLabel="Gọi video"
+              disabled={isStartingCall}
+              hitSlop={10}
+              onPress={startVideoCall}
+              style={[styles.iconButton, isStartingCall ? styles.disabledIconButton : null]}
+            >
+              <Ionicons color={isStartingCall ? colors.textMuted : colors.primary} name="videocam" size={22} />
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Gọi thoại"
+              disabled={isStartingCall}
+              hitSlop={10}
+              onPress={startVoiceCall}
+              style={[styles.iconButton, isStartingCall ? styles.disabledIconButton : null]}
+            >
+              <Ionicons color={isStartingCall ? colors.textMuted : colors.primary} name="call" size={22} />
+            </Pressable>
+          </>
+        ) : null}
         {canAddMembers ? (
           <Pressable
             accessibilityLabel="Them thanh vien"
@@ -1951,6 +2082,26 @@ const styles = StyleSheet.create({
     maxWidth: "78%",
     padding: spacing.md,
   },
+  callHistoryMessage: {
+    borderRadius: 8,
+    gap: spacing.xs,
+    maxWidth: "78%",
+    padding: spacing.md,
+  },
+  callHistoryContent: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  callHistoryMessageText: {
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  mineCallHistoryMessage: {
+    backgroundColor: "#DCEEFF",
+  },
   composer: {
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
@@ -1997,6 +2148,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 36,
   },
+  disabledIconButton: { opacity: 0.55 },
   input: {
     backgroundColor: "#F4F8FC",
     borderColor: "#D8EAFF",
@@ -2291,6 +2443,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   theirBubble: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+  },
+  theirCallHistoryMessage: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,

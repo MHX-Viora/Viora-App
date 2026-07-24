@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { colors, spacing } from "@/theme";
@@ -26,13 +26,16 @@ const alertStyles = {
 export function useAuthAlert() {
   const [alert, setAlert] = useState<AuthAlertOptions | null>(null);
 
-  const showAlert = (options: AuthAlertOptions) => setAlert(options);
-  const closeAlert = () => setAlert(null);
-  const handleAlertAction = () => {
+  const showAlert = useCallback(
+    (options: AuthAlertOptions) => setAlert(options),
+    [],
+  );
+  const closeAlert = useCallback(() => setAlert(null), []);
+  const handleAlertAction = useCallback(() => {
     const onAction = alert?.onAction;
     setAlert(null);
     onAction?.();
-  };
+  }, [alert]);
 
   return { alert, closeAlert, handleAlertAction, showAlert };
 }

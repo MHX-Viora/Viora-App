@@ -1,5 +1,5 @@
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -27,9 +27,22 @@ export function LoginScreen() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const loginRequestIdRef = useRef(0);
+  const isLoginPendingRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      closeAlert();
+
+      return () => {
+        loginRequestIdRef.current += 1;
+        isLoginPendingRef.current = false;
+      };
+    }, [closeAlert]),
+  );
 
   const handleLogin = async () => {
-    if (isSubmitting) return;
+    if (isLoginPendingRef.current) return;
 
     const normalizedIdentifier = identifier.trim();
     if (!normalizedIdentifier || !password) {
@@ -39,6 +52,8 @@ export function LoginScreen() {
       });
     }
 
+    isLoginPendingRef.current = true;
+    const requestId = ++loginRequestIdRef.current;
     setIsSubmitting(true);
     try {
       // Gọi API đăng nhập bằng email hoặc số điện thoại người dùng đã nhập.
@@ -56,13 +71,18 @@ export function LoginScreen() {
       // Chưa có user thì hoàn thiện hồ sơ; đã có user thì vào trang chủ.
       router.replace(session.user === null ? "/complete-profile" : "/");
     } catch (error) {
+      if (requestId !== loginRequestIdRef.current) return;
+
       showAlert({
         title: "Đăng nhập thất bại",
         message: error instanceof Error ? error.message : "Vui lòng thử lại.",
         kind: "error",
       });
     } finally {
-      setIsSubmitting(false);
+      if (requestId === loginRequestIdRef.current) {
+        isLoginPendingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
   return (

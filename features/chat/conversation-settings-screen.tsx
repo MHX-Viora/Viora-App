@@ -679,7 +679,13 @@ export function ConversationSettingsScreen() {
         <Pressable
           accessibilityLabel="Quay lại"
           hitSlop={10}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+              return;
+            }
+            router.replace("/(tabs)/chat");
+          }}
           style={styles.iconButton}
         >
           <Ionicons color={colors.text} name="chevron-back" size={24} />

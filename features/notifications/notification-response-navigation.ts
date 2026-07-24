@@ -1,6 +1,9 @@
 import { router } from "expo-router";
 
+import { emitIncomingCall } from "@/features/calls/call-events";
 import { navigateNotification } from "@/features/notifications/notification-navigation";
+import { getVoiceCall } from "@/services/call.service";
+import { CallStatus } from "@/types/call";
 import type {
   NotificationItemModel,
   NotificationReferenceType,
@@ -99,6 +102,26 @@ export const navigateNotificationData = (data: Record<string, unknown>) => {
     data["conversation.id"],
   );
   const dataType = firstString(data.type, data.notificationType);
+  if (dataType?.toLowerCase() === "incomingcall") {
+    const callId = firstString(data.callId, data["call.id"]);
+    if (callId) {
+      navigateWhenReady(() => {
+        void getVoiceCall(callId)
+          .then((call) => {
+            if (call.status !== CallStatus.Calling) return;
+            emitIncomingCall({
+              callId: call.id,
+              caller: call.caller,
+              conversationId: call.conversationId,
+            });
+          })
+          .catch((error) => {
+            console.info("[Push] incoming call lookup skipped", error instanceof Error ? error.message : String(error));
+          });
+      });
+      return true;
+    }
+  }
   if (dataType === "chat" && chatConversationId) {
     navigateWhenReady(() =>
       router.push({

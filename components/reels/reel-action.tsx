@@ -19,7 +19,12 @@ export function ReelAction({
   selected,
   value,
 }: ReelActionProps) {
-  const selectedColor = icon === "heart" ? colors.danger : colors.primary;
+  const selectedColor =
+    icon === "heart"
+      ? colors.danger
+      : icon === "bookmark"
+        ? "#FBBF24"
+        : colors.primary;
 
   return (
     <View style={styles.actionGroup}>

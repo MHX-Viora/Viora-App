@@ -7,6 +7,11 @@ import {
 
 import { emitRealtimeNotification } from "@/features/notifications/notification-events";
 import {
+  emitCallAccepted,
+  emitCallLifecycle,
+  emitIncomingCall,
+} from "@/features/calls/call-events";
+import {
   emitRealtimeConversationRead,
   emitRealtimeConversation,
   emitRealtimeConversationBlockedChanged,
@@ -119,6 +124,27 @@ const getRealtimeConnection = () => {
       }
       void syncChatUnreadCount("signalr");
       void showChatRealtimeNotification(event);
+    });
+    connection.on("IncomingCall", (payload) => {
+      emitIncomingCall(payload);
+    });
+    connection.on("CallAccepted", (payload) => {
+      emitCallAccepted(payload);
+    });
+    connection.on("CallRejected", (payload) => {
+      emitCallLifecycle("CallRejected", payload);
+    });
+    connection.on("CallCancelled", (payload) => {
+      emitCallLifecycle("CallCancelled", payload);
+    });
+    connection.on("CallEnded", (payload) => {
+      emitCallLifecycle("CallEnded", payload);
+    });
+    connection.on("CallMissed", (payload) => {
+      emitCallLifecycle("CallMissed", payload);
+    });
+    connection.on("CallTimeout", (payload) => {
+      emitCallLifecycle("CallTimeout", payload);
     });
     connection.on("FriendRequestReceived", (payload) => {
       handleNotificationPayload(payload, "FriendRequestReceived");

@@ -1,0 +1,268 @@
+import type { IceServer } from "@/types/call";
+import { PermissionsAndroid, Platform } from "react-native";
+
+type MediaTrackLike = {
+  _switchCamera?: () => void;
+  enabled: boolean;
+  kind?: string;
+  stop: () => void;
+};
+
+type MediaStreamLike = {
+  getAudioTracks?: () => MediaTrackLike[];
+  getTracks: () => MediaTrackLike[];
+  getVideoTracks?: () => MediaTrackLike[];
+  toURL?: () => string;
+};
+
+type PeerStateSnapshot = {
+  connectionState: string;
+  iceConnectionState: string;
+  iceGatheringState: string;
+  signalingState: string;
+};
+
+export const getEffectivePeerState = (state: PeerStateSnapshot) => {
+  if (state.connectionState === "connected") return "connected";
+  if (
+    state.iceConnectionState === "connected" ||
+    state.iceConnectionState === "completed"
+  ) {
+    return state.iceConnectionState;
+  }
+  if (state.connectionState === "failed" || state.iceConnectionState === "failed") {
+    return "failed";
+  }
+  if (
+    state.connectionState === "disconnected" ||
+    state.iceConnectionState === "disconnected"
+  ) {
+    return "disconnected";
+  }
+  return state.connectionState !== "unknown"
+    ? state.connectionState
+    : state.iceConnectionState;
+};
+
+type PeerEvent = {
+  candidate?: unknown;
+  stream?: MediaStreamLike;
+  streams?: MediaStreamLike[];
+  track?: MediaTrackLike;
+};
+
+type WebRtcModule = {
+  MediaStream?: new (tracks: MediaTrackLike[]) => MediaStreamLike;
+  RTCPeerConnection: new (configuration: { iceServers: IceServer[] }) => {
+    addEventListener?: (event: string, handler: (event: PeerEvent) => void) => void;
+    addIceCandidate: (candidate: unknown) => Promise<void>;
+    addStream?: (stream: MediaStreamLike) => void;
+    addTrack?: (track: MediaTrackLike, stream: MediaStreamLike) => void;
+    close: () => void;
+    connectionState?: string;
+    createAnswer: () => Promise<unknown>;
+    createOffer: () => Promise<unknown>;
+    iceConnectionState?: string;
+    iceGatheringState?: string;
+    setLocalDescription: (description: unknown) => Promise<void>;
+    setRemoteDescription: (description: unknown) => Promise<void>;
+    signalingState?: string;
+  };
+  mediaDevices: {
+    getUserMedia: (constraints: {
+      audio: boolean;
+      video: boolean | Record<string, unknown>;
+    }) => Promise<MediaStreamLike>;
+  };
+};
+
+const normalizeWebRtcModule = (value: unknown): WebRtcModule => {
+  const moduleValue =
+    typeof value === "object" &&
+    value !== null &&
+    "default" in value &&
+    typeof (value as { default?: unknown }).default === "object" &&
+    (value as { default?: unknown }).default !== null
+      ? (value as { default: unknown }).default
+      : value;
+
+  const candidate = moduleValue as Partial<WebRtcModule>;
+  if (!candidate.RTCPeerConnection || !candidate.mediaDevices?.getUserMedia) {
+    throw new Error(
+      "WebRTC native API chưa sẵn sàng. Hãy build lại ứng dụng và cấp quyền micro.",
+    );
+  }
+
+  return candidate as WebRtcModule;
+};
+
+const loadWebRtc = async (): Promise<WebRtcModule> => {
+  try {
+    return normalizeWebRtcModule(require("react-native-webrtc"));
+  } catch (error) {
+    throw new Error(
+      "WebRTC chưa được tích hợp vào bản cài đặt. Hãy chạy lại npm run android để tạo native build mới.",
+      { cause: error },
+    );
+  }
+};
+
+export const createVoicePeer = async (
+  iceServers: IceServer[],
+  onIceCandidate: (candidate: unknown) => void,
+  onConnectionStateChange?: (state: string) => void,
+  options?: {
+    onLocalStream?: (url: string) => void;
+    onRemoteStream?: (url: string) => void;
+    onStateChange?: (state: PeerStateSnapshot) => void;
+    video?: boolean;
+  },
+) => {
+  if (Platform.OS === "android") {
+    const permissions = [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
+    if (options?.video) permissions.push(PermissionsAndroid.PERMISSIONS.CAMERA);
+    const result = await PermissionsAndroid.requestMultiple(permissions);
+    if (
+      result[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] !==
+      PermissionsAndroid.RESULTS.GRANTED
+    ) {
+      throw new Error("Bạn cần cấp quyền micro để nghe gọi.");
+    }
+    if (
+      options?.video &&
+      result[PermissionsAndroid.PERMISSIONS.CAMERA] !==
+        PermissionsAndroid.RESULTS.GRANTED
+    ) {
+      throw new Error("Bạn cần cấp quyền camera để gọi video.");
+    }
+  }
+
+  const { MediaStream, RTCPeerConnection, mediaDevices } = await loadWebRtc();
+  const stream = await mediaDevices.getUserMedia({
+    audio: true,
+    video: options?.video ? { facingMode: "user" } : false,
+  });
+  const localUrl = stream.toURL?.() ?? "";
+  let remoteStreamUrl = "";
+  if (localUrl) {
+    console.info("[Call][Media] local stream ready", {
+      audioTracks: stream.getAudioTracks?.().length ?? 0,
+      videoTracks: stream.getVideoTracks?.().length ?? 0,
+    });
+    options?.onLocalStream?.(localUrl);
+  }
+
+  const peer = new RTCPeerConnection({ iceServers });
+  const snapshot = (): PeerStateSnapshot => ({
+    connectionState: peer.connectionState ?? "unknown",
+    iceConnectionState: peer.iceConnectionState ?? "unknown",
+    iceGatheringState: peer.iceGatheringState ?? "unknown",
+    signalingState: peer.signalingState ?? "unknown",
+  });
+  const reportState = (source: string) => {
+    const state = snapshot();
+    console.info(`[Call][WebRTC] ${source}`, state);
+    options?.onStateChange?.(state);
+    onConnectionStateChange?.(getEffectivePeerState(state));
+  };
+
+  if (peer.addTrack) {
+    stream.getTracks().forEach((track) => peer.addTrack?.(track, stream));
+  } else {
+    peer.addStream?.(stream);
+  }
+
+  peer.addEventListener?.("icecandidate", (event) => {
+    if (event.candidate) {
+      console.info("[Call][WebRTC] local ICE candidate");
+      onIceCandidate(event.candidate);
+    }
+  });
+  peer.addEventListener?.("connectionstatechange", () =>
+    reportState("connection state changed"),
+  );
+  peer.addEventListener?.("iceconnectionstatechange", () =>
+    reportState("ICE connection state changed"),
+  );
+  peer.addEventListener?.("icegatheringstatechange", () =>
+    reportState("ICE gathering state changed"),
+  );
+  peer.addEventListener?.("signalingstatechange", () =>
+    reportState("signaling state changed"),
+  );
+
+  const publishRemoteStream = (remoteStream?: MediaStreamLike | null) => {
+    const remoteUrl = remoteStream?.toURL?.() ?? "";
+    if (!remoteUrl) return;
+    remoteStreamUrl = remoteUrl;
+    console.info("[Call][Media] remote stream ready", {
+      audioTracks: remoteStream?.getAudioTracks?.().length ?? 0,
+      videoTracks: remoteStream?.getVideoTracks?.().length ?? 0,
+    });
+    options?.onRemoteStream?.(remoteUrl);
+  };
+  peer.addEventListener?.("track", (event) => {
+    const fallbackStream =
+      !event.streams?.[0] && event.track && MediaStream
+        ? new MediaStream([event.track])
+        : null;
+    publishRemoteStream(event.streams?.[0] ?? event.stream ?? fallbackStream);
+  });
+  peer.addEventListener?.("addstream", (event) => {
+    publishRemoteStream(event.stream ?? event.streams?.[0]);
+  });
+
+  const audioTracks = () =>
+    stream.getAudioTracks?.() ??
+    stream.getTracks().filter((track) => track.kind === "audio");
+  const videoTracks = () =>
+    stream.getVideoTracks?.() ??
+    stream.getTracks().filter((track) => track.kind === "video");
+
+  let isClosed = false;
+  return {
+    addIceCandidate: async (candidate: unknown) => {
+      await peer.addIceCandidate(candidate);
+      console.info("[Call][WebRTC] remote ICE candidate added");
+    },
+    close: () => {
+      if (isClosed) return;
+      isClosed = true;
+      stream.getTracks().forEach((track) => track.stop());
+      peer.close();
+      console.info("[Call][WebRTC] peer and local tracks closed");
+    },
+    createAnswer: async (offer: unknown) => {
+      await peer.setRemoteDescription(offer);
+      const answer = await peer.createAnswer();
+      await peer.setLocalDescription(answer);
+      console.info("[Call][Signal] answer created");
+      return answer;
+    },
+    createOffer: async () => {
+      const offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      console.info("[Call][Signal] offer created");
+      return offer;
+    },
+    getLocalStreamUrl: () => localUrl,
+    getRemoteStreamUrl: () => remoteStreamUrl,
+    setAnswer: async (answer: unknown) => {
+      await peer.setRemoteDescription(answer);
+      console.info("[Call][Signal] answer applied");
+    },
+    setCameraEnabled: (enabled: boolean) => {
+      videoTracks().forEach((track) => {
+        track.enabled = enabled;
+      });
+    },
+    setMicrophoneEnabled: (enabled: boolean) => {
+      audioTracks().forEach((track) => {
+        track.enabled = enabled;
+      });
+    },
+    switchCamera: () => {
+      videoTracks().forEach((track) => track._switchCamera?.());
+    },
+  };
+};
