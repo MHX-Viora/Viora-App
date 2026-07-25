@@ -2,6 +2,8 @@ import { Tabs } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { TabIcon } from "@/components/layout/tab-icon";
+import { floatingTabBarStyle } from "@/components/layout/tab-bar-style";
+import { communityColors as navigationColors } from "@/features/feed/community-colors";
 import { colors } from "@/theme";
 import {
   getChatUnreadCount,
@@ -41,24 +43,20 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: navigationColors.primary,
         tabBarHideOnKeyboard: true,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarInactiveTintColor: navigationColors.textMuted,
         tabBarLabelPosition: "below-icon",
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginTop: 2 },
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          elevation: 10,
-          height: 100,
-          paddingBottom: 20,
-          paddingTop: 6,
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
+        tabBarItemStyle: {
+          borderRadius: 16,
+          paddingVertical: 4,
         },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          marginTop: 1,
+        },
+        tabBarStyle: floatingTabBarStyle,
       }}
     >
       <Tabs.Screen

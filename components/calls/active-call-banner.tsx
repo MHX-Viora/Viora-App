@@ -8,7 +8,8 @@ import {
   type ActiveVoiceCall,
   subscribeActiveVoiceCall,
 } from "@/features/calls/call-events";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export function ActiveCallBanner() {
   const insets = useSafeAreaInsets();
@@ -52,7 +53,9 @@ export function ActiveCallBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: "#12B76A",
+    backgroundColor: "rgba(14, 28, 49, 0.94)",
+    borderBottomColor: colors.primary,
+    borderBottomWidth: 1,
     left: 0,
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -60,6 +63,10 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     zIndex: 1000,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 10,
   },
   content: {
     alignItems: "center",

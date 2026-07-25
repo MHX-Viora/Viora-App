@@ -19,6 +19,11 @@ import {
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { showAppToast } from "@/components/common/app-toast";
+import {
+  floatingTabBarStyle,
+  TAB_BAR_BOTTOM,
+  TAB_BAR_HEIGHT,
+} from "@/components/layout/tab-bar-style";
 import type { SelectedVideo } from "@/components/reels/create-reel-modal";
 import { CreateReelModal } from "@/components/reels/create-reel-modal";
 import { ReelCard } from "@/components/reels/reel-card";
@@ -26,6 +31,7 @@ import { ReelsHeader } from "@/components/reels/reels-header";
 import { ReelsSearchModal } from "@/components/reels/reels-search-modal";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { reels } from "@/features/reels/data";
+import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { reactPost, savePost } from "@/services/post.service";
 import { getReelShareLink } from "@/services/share-link.service";
 import {
@@ -33,18 +39,12 @@ import {
   formatReelCount,
   getReels,
 } from "@/services/reel.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Reel, ReelSort } from "@/types/reel";
 
 const PAGE_SIZE = 20;
-const ITEM_GAP = 1;
-const TAB_BAR_STYLE = {
-  backgroundColor: "#F7F9FC",
-  borderTopColor: colors.border,
-  height: 100,
-  paddingBottom: 20,
-  paddingTop: 6,
-};
+const ITEM_GAP = 0;
+const REEL_BOTTOM_INSET = TAB_BAR_BOTTOM + TAB_BAR_HEIGHT;
 
 const getSafeVideoName = (name?: string | null) => {
   const fallback = `reel-${Date.now()}.mp4`;
@@ -152,11 +152,11 @@ export function ReelsScreen() {
     parent?.setOptions({
       tabBarStyle: isSearchDetailVisible
         ? { display: "none" }
-        : TAB_BAR_STYLE,
+        : floatingTabBarStyle,
     });
 
     return () => {
-      parent?.setOptions({ tabBarStyle: TAB_BAR_STYLE });
+      parent?.setOptions({ tabBarStyle: floatingTabBarStyle });
     };
   }, [isSearchDetailVisible, navigation]);
 
@@ -437,6 +437,7 @@ export function ReelsScreen() {
                   onSave={handleSaveReel}
                   onShare={handleShareReel}
                   reel={item}
+                  safeBottomInset={REEL_BOTTOM_INSET}
                 />
               )
             )}
@@ -470,6 +471,7 @@ export function ReelsScreen() {
         isSubmitting={isCreatingReel}
         onClose={closeCreate}
         onPickVideo={pickVideo}
+        onRecordVideo={setSelectedVideo}
         onSubmit={createReelWithApi}
         selectedVideo={selectedVideo}
         visible={createVisible}

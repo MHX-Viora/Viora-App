@@ -10,7 +10,8 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { notificationColors as colors } from "@/features/notifications/notification-colors";
+import { spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
 import { formatNotificationTime } from "@/utils/notification-time";
 
@@ -59,7 +60,7 @@ function NotificationItemComponent({
           {notification.sender?.isVerified && (
             <Ionicons
               accessibilityLabel="Tài khoản đã xác minh"
-              color={colors.primary}
+              color={colors.verified}
               name="checkmark-circle"
               size={15}
             />
@@ -121,13 +122,20 @@ export const NotificationItem = memo(
 );
 
 const styles = StyleSheet.create({
-  avatar: { borderRadius: 26, height: 52, width: 52 },
+  avatar: {
+    borderColor: colors.border,
+    borderRadius: 26,
+    borderWidth: 1,
+    height: 52,
+    width: 52,
+  },
   content: { flex: 1, gap: 2, paddingRight: spacing.md },
   item: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    borderColor: colors.borderRead,
+    borderRadius: 14,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
     minHeight: 84,
@@ -150,6 +158,10 @@ const styles = StyleSheet.create({
     height: 26,
     justifyContent: "center",
     width: 26,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 7,
   },
   readButtonDisabled: { opacity: 0.62 },
   readButtonPressed: { opacity: 0.72 },
@@ -162,7 +174,9 @@ const styles = StyleSheet.create({
   systemAvatar: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 26,
+    borderWidth: 1,
     height: 52,
     justifyContent: "center",
     width: 52,
@@ -185,5 +199,8 @@ const styles = StyleSheet.create({
     right: spacing.sm,
     top: spacing.xs,
   },
-  unreadItem: { backgroundColor: colors.primarySoft },
+  unreadItem: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+  },
 });

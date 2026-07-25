@@ -10,4 +10,5 @@ export const colors = {
   reelOverlay: 'rgba(0, 0, 0, 0.18)',
   white: '#FFFFFF',
   danger: '#FF3158',
+  verified: '#1D9BF0',
 } as const;

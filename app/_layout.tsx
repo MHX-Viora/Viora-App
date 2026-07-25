@@ -1,16 +1,18 @@
 import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
-import { AppState } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { AppState, View } from "react-native";
 import "react-native-reanimated";
 
 import { ActiveCallBanner } from "@/components/calls/active-call-banner";
 import { AppToastHost } from "@/components/common/app-toast";
 import { IncomingCallHost } from "@/components/calls/incoming-call-host";
+import { AppLaunchScreen } from "@/components/layout/app-launch-screen";
 import { emitRealtimeSyncRequest } from "@/features/chat/chat-events";
 import { setNotificationNavigationReady } from "@/features/notifications/notification-response-navigation";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { getNotifications } from "@/services/notification.service";
+import { setupIncomingCallNotifeeEvents } from "@/services/incoming-call-notifee-events";
 import {
   registerPushNotifications,
   setupNotificationHandling,
@@ -73,10 +75,12 @@ export default function RootLayout() {
   const segments = useSegments();
   const hasRegisteredPushNotifications = useRef(false);
   const hasHydratedAuthenticatedState = useRef(false);
+  const [isAppReady, setIsAppReady] = useState(false);
 
   useEffect(() => {
     setupNotificationHandling();
     setupNotificationResponseHandling();
+    setupIncomingCallNotifeeEvents();
     setupPushTokenRefreshHandling();
   }, []);
 
@@ -169,11 +173,19 @@ export default function RootLayout() {
       }
     };
 
-    checkLoginStatus();
+    void checkLoginStatus()
+      .catch((error: unknown) => {
+        console.info(
+          "[Session] initial hydration failed",
+          error instanceof Error ? error.message : String(error),
+        );
+        router.replace("/login");
+      })
+      .finally(() => setIsAppReady(true));
   }, [segments]);
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="edit-profile" />
@@ -204,10 +216,11 @@ export default function RootLayout() {
         <Stack.Screen name="register" />
         <Stack.Screen name="complete-profile" />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       <ActiveCallBanner />
       <IncomingCallHost />
       <AppToastHost />
-    </>
+      {!isAppReady && <AppLaunchScreen />}
+    </View>
   );
 }

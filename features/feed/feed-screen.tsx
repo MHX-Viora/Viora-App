@@ -20,6 +20,7 @@ import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { FIXED_TOP_BAR_HEIGHT } from "@/components/layout/fixed-top-bar";
 import { feedPosts as initialPosts } from "@/features/feed/data";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { createPost, getPosts } from "@/services/feed.service";
 import {
@@ -28,7 +29,7 @@ import {
 } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { CreatePostInput, FeedPost } from "@/types/feed";
 
 const PAGE_SIZE = 10;
@@ -46,7 +47,6 @@ export function FeedScreen() {
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [draftImages, setDraftImages] = useState<string[]>([]);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-
   const loadPosts = async (nextPage: number) => {
     if (nextPage === 1) {
       setIsLoading(true);
@@ -347,7 +347,10 @@ function PostSkeleton() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 10, paddingTop: FIXED_TOP_BAR_HEIGHT },
+  content: {
+    paddingBottom: 10,
+    paddingTop: FIXED_TOP_BAR_HEIGHT,
+  },
   emptyContent: { flexGrow: 1 },
   emptyState: {
     alignItems: "center",
@@ -437,9 +440,9 @@ const styles = StyleSheet.create({
   },
   skeletonCard: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: colors.border,
-    borderTopWidth: 1,
     marginBottom: spacing.sm,
     paddingBottom: spacing.md,
   },

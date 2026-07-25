@@ -9,7 +9,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 const SETTINGS = [
   { action: "saved", icon: "bookmark-outline", label: "Đã lưu" },
@@ -186,9 +187,11 @@ const styles = StyleSheet.create({
   rowPressed: { backgroundColor: colors.background },
   rowText: { color: colors.text, flex: 1, fontSize: 15, fontWeight: "600" },
   sheet: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    borderWidth: 1,
     maxHeight: "82%",
     paddingTop: spacing.sm,
   },

@@ -24,9 +24,10 @@ import {
   REEL_REPORT_REASONS,
   REEL_VIDEO_TOP_OFFSET,
 } from "@/constants/reels";
+import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { deletePost, reportPost } from "@/services/post.service";
 import { followUser } from "@/services/user.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 import { formatReelTime } from "@/utils/reel-time";
 
@@ -298,6 +299,15 @@ export function ReelCard({
   return (
     <View style={[styles.background, { height }]}>
       <View style={[styles.videoLayer, { top: videoTopOffset }]}>
+        {reel.thumbnailUrl ? (
+          <Image
+            blurRadius={28}
+            contentFit="cover"
+            pointerEvents="none"
+            source={{ uri: reel.thumbnailUrl }}
+            style={styles.videoBackdrop}
+          />
+        ) : null}
         <View style={styles.videoFrame}>
           <VideoView
             contentFit="contain"
@@ -364,7 +374,7 @@ export function ReelCard({
               {reel.isAuthorVerified && (
                 <Ionicons
                   accessibilityLabel="Tài khoản đã xác minh"
-                  color={colors.primary}
+                  color={colors.verified}
                   name="checkmark-circle"
                   size={16}
                 />
@@ -449,7 +459,12 @@ export function ReelCard({
       </View>
 
       {showControls && (
-        <View style={styles.controlsBackdrop}>
+        <View
+          style={[
+            styles.controlsBackdrop,
+            { paddingBottom: safeBottomInset + spacing.md },
+          ]}
+        >
           <Pressable
             accessibilityLabel="Đóng cài đặt video"
             accessibilityRole="button"
@@ -601,7 +616,10 @@ export function ReelCard({
             accessibilityLabel="Chi tiết video"
             style={[
               styles.detailsSheet,
-              { transform: [{ translateY: detailsTranslateY }] },
+              {
+                marginBottom: safeBottomInset,
+                transform: [{ translateY: detailsTranslateY }],
+              },
             ]}
           >
             <View style={styles.sheetHandle} />
@@ -678,7 +696,7 @@ const styles = StyleSheet.create({
   },
   authorPressable: { flexShrink: 1 },
   avatar: {
-    borderColor: colors.white,
+    borderColor: colors.primary,
     borderRadius: 24,
     borderWidth: 1,
     height: 48,
@@ -721,8 +739,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   controlsPanel: {
-    backgroundColor: "rgba(20,26,34,0.96)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 16,
+    borderWidth: 1,
     padding: spacing.md,
   },
   controlsTitle: { color: colors.white, fontSize: 17, fontWeight: "700" },
@@ -768,7 +788,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   detailsHashtags: {
-    color: "#61D3F2",
+    color: colors.primary,
     fontSize: 14,
     fontWeight: "600",
     lineHeight: 21,
@@ -780,9 +800,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   detailsSheet: {
-    backgroundColor: "#151B23",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
+    borderWidth: 1,
     maxHeight: "72%",
     minHeight: 280,
     paddingBottom: spacing.xl,
@@ -792,7 +816,7 @@ const styles = StyleSheet.create({
   detailsTitle: { color: colors.white, fontSize: 17, fontWeight: "700" },
   deleteText: { color: colors.danger },
   hashtags: {
-    color: "#61D3F2",
+    color: colors.primary,
     fontSize: 14,
     fontWeight: "600",
     marginTop: spacing.xs,
@@ -821,8 +845,10 @@ const styles = StyleSheet.create({
   playButton: {
     alignItems: "center",
     alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.52)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 34,
+    borderWidth: 1,
     height: 68,
     justifyContent: "center",
     position: "absolute",
@@ -853,8 +879,10 @@ const styles = StyleSheet.create({
   },
   reportSheet: {
     backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
+    borderWidth: 1,
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
@@ -933,7 +961,7 @@ const styles = StyleSheet.create({
   timeText: { color: colors.white, fontSize: 12, minWidth: 34 },
   tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(8, 16, 26, 0)",
+    backgroundColor: "rgba(2, 12, 24, 0.12)",
   },
   topMask: {
     backgroundColor: colors.reelBackground,
@@ -968,10 +996,14 @@ const styles = StyleSheet.create({
     top: REEL_VIDEO_TOP_OFFSET,
   },
   videoFrame: {
-    aspectRatio: 9 / 16,
-    backgroundColor: colors.reelBackground,
-    maxHeight: "100%",
+    backgroundColor: "transparent",
+    height: "100%",
     overflow: "hidden",
     width: "100%",
+  },
+  videoBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.48,
+    transform: [{ scale: 1.08 }],
   },
 });

@@ -27,6 +27,7 @@ import {
   subscribeRealtimeNewMessageNotifications,
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import {
   getConversation,
   getConversations,
@@ -36,7 +37,7 @@ import {
 } from "@/services/chat.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { getUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
 import {
   firstParam,
@@ -550,7 +551,7 @@ export function ConversationsScreen() {
                 pressed && styles.rowPressed,
               ]}
             >
-              <Ionicons color={colors.white} name="add" size={24} />
+              <Ionicons color={colors.primaryContrast} name="add" size={24} />
             </Pressable>
           </View>
         </View>
@@ -825,14 +826,12 @@ const styles = StyleSheet.create({
   emptyText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
   footer: { padding: spacing.lg },
   header: {
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: "transparent",
     gap: spacing.md,
     padding: spacing.lg,
     paddingTop: spacing.xl,
   },
-  heading: { color: colors.text, fontSize: 28, fontWeight: "900" },
+  heading: { color: colors.text, fontSize: 24, fontWeight: "900" },
   headingRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -842,17 +841,23 @@ const styles = StyleSheet.create({
   headerActions: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
   headerIconButton: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.primarySoft,
     borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
     height: 40,
     justifyContent: "center",
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.32,
+    shadowRadius: 8,
     width: 40,
   },
   primaryHeaderIconButton: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+    elevation: 8,
+    shadowOpacity: 0.62,
   },
   createRoomButton: {
     alignItems: "center",
@@ -863,8 +868,12 @@ const styles = StyleSheet.create({
     minHeight: 36,
     paddingHorizontal: spacing.sm,
   },
-  createRoomText: { color: colors.white, fontSize: 12, fontWeight: "900" },
-  listContent: { paddingBottom: 112 },
+  createRoomText: {
+    color: colors.primaryContrast,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  listContent: { paddingBottom: 112, paddingTop: spacing.xs },
   loading: { flex: 1, justifyContent: "center" },
   menuAction: {
     alignItems: "center",
@@ -919,7 +928,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   permissionButtonText: {
-    color: colors.white,
+    color: colors.primaryContrast,
     fontSize: 15,
     fontWeight: "900",
   },
@@ -963,10 +972,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
-  qrScreen: { backgroundColor: colors.white, flex: 1 },
+  qrScreen: { backgroundColor: colors.background, flex: 1 },
   qrTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
   quickMenu: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -1016,9 +1025,9 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1 },
   searchBox: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,

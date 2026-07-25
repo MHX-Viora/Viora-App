@@ -41,6 +41,7 @@ import {
   CHAT_STICKERS,
   GOOGLE_MAPS_URL_PATTERN,
 } from "@/constants/chat";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import {
   getActiveVoiceCall,
   subscribeActiveVoiceCall,
@@ -67,7 +68,7 @@ import { startCallRealtime } from "@/services/call-realtime.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { joinRealtimeGroup, leaveRealtimeGroup } from "@/services/realtime.service";
 import { getUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import { CallType } from "@/types/call";
 import { MessageType } from "@/types/chat";
 import type {
@@ -122,7 +123,7 @@ function AudioAttachment({
       style={[styles.audioPill, isMine && styles.mineAudioPill]}
     >
       <Ionicons
-        color="#0068FF"
+        color={colors.primary}
         name={status.playing ? "pause-circle" : "play-circle"}
         size={26}
       />
@@ -286,7 +287,7 @@ function AttachmentView({
       style={[styles.filePill, isMine && styles.mineFilePill]}
     >
       <View style={[styles.fileIcon, isMine && styles.mineFileIcon]}>
-        <Ionicons color="#0068FF" name="document-text-outline" size={22} />
+        <Ionicons color={colors.primary} name="document-text-outline" size={22} />
       </View>
       <View style={styles.fileText}>
         <Text
@@ -298,7 +299,7 @@ function AttachmentView({
         <Text style={[styles.fileMeta, isMine && styles.mineFileMeta]}>Tệp</Text>
       </View>
       <Ionicons
-        color="#0068FF"
+        color={colors.primary}
         name="open-outline"
         size={18}
       />
@@ -372,7 +373,7 @@ function LocationCard({
       style={[styles.locationCard, isMine && styles.mineLocationCard]}
     >
       <Ionicons
-        color="#0068FF"
+        color={colors.primary}
         name="location"
         size={18}
       />
@@ -1594,14 +1595,27 @@ export function ChatScreen() {
       setIsStartingCall(true);
       await startCallRealtime();
       const callId = await createVoiceCall(conversationId, callType);
+      const otherMessage = messages.find((item) => !item.isMine);
+      const peerAvatarUrl =
+        conversationDetails.otherParticipant?.avatarUrl ||
+        params.otherAvatarUrl ||
+        params.conversationAvatarUrl ||
+        conversationDetails.avatarUrl ||
+        otherMessage?.sender.avatarUrl ||
+        "";
+      const peerDisplayName =
+        conversationDetails.otherParticipant?.displayName ||
+        params.otherUserName ||
+        otherMessage?.sender.displayName ||
+        title;
       router.push({
         pathname: "/call/[callId]",
         params: {
-          avatarUrl: conversationDetails.otherParticipant?.avatarUrl ?? conversationDetails.avatarUrl ?? "",
+          avatarUrl: peerAvatarUrl,
           callId,
           callType: String(callType),
           conversationId,
-          displayName: conversationDetails.otherParticipant?.displayName ?? title,
+          displayName: peerDisplayName,
           mode: "caller",
         },
       });
@@ -1610,7 +1624,17 @@ export function ChatScreen() {
     } finally {
       setIsStartingCall(false);
     }
-  }, [activeVoiceCall, conversationDetails, conversationId, isStartingCall, title]);
+  }, [
+    activeVoiceCall,
+    conversationDetails,
+    conversationId,
+    isStartingCall,
+    messages,
+    params.conversationAvatarUrl,
+    params.otherAvatarUrl,
+    params.otherUserName,
+    title,
+  ]);
   const startVoiceCall = useCallback(() => startCall(CallType.Audio), [startCall]);
   const startVideoCall = useCallback(() => startCall(CallType.Video), [startCall]);
 
@@ -1892,7 +1916,7 @@ export function ChatScreen() {
             }}
             style={styles.toolButton}
           >
-            <Ionicons color="#0068FF" name="camera-outline" size={21} />
+            <Ionicons color={colors.primary} name="camera-outline" size={21} />
             <Text style={styles.toolLabel}>Camera</Text>
           </Pressable>
           <Pressable
@@ -1903,7 +1927,7 @@ export function ChatScreen() {
             }}
             style={styles.toolButton}
           >
-            <Ionicons color="#0068FF" name="image-outline" size={21} />
+            <Ionicons color={colors.primary} name="image-outline" size={21} />
             <Text style={styles.toolLabel}>Ảnh</Text>
           </Pressable>
           <Pressable
@@ -1914,7 +1938,7 @@ export function ChatScreen() {
             }}
             style={styles.toolButton}
           >
-            <Ionicons color="#0068FF" name="document-text-outline" size={21} />
+            <Ionicons color={colors.primary} name="document-text-outline" size={21} />
             <Text style={styles.toolLabel}>Tệp</Text>
           </Pressable>
           <Pressable
@@ -1929,7 +1953,7 @@ export function ChatScreen() {
             ]}
           >
             <Ionicons
-              color={recorderState.isRecording ? colors.white : "#0068FF"}
+              color={recorderState.isRecording ? colors.white : colors.primary}
               name={recorderState.isRecording ? "stop" : "mic-outline"}
               size={21}
             />
@@ -1950,7 +1974,7 @@ export function ChatScreen() {
             }}
             style={styles.toolButton}
           >
-            <Ionicons color="#0068FF" name="happy-outline" size={21} />
+            <Ionicons color={colors.primary} name="happy-outline" size={21} />
             <Text style={styles.toolLabel}>Sticker</Text>
           </Pressable>
           <Pressable
@@ -1961,7 +1985,7 @@ export function ChatScreen() {
             }}
             style={styles.toolButton}
           >
-            <Ionicons color="#0068FF" name="location-outline" size={21} />
+            <Ionicons color={colors.primary} name="location-outline" size={21} />
             <Text style={styles.toolLabel}>Vị trí</Text>
           </Pressable>
         </View>
@@ -1988,7 +2012,7 @@ export function ChatScreen() {
             ]}
           >
             <Ionicons
-              color={showChatTools ? colors.white : "#0068FF"}
+              color={showChatTools ? colors.white : colors.primary}
               name={showChatTools ? "close" : "add-circle-outline"}
               size={24}
             />
@@ -2026,7 +2050,7 @@ export function ChatScreen() {
                 styles.sendButtonDisabled,
             ]}
           >
-            <Ionicons color={colors.white} name="send" size={18} />
+            <Ionicons color={colors.primaryContrast} name="send" size={18} />
           </Pressable>
         </View>
           </>
@@ -2043,9 +2067,9 @@ export function ChatScreen() {
 
 const styles = StyleSheet.create({
   attachmentSummary: { display: "none" },
-  activeWaveBar: { backgroundColor: "#0068FF" },
+  activeWaveBar: { backgroundColor: colors.primary },
   actionRow: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 16,
     borderWidth: 1,
@@ -2064,8 +2088,8 @@ const styles = StyleSheet.create({
   },
   audioPill: {
     alignItems: "center",
-    backgroundColor: "#EAF5FF",
-    borderColor: "#D8EAFF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
@@ -2077,13 +2101,13 @@ const styles = StyleSheet.create({
   },
   avatarSpace: { width: 32 },
   bubble: {
-    borderRadius: 8,
+    borderRadius: 10,
     gap: spacing.xs,
     maxWidth: "78%",
     padding: spacing.md,
   },
   callHistoryMessage: {
-    borderRadius: 8,
+    borderRadius: 10,
     gap: spacing.xs,
     maxWidth: "78%",
     padding: spacing.md,
@@ -2100,10 +2124,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   mineCallHistoryMessage: {
-    backgroundColor: "#DCEEFF",
+    backgroundColor: "rgba(36, 221, 228, 0.18)",
+    borderColor: colors.border,
+    borderWidth: 1,
   },
   composer: {
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderTopColor: colors.border,
     borderTopWidth: 1,
     gap: spacing.sm,
@@ -2111,7 +2137,7 @@ const styles = StyleSheet.create({
   },
   fileIcon: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 12,
     height: 40,
     justifyContent: "center",
@@ -2121,8 +2147,8 @@ const styles = StyleSheet.create({
   fileName: { color: colors.text, fontSize: 14, fontWeight: "800" },
   filePill: {
     alignItems: "center",
-    backgroundColor: "#EAF5FF",
-    borderColor: "#D8EAFF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
@@ -2133,25 +2159,35 @@ const styles = StyleSheet.create({
   fileText: { flex: 1 },
   header: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
+    backgroundColor: "rgba(36, 221, 228, 0.16)",
+    borderBottomColor: "rgba(36, 221, 228, 0.62)",
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
     borderBottomWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md,
     paddingTop: spacing.xl,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 4, width: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   headerTitle: { color: colors.text, flex: 1, fontSize: 18, fontWeight: "900" },
   iconButton: {
     alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
     height: 36,
     justifyContent: "center",
     width: 36,
   },
   disabledIconButton: { opacity: 0.55 },
   input: {
-    backgroundColor: "#F4F8FC",
-    borderColor: "#D8EAFF",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 18,
     borderWidth: 1,
     color: colors.text,
@@ -2174,7 +2210,7 @@ const styles = StyleSheet.create({
   },
   messageActionButton: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
@@ -2208,7 +2244,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   messagesContent: {
-    backgroundColor: "#F4F9FF",
+    backgroundColor: colors.background,
     flexGrow: 1,
     paddingVertical: spacing.md,
   },
@@ -2218,7 +2254,7 @@ const styles = StyleSheet.create({
   },
   mediaLoadError: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 7,
     borderWidth: 1,
@@ -2251,35 +2287,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
-  mineBubble: { backgroundColor: "#DCEEFF" },
-  mineActiveWaveBar: { backgroundColor: "#0068FF" },
+  mineBubble: {
+    backgroundColor: "rgba(36, 221, 228, 0.20)",
+    borderColor: "rgba(36, 221, 228, 0.66)",
+    borderWidth: 1,
+  },
+  mineActiveWaveBar: { backgroundColor: colors.primary },
   mineAudioLabel: { color: colors.text },
   mineAudioPill: {
-    backgroundColor: "#EAF5FF",
-    borderColor: "#D8EAFF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
   },
-  mineFileIcon: { backgroundColor: colors.white },
+  mineFileIcon: { backgroundColor: colors.surfaceElevated },
   mineFileMeta: { color: colors.textMuted },
   mineFileName: { color: colors.text },
   mineFilePill: {
-    backgroundColor: "#EAF5FF",
-    borderColor: "#D8EAFF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
   },
   mineLocationCard: {
-    backgroundColor: "#EAF5FF",
-    borderColor: "#D8EAFF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
   },
   mineMessageActionMenu: { marginRight: spacing.xs },
   mineRow: { justifyContent: "flex-end" },
   mineReplyBox: {
     backgroundColor: "rgba(0, 104, 255, 0.08)",
-    borderLeftColor: "#0068FF",
+    borderLeftColor: colors.primary,
     borderRadius: 6,
     paddingBottom: spacing.xs,
     paddingRight: spacing.sm,
     paddingTop: spacing.xs,
   },
-  mineReplyName: { color: "#0068FF" },
+  mineReplyName: { color: colors.primary },
   mineReplyText: { color: colors.textMuted },
   mineRecalledMessageText: { color: colors.textMuted },
   mineText: { color: colors.text },
@@ -2295,8 +2335,8 @@ const styles = StyleSheet.create({
   newMessageText: { color: colors.white, fontSize: 13, fontWeight: "800" },
   moreToolButton: {
     alignItems: "center",
-    backgroundColor: "#EEF6FF",
-    borderColor: "#D7E9FF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
     height: 40,
@@ -2305,13 +2345,13 @@ const styles = StyleSheet.create({
     width: 40,
   },
   moreToolButtonActive: {
-    backgroundColor: "#2D8CFF",
-    borderColor: "#2D8CFF",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   locationCard: {
     alignItems: "center",
-    backgroundColor: "#EAF5FF",
-    borderColor: "#D8EAFF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
@@ -2368,7 +2408,7 @@ const styles = StyleSheet.create({
   replyComposerText: { flex: 1 },
   replyName: { color: colors.primary, fontSize: 12, fontWeight: "900" },
   replyText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  screen: { backgroundColor: "#F4F9FF", flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
   sendStatus: {
     backgroundColor: colors.background,
     borderRadius: 999,
@@ -2401,6 +2441,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     height: 40,
     justifyContent: "center",
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 9,
     width: 40,
   },
   sendButtonDisabled: { opacity: 0.45 },
@@ -2424,8 +2468,10 @@ const styles = StyleSheet.create({
   senderName: { color: colors.text, fontSize: 12, fontWeight: "900" },
   smallAvatar: { borderRadius: 16, height: 32, width: 32 },
   systemMessageBubble: {
-    backgroundColor: colors.background,
-    borderRadius: 8,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 10,
+    borderWidth: 1,
     maxWidth: "82%",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -2443,20 +2489,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   theirBubble: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: "rgba(152, 80, 232, 0.14)",
+    borderColor: "rgba(152, 80, 232, 0.62)",
     borderWidth: 1,
   },
   theirCallHistoryMessage: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: "rgba(152, 80, 232, 0.14)",
+    borderColor: "rgba(152, 80, 232, 0.62)",
     borderWidth: 1,
   },
   theirMessageActionMenu: { marginLeft: spacing.xs },
   theirRow: { justifyContent: "flex-start" },
   stickerButton: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
@@ -2476,8 +2522,8 @@ const styles = StyleSheet.create({
   },
   toolButton: {
     alignItems: "center",
-    backgroundColor: "#EEF6FF",
-    borderColor: "#D7E9FF",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 14,
     borderWidth: 1,
     gap: 4,

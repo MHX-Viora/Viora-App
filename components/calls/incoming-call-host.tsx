@@ -4,13 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CallAvatarHalo, CallBackdrop } from "@/components/calls/call-visuals";
 import {
   clearIncomingCall,
   subscribeCallLifecycle,
   subscribeIncomingCalls,
 } from "@/features/calls/call-events";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import { rejectVoiceCall } from "@/services/call.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import { CallType } from "@/types/call";
 import type { IncomingCallEvent } from "@/types/call";
 
@@ -79,19 +81,22 @@ export function IncomingCallHost() {
           },
         ]}
       >
+        <CallBackdrop />
         <View style={styles.header}>
           <Text style={styles.headerText}>
             {incomingCall?.callType === CallType.Video ? "Cuộc gọi video đến" : "Cuộc gọi đến"}
           </Text>
         </View>
         <View style={styles.identity}>
-          {incomingCall?.caller.avatarUrl ? (
-            <Image source={{ uri: incomingCall.caller.avatarUrl }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Ionicons color={colors.primary} name="person" size={34} />
-            </View>
-          )}
+          <CallAvatarHalo size={250}>
+            {incomingCall?.caller.avatarUrl ? (
+              <Image source={{ uri: incomingCall.caller.avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Ionicons color={colors.primary} name="person" size={34} />
+              </View>
+            )}
+          </CallAvatarHalo>
           <Text numberOfLines={1} style={styles.name}>
             {incomingCall?.caller.displayName}
           </Text>
@@ -119,16 +124,30 @@ export function IncomingCallHost() {
 }
 
 const styles = StyleSheet.create({
-  accept: { backgroundColor: "#12B76A" },
+  accept: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+  },
   actionItem: { alignItems: "center", gap: spacing.sm, minWidth: 96 },
   actionLabel: { color: colors.white, fontSize: 14, fontWeight: "800" },
   actions: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-around",
+    padding: spacing.md,
     paddingHorizontal: spacing.xl,
     width: "100%",
   },
-  avatar: { borderRadius: 64, height: 128, width: 128 },
+  avatar: {
+    borderColor: colors.primary,
+    borderRadius: 64,
+    borderWidth: 2,
+    height: 128,
+    width: 128,
+  },
   avatarFallback: {
     alignItems: "center",
     backgroundColor: colors.white,
@@ -137,9 +156,26 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 128,
   },
-  button: { alignItems: "center", borderRadius: 999, height: 72, justifyContent: "center", width: 72 },
-  header: { alignItems: "center", minHeight: 44 },
-  headerText: { color: "rgba(255, 255, 255, 0.72)", fontSize: 15, fontWeight: "800" },
+  button: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 64,
+    justifyContent: "center",
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 13,
+    width: 64,
+  },
+  header: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  headerText: { color: colors.textMuted, fontSize: 15, fontWeight: "800" },
   identity: {
     alignItems: "center",
     flex: 1,
@@ -148,7 +184,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   name: { color: colors.white, fontSize: 28, fontWeight: "900", maxWidth: "100%" },
-  reject: { backgroundColor: colors.danger },
-  screen: { backgroundColor: "#101828", flex: 1, paddingHorizontal: spacing.xl },
-  status: { color: "rgba(255, 255, 255, 0.72)", fontSize: 15, fontWeight: "800" },
+  reject: {
+    backgroundColor: colors.danger,
+    shadowColor: colors.danger,
+  },
+  screen: {
+    backgroundColor: colors.background,
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
+  status: { color: colors.textMuted, fontSize: 15, fontWeight: "800" },
 });

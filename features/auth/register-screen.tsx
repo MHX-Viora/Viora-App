@@ -17,10 +17,12 @@ import {
   AuthFooterLink,
   AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { showAppToast } from "@/components/common/app-toast";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { register } from "@/services/auth.service";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export function RegisterScreen() {
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
@@ -80,6 +82,7 @@ export function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AuthBackground compact />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
@@ -183,8 +186,8 @@ export function RegisterScreen() {
 const styles = StyleSheet.create({
   checkbox: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: "#CBD3E1",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 4,
     borderWidth: 1,
     height: 18,
@@ -192,7 +195,10 @@ const styles = StyleSheet.create({
     marginTop: 1,
     width: 18,
   },
-  checkboxChecked: { backgroundColor: "#1239A6", borderColor: "#1239A6" },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
   container: { gap: 36, maxWidth: 430, width: "100%" },
   content: {
     flexGrow: 1,
@@ -201,16 +207,27 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
   flex: { flex: 1 },
-  form: { gap: spacing.lg },
+  form: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
+    borderWidth: 1,
+    gap: spacing.lg,
+    padding: spacing.xl,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 18,
+  },
   heading: { alignItems: "center", gap: spacing.xs },
   linkText: {
-    color: "#07389A",
+    color: colors.primary,
     fontWeight: "700",
     textDecorationLine: "underline",
   },
-  screen: { backgroundColor: "#F8F9FE", flex: 1 },
-  subtitle: { color: "#34425D", fontSize: 14, textAlign: "center" },
+  screen: { backgroundColor: colors.background, flex: 1 },
+  subtitle: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   termsRow: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md },
   termsText: { color: colors.text, flex: 1, fontSize: 14, lineHeight: 20 },
-  title: { color: "#071A38", fontSize: 26, fontWeight: "900" },
+  title: { color: colors.text, fontSize: 26, fontWeight: "900" },
 });

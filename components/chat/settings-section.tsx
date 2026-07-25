@@ -1,7 +1,8 @@
 import type React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 type SettingsSectionProps = {
   children: React.ReactNode;
@@ -20,9 +21,9 @@ export function SettingsSection({ children, title }: SettingsSectionProps) {
 const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   sectionBody: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 14,
     borderWidth: 1,
     overflow: "hidden",
   },

@@ -18,8 +18,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { colors, spacing, typography } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import { normalizeFeedImageUri } from "@/features/feed/image-source";
+import { spacing, typography } from "@/theme";
 import type { CreatePostInput } from "@/types/feed";
 
 type Props = {
@@ -147,7 +148,9 @@ export function CreatePostModal({
       animationType="slide"
       hardwareAccelerated
       navigationBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        if (!isSubmitting) onClose();
+      }}
       presentationStyle="overFullScreen"
       statusBarTranslucent
       transparent
@@ -164,8 +167,12 @@ export function CreatePostModal({
               <Pressable
                 accessibilityLabel="Đóng hộp tạo bài viết"
                 accessibilityRole="button"
+                disabled={isSubmitting}
                 onPress={onClose}
-                style={styles.headerIconButton}
+                style={[
+                  styles.headerIconButton,
+                  isSubmitting && styles.controlDisabled,
+                ]}
               >
                 <Ionicons color={colors.text} name="close" size={22} />
               </Pressable>
@@ -196,11 +203,13 @@ export function CreatePostModal({
                   <Pressable
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
+                    disabled={isSubmitting}
                     key={item.value}
                     onPress={() => setVisibility(item.value)}
                     style={[
                       styles.visibilityButton,
                       selected && styles.visibilityButtonActive,
+                      isSubmitting && styles.controlDisabled,
                     ]}
                   >
                     <Ionicons
@@ -228,6 +237,7 @@ export function CreatePostModal({
           >
             <TextInput
               autoFocus
+              editable={!isSubmitting}
               maxLength={3000}
               multiline
               onChangeText={setBody}
@@ -247,6 +257,7 @@ export function CreatePostModal({
                 <TextInput
                   accessibilityLabel="Link"
                   autoCapitalize="none"
+                  editable={!isSubmitting}
                   onChangeText={setLink}
                   placeholder="Dán link vào đây"
                   placeholderTextColor={colors.textMuted}
@@ -256,6 +267,7 @@ export function CreatePostModal({
                 <Pressable
                   accessibilityLabel="Xóa link"
                   accessibilityRole="button"
+                  disabled={isSubmitting}
                   hitSlop={8}
                   onPress={removeLink}
                   style={styles.removeAttachmentButton}
@@ -279,6 +291,7 @@ export function CreatePostModal({
                 <Pressable
                   accessibilityLabel="Xóa vị trí"
                   accessibilityRole="button"
+                  disabled={isSubmitting}
                   hitSlop={8}
                   onPress={removeLocation}
                   style={styles.removeAttachmentButton}
@@ -316,6 +329,7 @@ export function CreatePostModal({
                       <Pressable
                         accessibilityLabel={`Bỏ ảnh đã chọn ${index + 1}`}
                         accessibilityRole="button"
+                        disabled={isSubmitting}
                         hitSlop={8}
                         onPress={() => onRemoveImage(index)}
                         style={styles.removeImageButton}
@@ -388,19 +402,35 @@ export function CreatePostModal({
           </View>
         </View>
       </KeyboardAvoidingView>
+      {isSubmitting && (
+        <View
+          accessibilityLabel="Đang đăng bài viết"
+          accessibilityRole="progressbar"
+          accessibilityViewIsModal
+          style={styles.submittingOverlay}
+        >
+          <View style={styles.submittingPanel}>
+            <ActivityIndicator color={colors.primary} size="large" />
+            <Text style={styles.submittingTitle}>Đang đăng bài viết</Text>
+            <Text style={styles.submittingText}>
+              Vui lòng chờ, không thoát khỏi màn hình này.
+            </Text>
+          </View>
+        </View>
+      )}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: {
-    backgroundColor: "rgba(15,23,42,0.34)",
+    backgroundColor: "rgba(2, 7, 18, 0.72)",
     flex: 1,
     justifyContent: "flex-end",
   },
   attachmentCard: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 10,
     borderWidth: 1,
@@ -447,9 +477,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
   },
+  controlDisabled: { opacity: 0.45 },
   footerButton: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 10,
     borderWidth: 1,
@@ -469,9 +500,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 28,
   },
-  linkIconWrap: { backgroundColor: "#E7F1FF" },
-  locationIconWrap: { backgroundColor: "#E7F1FF" },
-  photoIconWrap: { backgroundColor: "#E8F8EE" },
+  linkIconWrap: { backgroundColor: colors.primarySoft },
+  locationIconWrap: { backgroundColor: colors.primarySoft },
+  photoIconWrap: { backgroundColor: colors.primarySoft },
   handle: {
     alignSelf: "center",
     backgroundColor: colors.border,
@@ -490,8 +521,10 @@ const styles = StyleSheet.create({
   },
   headerIconButton: {
     alignItems: "center",
-    backgroundColor: "#E4E6EB",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
     borderRadius: 999,
+    borderWidth: 1,
     height: 38,
     justifyContent: "center",
     width: 38,
@@ -525,7 +558,7 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     alignItems: "center",
-    backgroundColor: "rgba(15,23,42,0.72)",
+    backgroundColor: "rgba(5, 10, 20, 0.82)",
     borderRadius: 14,
     height: 28,
     justifyContent: "center",
@@ -553,7 +586,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   singleTile: { height: 220 },
-  submit: { color: colors.white, fontSize: 15, fontWeight: "900" },
+  submit: { color: colors.primaryContrast, fontSize: 15, fontWeight: "900" },
   submitButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
@@ -562,13 +595,52 @@ const styles = StyleSheet.create({
     minHeight: 38,
     minWidth: 68,
     paddingHorizontal: spacing.md,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 10,
   },
   submitDisabled: { opacity: 0.42 },
+  submittingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    backgroundColor: "rgba(2, 7, 18, 0.66)",
+    justifyContent: "center",
+    padding: spacing.xl,
+    zIndex: 20,
+  },
+  submittingPanel: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.primary,
+    borderRadius: 18,
+    borderWidth: 1,
+    maxWidth: 320,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.xl,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    width: "100%",
+  },
+  submittingText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: spacing.xs,
+    textAlign: "center",
+  },
+  submittingTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: "800",
+    marginTop: spacing.md,
+  },
   title: { ...typography.title, color: colors.text, fontSize: 18 },
   visibilityButton: {
     alignItems: "center",
-    backgroundColor: "#F0F2F5",
-    borderColor: "#F0F2F5",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
     borderRadius: 999,
     borderWidth: 1,
     flexDirection: "row",

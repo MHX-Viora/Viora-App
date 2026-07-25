@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { reelsColors as colors } from "@/features/reels/reels-colors";
+import { spacing } from "@/theme";
 import type { ReelSort } from "@/types/reel";
 
 const REELS_HEADER_HEIGHT = 90;
@@ -71,7 +72,11 @@ export function ReelsHeader({
 }
 
 const styles = StyleSheet.create({
-  active: { color: colors.white, fontSize: 14, fontWeight: "700" },
+  active: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   container: {
     height: REELS_HEADER_HEIGHT,
     justifyContent: "flex-end",
@@ -84,8 +89,8 @@ const styles = StyleSheet.create({
   },
   createButton: {
     alignItems: "center",
-    backgroundColor: "rgba(18,24,32,0.5)",
-    borderColor: "rgba(255,255,255,0.4)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 19,
     borderWidth: 1,
     height: 33,
@@ -94,12 +99,13 @@ const styles = StyleSheet.create({
     width: 33,
   },
   createButtonPressed: {
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.primarySoft,
     transform: [{ scale: 0.94 }],
   },
   inactive: {
-    color: "rgba(255,255,255,0.72)",
+    color: colors.textMuted,
     fontSize: 14,
+    fontWeight: "600",
     textAlign: "center",
   },
   row: {
@@ -112,9 +118,13 @@ const styles = StyleSheet.create({
   },
   tab: { alignItems: "center", gap: 6, minWidth: 58 },
   underline: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.primary,
     borderRadius: 1,
     height: 2,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
     width: 30,
   },
 });

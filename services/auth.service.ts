@@ -277,8 +277,9 @@ export const login = async (payload: Credentials): Promise<LoginResponse> => {
   //  Parse JSON ngay tại đây.
   const data = await parseResponseText(response);
 
-  //  API lỗi thì throw Error để màn hình login catch và show alert.
-  if (!response.ok || (isRecord(data) && data.status === 0)) {
+  // `status` trong response là trạng thái tài khoản, không phải cờ thành công.
+  // Chỉ HTTP status quyết định request đăng nhập có thất bại hay không.
+  if (!response.ok) {
     const error = data as ApiError;
     const message = getErrorMessage(error, "Đăng nhập thất bại.");
 

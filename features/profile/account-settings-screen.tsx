@@ -13,7 +13,8 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { showAppToast } from "@/components/common/app-toast";
 import { useUserSettings } from "@/hooks/use-user-settings";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 function SettingsSkeleton() {
   return (
@@ -164,7 +165,7 @@ export function AccountSettingsScreen() {
                 style={[styles.saveButton, isSaving && styles.disabledButton]}
               >
                 {isSaving ? (
-                  <ActivityIndicator color={colors.white} />
+                  <ActivityIndicator color={colors.primaryContrast} />
                 ) : (
                   <Text style={styles.saveText}>Lưu</Text>
                 )}
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  retryText: { color: colors.white, fontWeight: "700" },
+  retryText: { color: colors.primaryContrast, fontWeight: "700" },
   row: {
     alignItems: "center",
     flexDirection: "row",
@@ -252,14 +253,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 48,
   },
-  saveText: { color: colors.white, fontSize: 16, fontWeight: "800" },
+  saveText: {
+    color: colors.primaryContrast,
+    fontSize: 16,
+    fontWeight: "800",
+  },
   screen: { backgroundColor: colors.background, flex: 1 },
   section: { gap: spacing.xs },
   sectionBody: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 14,
+    borderWidth: 1,
     overflow: "hidden",
   },
   sectionTitle: {

@@ -22,7 +22,8 @@ import {
   getFriends,
   rejectFriendRequest,
 } from "@/services/friend.service";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { FriendListItem, FriendStatus } from "@/types/friend";
 
 const PAGE_SIZE = 20;
@@ -351,7 +352,7 @@ const FriendRow = memo(function FriendRow({
           {item.user.isVerified && (
             <Ionicons
               accessibilityLabel="Tài khoản đã xác minh"
-              color={colors.primary}
+              color={colors.verified}
               name="checkmark-circle"
               size={16}
             />
@@ -390,7 +391,7 @@ const FriendRow = memo(function FriendRow({
           style={[styles.confirmButton, isBusy && styles.disabledButton]}
         >
           {isBusy ? (
-            <ActivityIndicator color={colors.white} size="small" />
+            <ActivityIndicator color={colors.primaryContrast} size="small" />
           ) : (
             <Text style={styles.confirmText}>Xác nhận</Text>
           )}
@@ -496,7 +497,11 @@ const styles = StyleSheet.create({
     height: 38,
     justifyContent: "center",
   },
-  confirmText: { color: colors.white, fontSize: 14, fontWeight: "800" },
+  confirmText: {
+    color: colors.primaryContrast,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   disabledButton: { opacity: 0.62 },
   empty: {
     alignItems: "center",
@@ -522,17 +527,20 @@ const styles = StyleSheet.create({
   },
   friendRow: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     minHeight: 78,
     paddingHorizontal: spacing.md,
   },
   header: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -541,14 +549,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   headerSpacer: { width: 40 },
-  listContent: { backgroundColor: colors.surface, paddingBottom: spacing.xl },
+  listContent: { backgroundColor: colors.background, paddingBottom: spacing.xl },
   listHeader: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     padding: spacing.md,
   },
-  loadingWrap: { backgroundColor: colors.surface, flex: 1 },
+  loadingWrap: { backgroundColor: colors.background, flex: 1 },
   mutualText: { color: colors.textMuted, fontSize: 13, marginTop: 3 },
   nameRow: {
     alignItems: "center",
@@ -580,9 +588,12 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   requestRow: {
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
   },
   retryButton: {
     backgroundColor: colors.primary,
@@ -591,11 +602,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  retryText: { color: colors.white, fontSize: 14, fontWeight: "800" },
-  screen: { backgroundColor: colors.surface, flex: 1 },
+  retryText: {
+    color: colors.primaryContrast,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  screen: { backgroundColor: colors.background, flex: 1 },
   searchBox: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 10,
     borderWidth: 1,

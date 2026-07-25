@@ -1,0 +1,16 @@
+export const communityColors = {
+  primary: "#24DDE4",
+  primaryContrast: "#03141B",
+  primarySoft: "rgba(36, 221, 228, 0.14)",
+  background: "#06101C",
+  surface: "rgba(14, 28, 49, 0.76)",
+  surfaceElevated: "rgba(22, 38, 63, 0.68)",
+  border: "rgba(67, 220, 229, 0.58)",
+  borderSubtle: "rgba(139, 166, 198, 0.24)",
+  text: "#F4F9FF",
+  textMuted: "#9EADC0",
+  glow: "#9850E8",
+  white: "#FFFFFF",
+  danger: "#FF5470",
+  verified: "#1D9BF0",
+} as const;

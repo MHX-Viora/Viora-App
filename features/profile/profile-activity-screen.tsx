@@ -23,7 +23,8 @@ import {
 } from "@/services/profile-activity.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { getPostShareLink, getReelShareLink } from "@/services/share-link.service";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { ProfileActivityContentType, ProfileActivityKind } from "@/types/profile-activity";
 import type { Reel } from "@/types/reel";
@@ -407,7 +408,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  retryText: { color: colors.white, fontWeight: "700" },
+  retryText: { color: colors.primaryContrast, fontWeight: "700" },
   screen: { backgroundColor: colors.background, flex: 1 },
   segmentButton: {
     alignItems: "center",
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
   },
   segmentButtonActive: { backgroundColor: colors.primary },
   segmentText: { color: colors.textMuted, fontSize: 14, fontWeight: "800" },
-  segmentTextActive: { color: colors.white },
+  segmentTextActive: { color: colors.primaryContrast },
   skeletonAvatar: {
     backgroundColor: colors.border,
     borderRadius: 20,

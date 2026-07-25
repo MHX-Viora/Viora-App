@@ -1,8 +1,16 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import {
+  CameraView,
+  type CameraType,
+  useCameraPermissions,
+  useMicrophonePermissions,
+} from "expo-camera";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { useEffect, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,8 +23,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { searchHashtags } from "@/services/reel.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Hashtag } from "@/types/reel";
 
 export type SelectedVideo = {
@@ -30,6 +39,7 @@ export function CreateReelModal({
   isSubmitting = false,
   onClose,
   onPickVideo,
+  onRecordVideo,
   onSubmit,
   selectedVideo,
   visible,
@@ -37,6 +47,7 @@ export function CreateReelModal({
   isSubmitting?: boolean;
   onClose: () => void;
   onPickVideo: () => void;
+  onRecordVideo: (video: SelectedVideo) => void;
   onSubmit: (caption: string, hashtags: string[]) => void;
   selectedVideo: SelectedVideo | null;
   visible: boolean;
@@ -83,6 +94,7 @@ export function CreateReelModal({
           onClose={onClose}
           onNext={() => setStep("details")}
           onPickVideo={onPickVideo}
+          onRecordVideo={onRecordVideo}
           selectedVideo={selectedVideo}
         />
       ) : (
@@ -108,13 +120,108 @@ function VideoSelectionStep({
   onClose,
   onNext,
   onPickVideo,
+  onRecordVideo,
   selectedVideo,
 }: {
   onClose: () => void;
   onNext: () => void;
   onPickVideo: () => void;
+  onRecordVideo: (video: SelectedVideo) => void;
   selectedVideo: SelectedVideo | null;
 }) {
+  const cameraRef = useRef<CameraView>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [microphonePermission, requestMicrophonePermission] =
+    useMicrophonePermissions();
+  const [facing, setFacing] = useState<CameraType>("back");
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState<0 | 3 | 10>(0);
+  const [countdown, setCountdown] = useState(0);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      cameraRef.current?.stopRecording();
+    },
+    [],
+  );
+
+  const requestRecordingPermissions = async () => {
+    const camera = cameraPermission?.granted
+      ? cameraPermission
+      : await requestCameraPermission();
+    const microphone = microphonePermission?.granted
+      ? microphonePermission
+      : await requestMicrophonePermission();
+    const granted = camera.granted && microphone.granted;
+    if (!granted) {
+      Alert.alert(
+        "Cần quyền camera và micro",
+        "Hãy cấp quyền để Viora có thể quay video kèm âm thanh.",
+      );
+    }
+    return granted;
+  };
+
+  const recordVideo = async () => {
+    if (!cameraRef.current || !isCameraReady || isRecording) return;
+
+    setIsRecording(true);
+    try {
+      const result = await cameraRef.current.recordAsync({ maxDuration: 180 });
+      if (result?.uri) {
+        onRecordVideo({
+          duration: null,
+          name: `viora-${Date.now()}.mp4`,
+          type: "video/mp4",
+          uri: result.uri,
+        });
+      }
+    } catch (error) {
+      Alert.alert(
+        "Không thể quay video",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
+  const startRecording = async () => {
+    if (!(await requestRecordingPermissions())) return;
+    if (timerSeconds === 0) {
+      await recordVideo();
+      return;
+    }
+
+    setCountdown(timerSeconds);
+    timerRef.current = setInterval(() => {
+      setCountdown((current) => {
+        if (current <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          timerRef.current = null;
+          void recordVideo();
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      cameraRef.current?.stopRecording();
+      return;
+    }
+    void startRecording();
+  };
+
+  const cycleTimer = () =>
+    setTimerSeconds((current) => (current === 0 ? 3 : current === 3 ? 10 : 0));
+
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.cameraScreen}>
       <View style={styles.cameraHeader}>
@@ -137,8 +244,22 @@ function VideoSelectionStep({
       <View style={styles.previewStage}>
         {selectedVideo ? (
           <SelectedVideoPreview video={selectedVideo} />
+        ) : cameraPermission?.granted && microphonePermission?.granted ? (
+          <CameraView
+            enableTorch={torchEnabled && facing === "back"}
+            facing={facing}
+            mode="video"
+            onCameraReady={() => setIsCameraReady(true)}
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+          />
         ) : (
-          <View style={styles.emptyPreview}>
+          <Pressable
+            accessibilityLabel="Cho phép camera và micro"
+            accessibilityRole="button"
+            onPress={() => void requestRecordingPermissions()}
+            style={styles.emptyPreview}
+          >
             <Ionicons
               color="rgba(255,255,255,0.7)"
               name="videocam-outline"
@@ -146,8 +267,38 @@ function VideoSelectionStep({
             />
             <Text style={styles.emptyTitle}>Tạo video của bạn</Text>
             <Text style={styles.emptyText}>Chọn video có sẵn để bắt đầu</Text>
-          </View>
+          </Pressable>
         )}
+        {!selectedVideo &&
+          cameraPermission?.granted &&
+          microphonePermission?.granted && (
+          <View style={styles.cameraTools}>
+            <CameraTool
+              disabled={isRecording || countdown > 0}
+              icon="camera-reverse-outline"
+              label="Đổi camera"
+              onPress={() => {
+                setIsCameraReady(false);
+                setFacing((current) => (current === "back" ? "front" : "back"));
+              }}
+            />
+            <CameraTool
+              active={torchEnabled}
+              disabled={facing === "front" || isRecording || countdown > 0}
+              icon={torchEnabled ? "flash" : "flash-off-outline"}
+              label="Đèn"
+              onPress={() => setTorchEnabled((current) => !current)}
+            />
+            <CameraTool
+              active={timerSeconds > 0}
+              disabled={isRecording || countdown > 0}
+              icon="timer-outline"
+              label={timerSeconds === 0 ? "Hẹn giờ" : `${timerSeconds}s`}
+              onPress={cycleTimer}
+            />
+          </View>
+          )}
+        {countdown > 0 && <Text style={styles.countdown}>{countdown}</Text>}
         {selectedVideo && (
           <View style={styles.selectedBadge}>
             <Ionicons color={colors.white} name="checkmark" size={15} />
@@ -176,14 +327,18 @@ function VideoSelectionStep({
           <Text style={styles.sideLabel}>Tải lên</Text>
         </Pressable>
         <Pressable
-          accessibilityLabel={selectedVideo ? "Chọn video khác" : "Chọn video"}
+          accessibilityLabel={isRecording ? "Dừng quay video" : "Quay video"}
           accessibilityRole="button"
-          onPress={onPickVideo}
-          style={styles.captureOuter}
+          disabled={Boolean(selectedVideo) || countdown > 0}
+          onPress={toggleRecording}
+          style={[styles.captureOuter, isRecording && styles.captureOuterActive]}
         >
-          <View style={styles.captureInner}>
-            <Ionicons color={colors.white} name="add" size={28} />
-          </View>
+          <View
+            style={[
+              styles.captureInner,
+              isRecording && styles.captureInnerRecording,
+            ]}
+          />
         </Pressable>
         <Pressable
           accessibilityLabel="Tiếp tục chỉnh sửa bài đăng"
@@ -201,6 +356,41 @@ function VideoSelectionStep({
         </Pressable>
       </View>
     </SafeAreaView>
+  );
+}
+
+function CameraTool({
+  active = false,
+  disabled = false,
+  icon,
+  label,
+  onPress,
+}: {
+  active?: boolean;
+  disabled?: boolean;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={onPress}
+      style={[
+        styles.cameraTool,
+        active && styles.cameraToolActive,
+        disabled && styles.disabled,
+      ]}
+    >
+      <Ionicons
+        color={active ? colors.primary : colors.white}
+        name={icon}
+        size={22}
+      />
+      <Text style={styles.cameraToolText}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -395,7 +585,7 @@ function VideoDetailsStep({
             <View style={styles.suggestions}>
               {isLoadingTags ? (
                 <View style={styles.suggestionState}>
-                  <ActivityIndicator color="#FE2C55" size="small" />
+                  <ActivityIndicator color={colors.primary} size="small" />
                   <Text style={styles.suggestionMuted}>Đang tìm hashtag...</Text>
                 </View>
               ) : tagError ? (
@@ -459,7 +649,7 @@ function VideoDetailsStep({
                     style={styles.hashtagChip}
                   >
                     <Text style={styles.hashtagChipText}>#{tag.name}</Text>
-                    <Ionicons color="#175CD3" name="close" size={14} />
+                    <Ionicons color={colors.primary} name="close" size={14} />
                   </Pressable>
                 ))}
               </View>
@@ -533,7 +723,7 @@ function formatDuration(duration: number | null) {
 }
 
 const styles = StyleSheet.create({
-  cameraScreen: { backgroundColor: "#080A0D", flex: 1 },
+  cameraScreen: { backgroundColor: colors.reelBackground, flex: 1 },
   cameraHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -543,14 +733,20 @@ const styles = StyleSheet.create({
   },
   roundButton: {
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.34)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
     borderRadius: 22,
+    borderWidth: 1,
     height: 44,
     justifyContent: "center",
     width: 44,
   },
   soundPill: {
     alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
     flexDirection: "row",
     gap: 6,
     paddingHorizontal: spacing.md,
@@ -561,12 +757,14 @@ const styles = StyleSheet.create({
   previewStage: {
     alignSelf: "center",
     aspectRatio: 9 / 16,
-    backgroundColor: "#050505",
-    borderRadius: 18,
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
     flex: 1,
     maxHeight: "100%",
     overflow: "hidden",
-    width: "76%",
+    width: "96%",
   },
   emptyPreview: { alignItems: "center", flex: 1, justifyContent: "center" },
   emptyTitle: {
@@ -582,8 +780,10 @@ const styles = StyleSheet.create({
   },
   selectedBadge: {
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.58)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 14,
+    borderWidth: 1,
     flexDirection: "row",
     gap: 4,
     left: spacing.md,
@@ -595,8 +795,10 @@ const styles = StyleSheet.create({
   selectedText: { color: colors.white, fontSize: 12, fontWeight: "700" },
   previewSoundButton: {
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.58)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 20,
+    borderWidth: 1,
     height: 40,
     justifyContent: "center",
     position: "absolute",
@@ -623,40 +825,87 @@ const styles = StyleSheet.create({
   sideLabel: { color: colors.white, fontSize: 12, fontWeight: "600" },
   galleryIcon: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 8,
+    borderWidth: 1,
     height: 42,
     justifyContent: "center",
     width: 42,
   },
   captureOuter: {
     alignItems: "center",
-    borderColor: colors.white,
+    borderColor: colors.primary,
     borderRadius: 40,
     borderWidth: 4,
     height: 80,
     justifyContent: "center",
     width: 80,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
   },
+  captureOuterActive: { borderColor: colors.danger },
   captureInner: {
     alignItems: "center",
-    backgroundColor: "#FE2C55",
+    backgroundColor: colors.white,
     borderRadius: 32,
     height: 64,
     justifyContent: "center",
     width: 64,
   },
+  captureInnerRecording: {
+    backgroundColor: colors.danger,
+    borderRadius: 10,
+    height: 34,
+    width: 34,
+  },
   nextIcon: {
     alignItems: "center",
-    backgroundColor: "#FE2C55",
+    backgroundColor: colors.primary,
     borderRadius: 21,
     height: 42,
     justifyContent: "center",
     width: 42,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.55,
+    shadowRadius: 8,
+  },
+  cameraTools: {
+    gap: spacing.sm,
+    position: "absolute",
+    right: spacing.sm,
+    top: spacing.lg,
+  },
+  cameraTool: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 2,
+    justifyContent: "center",
+    minHeight: 52,
+    width: 56,
+  },
+  cameraToolActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  cameraToolText: { color: colors.white, fontSize: 9, fontWeight: "700" },
+  countdown: {
+    alignSelf: "center",
+    color: colors.white,
+    fontSize: 72,
+    fontWeight: "900",
+    position: "absolute",
+    top: "42%",
   },
   disabled: { opacity: 0.35 },
   mutedLabel: { opacity: 0.4 },
-  detailsScreen: { backgroundColor: colors.surface, flex: 1 },
+  detailsScreen: { backgroundColor: colors.background, flex: 1 },
   detailsHeader: {
     alignItems: "center",
     borderBottomColor: colors.border,
@@ -676,7 +925,9 @@ const styles = StyleSheet.create({
   formContent: { padding: spacing.lg, paddingBottom: 100 },
   videoSummary: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+    borderWidth: 1,
     borderRadius: 12,
     flexDirection: "row",
     gap: spacing.md,
@@ -701,7 +952,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   input: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -718,7 +969,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   hashtagBox: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -739,14 +990,14 @@ const styles = StyleSheet.create({
   },
   hashtagChip: {
     alignItems: "center",
-    backgroundColor: "#EAF2FF",
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     flexDirection: "row",
     gap: 4,
     paddingHorizontal: spacing.sm,
     paddingVertical: 7,
   },
-  hashtagChipText: { color: "#175CD3", fontSize: 13, fontWeight: "800" },
+  hashtagChipText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
   suggestions: {
     borderTopColor: colors.border,
     borderTopWidth: 1,
@@ -769,7 +1020,7 @@ const styles = StyleSheet.create({
   },
   suggestionHash: {
     alignItems: "center",
-    backgroundColor: "#F2F4F7",
+    backgroundColor: colors.primarySoft,
     borderRadius: 16,
     height: 32,
     justifyContent: "center",
@@ -782,12 +1033,16 @@ const styles = StyleSheet.create({
   footer: { borderTopColor: colors.border, borderTopWidth: 1, padding: spacing.md },
   publishButton: {
     alignItems: "center",
-    backgroundColor: "#FE2C55",
+    backgroundColor: colors.primary,
     borderRadius: 8,
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
     minHeight: 48,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.65,
+    shadowRadius: 10,
   },
   publishButtonDisabled: { opacity: 0.6 },
   publishText: { color: colors.white, fontSize: 16, fontWeight: "800" },
@@ -801,7 +1056,9 @@ const styles = StyleSheet.create({
   },
   submittingPanel: {
     alignItems: "center",
-    backgroundColor: "rgba(20,24,31,0.96)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+    borderWidth: 1,
     borderRadius: 16,
     gap: spacing.sm,
     padding: spacing.lg,

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { notificationColors as colors } from "@/features/notifications/notification-colors";
+import { spacing } from "@/theme";
 
 type Props = {
   onMarkAllRead: () => void;
@@ -32,7 +33,9 @@ export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
 const styles = StyleSheet.create({
   action: {
     backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 999,
+    borderWidth: 1,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

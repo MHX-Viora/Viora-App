@@ -2,7 +2,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 import {
@@ -56,7 +57,7 @@ export function ConversationRow({
           </Text>
           {showVerified ? (
             <Ionicons
-              color={colors.primary}
+              color={colors.verified}
               name="checkmark-circle"
               size={16}
             />
@@ -109,14 +110,22 @@ export function ConversationRow({
 }
 
 const styles = StyleSheet.create({
-  avatar: { borderRadius: 28, height: 56, width: 56 },
+  avatar: {
+    borderColor: colors.borderSubtle,
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
+    width: 48,
+  },
   avatarFallback: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
-    borderRadius: 28,
-    height: 56,
+    borderColor: colors.border,
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
     justifyContent: "center",
-    width: 56,
+    width: 48,
   },
   badge: {
     alignItems: "center",
@@ -131,12 +140,15 @@ const styles = StyleSheet.create({
   preview: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   row: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.62)",
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
-    gap: spacing.md,
-    minHeight: 82,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    marginHorizontal: spacing.lg,
+    minHeight: 72,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

@@ -7,7 +7,8 @@ import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export function ProfileQrModal({
   avatar,
@@ -136,7 +137,7 @@ export function ProfileQrModal({
               <View style={styles.qrWrap}>
                 <QRCode
                   backgroundColor={colors.white}
-                  color={colors.text}
+                  color={colors.primaryContrast}
                   size={210}
                   value={qrValue}
                 />
@@ -367,18 +368,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: spacing.md,
   },
-  primaryButtonText: { color: colors.white, fontSize: 15, fontWeight: "700" },
+  primaryButtonText: {
+    color: colors.primaryContrast,
+    fontSize: 15,
+    fontWeight: "700",
+  },
   qrCard: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 24,
     borderWidth: 1,
     padding: spacing.lg,
-    shadowColor: "#000",
-    shadowOffset: { height: 8, width: 0 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
   },
   qrWrap: {
     backgroundColor: colors.white,
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
   },
   scanResult: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 16,
     bottom: spacing.lg,
     flexDirection: "row",

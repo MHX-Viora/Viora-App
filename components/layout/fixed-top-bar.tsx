@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { colors } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
 
 export const FIXED_TOP_BAR_HEIGHT = 100;
 

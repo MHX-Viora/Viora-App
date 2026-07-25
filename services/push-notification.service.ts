@@ -28,6 +28,14 @@ import {
   emitIncomingCall,
 } from "@/features/calls/call-events";
 import { claimChatNotification } from "@/utils/chat-notification-dedupe";
+import {
+  ensureIncomingCallNotificationChannel,
+  INCOMING_CALL_ACCEPT_ACTION,
+  INCOMING_CALL_LOCAL_SOURCE,
+  INCOMING_CALL_REJECT_ACTION,
+  scheduleIncomingCallNotification,
+} from "@/services/incoming-call-notification.service";
+import { rejectVoiceCall } from "@/services/call.service";
 
 const DEVICE_ID_KEY = "viora.device-id";
 const LAST_FCM_TOKEN_KEY = "viora.last-fcm-token";
@@ -266,6 +274,7 @@ const registerPushNotificationsInternal = async () => {
     }
 
     if (Platform.OS === "android") {
+      await ensureIncomingCallNotificationChannel();
       await Notifications.setNotificationChannelAsync("default", {
         importance: Notifications.AndroidImportance.HIGH,
         name: "default",
@@ -421,6 +430,26 @@ export const setupNotificationHandling = () => {
     });
     if (data.type === "IncomingCall") {
       emitIncomingCall(data);
+      const callerName =
+        typeof data.callerDisplayName === "string"
+          ? data.callerDisplayName
+          : typeof data.callerName === "string"
+            ? data.callerName
+            : typeof data.senderName === "string"
+              ? data.senderName
+              : "";
+      await scheduleIncomingCallNotification({
+        body:
+          remoteMessage.notification?.body ||
+          (callerName
+            ? `${callerName} đang gọi cho bạn`
+            : "Bạn có một cuộc gọi Viora đến"),
+        data,
+        title:
+          remoteMessage.notification?.title ||
+          callerName ||
+          "Cuộc gọi Viora đến",
+      });
       return;
     }
     if (data.type === "MissedCall") {
@@ -440,11 +469,14 @@ export const setupNotificationHandling = () => {
         emitCallLifecycle("CallMissed", data);
       }
       const shouldSuppress = shouldSuppressForegroundNotification(data);
+      const isDelegatedIncomingCall =
+        data.type === "IncomingCall" &&
+        data.deliverySource !== INCOMING_CALL_LOCAL_SOURCE;
       return {
-        shouldPlaySound: !shouldSuppress,
+        shouldPlaySound: !shouldSuppress && !isDelegatedIncomingCall,
         shouldSetBadge: true,
-        shouldShowBanner: !shouldSuppress,
-        shouldShowList: !shouldSuppress,
+        shouldShowBanner: !shouldSuppress && !isDelegatedIncomingCall,
+        shouldShowList: !shouldSuppress && !isDelegatedIncomingCall,
       };
     },
   });
@@ -548,21 +580,52 @@ export const setupNotificationResponseHandling = () => {
       );
     });
 
-  const handleResponse = (response: Notifications.NotificationResponse) => {
-    if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
-      return;
-    }
-
+  const handleResponse = async (
+    response: Notifications.NotificationResponse,
+  ) => {
     const data = response.notification.request.content.data as Record<
       string,
       unknown
     >;
+    const actionIdentifier = response.actionIdentifier;
     const responseKey = String(
       data.messageId ??
         data.notificationId ??
         response.notification.request.identifier,
-    );
+    ) + `:${actionIdentifier}`;
     if (!claimNotificationResponse(responseKey)) return;
+
+    const callId = typeof data.callId === "string" ? data.callId : "";
+    if (actionIdentifier === INCOMING_CALL_REJECT_ACTION) {
+      await Notifications.dismissNotificationAsync(
+        response.notification.request.identifier,
+      );
+      if (!callId) return;
+      try {
+        await rejectVoiceCall(callId);
+        emitCallLifecycle("CallRejected", data);
+      } catch (error) {
+        console.info(
+          "[Push] reject incoming call failed",
+          error instanceof Error ? error.message : String(error),
+        );
+      }
+      return;
+    }
+
+    if (
+      actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER &&
+      actionIdentifier !== INCOMING_CALL_ACCEPT_ACTION
+    ) {
+      return;
+    }
+
+    if (actionIdentifier === INCOMING_CALL_ACCEPT_ACTION) {
+      await Notifications.dismissNotificationAsync(
+        response.notification.request.identifier,
+      );
+    }
+
     logNotificationLifecycle("notification opened", data);
     if (data.type === "MissedCall") {
       emitCallLifecycle("CallMissed", data);
@@ -574,7 +637,7 @@ export const setupNotificationResponseHandling = () => {
   };
 
   Notifications.addNotificationResponseReceivedListener((response) => {
-    handleResponse(response);
+    void handleResponse(response);
   });
 
   void Notifications.getLastNotificationResponseAsync().then((response) => {
@@ -583,7 +646,7 @@ export const setupNotificationResponseHandling = () => {
       "initial notification",
       response.notification.request.content.data as Record<string, unknown>,
     );
-    handleResponse(response);
+    void handleResponse(response);
   });
 
   notificationResponseHandlingConfigured = true;

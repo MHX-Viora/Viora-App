@@ -19,7 +19,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getConversationAttachments } from "@/services/chat.service";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { ChatSharedAttachment } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 
@@ -238,7 +239,9 @@ export function ConversationAttachmentsScreen() {
             style={[styles.tab, type === tab.type && styles.activeTab]}
           >
             <Ionicons
-              color={type === tab.type ? colors.white : colors.textMuted}
+              color={
+                type === tab.type ? colors.primaryContrast : colors.textMuted
+              }
               name={tab.icon}
               size={16}
             />
@@ -346,7 +349,7 @@ export function ConversationAttachmentsScreen() {
 const styles = StyleSheet.create({
   activeWaveBar: { backgroundColor: colors.danger },
   activeTab: { backgroundColor: colors.primary, borderColor: colors.primary },
-  activeTabText: { color: colors.white },
+  activeTabText: { color: colors.primaryContrast },
   audioBody: { flex: 1, gap: 5 },
   center: {
     alignItems: "center",
@@ -368,9 +371,9 @@ const styles = StyleSheet.create({
   fileName: { color: colors.text, fontSize: 14, fontWeight: "800" },
   fileRow: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
@@ -379,7 +382,7 @@ const styles = StyleSheet.create({
   },
   fileText: { flex: 1 },
   header: {
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     padding: spacing.md,
@@ -415,7 +418,7 @@ const styles = StyleSheet.create({
   tab: {
     alignItems: "center",
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.xs,
@@ -424,7 +427,7 @@ const styles = StyleSheet.create({
   },
   tabText: { color: colors.textMuted, fontSize: 13, fontWeight: "800" },
   tabs: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md,
@@ -436,7 +439,7 @@ const styles = StyleSheet.create({
   },
   viewer: {
     alignItems: "center",
-    backgroundColor: colors.reelBackground,
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
   },

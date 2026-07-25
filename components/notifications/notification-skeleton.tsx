@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { notificationColors as colors } from "@/features/notifications/notification-colors";
+import { spacing } from "@/theme";
 
 export function NotificationSkeleton() {
   const opacity = useRef(new Animated.Value(0.45)).current;
@@ -68,8 +69,9 @@ const styles = StyleSheet.create({
   row: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    borderColor: colors.borderRead,
+    borderRadius: 14,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
     padding: spacing.md,

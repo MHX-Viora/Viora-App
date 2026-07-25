@@ -3,7 +3,8 @@ import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export default function ConversationReportRoute() {
   const insets = useSafeAreaInsets();
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -61,6 +62,10 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
     height: 36,
     justifyContent: "center",
     width: 36,

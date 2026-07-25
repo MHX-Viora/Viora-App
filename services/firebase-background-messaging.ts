@@ -7,6 +7,10 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
 import { getCurrentNotificationData } from "@/utils/push-notification-time";
+import {
+  INCOMING_CALL_CHANNEL_ID,
+  replaceDelegatedIncomingCallNotification,
+} from "@/services/incoming-call-notification.service";
 
 const firstText = (...values: unknown[]) => {
   for (const value of values) {
@@ -42,6 +46,37 @@ if (Platform.OS !== "web") {
       sentTime: remoteMessage.sentTime,
       ttl: remoteMessage.ttl,
     });
+
+    if (
+      data.type === "IncomingCall" &&
+      remoteMessage.notification?.android?.channelId !==
+        INCOMING_CALL_CHANNEL_ID
+    ) {
+      const callerName = firstText(
+        data.callerDisplayName,
+        data.callerName,
+        data.senderName,
+        data.displayName,
+      );
+      const notificationId = await replaceDelegatedIncomingCallNotification({
+        body:
+          remoteMessage.notification?.body ||
+          (callerName
+            ? `${callerName} đang gọi cho bạn`
+            : "Bạn có một cuộc gọi Viora đến"),
+        callId: firstText(data.callId),
+        data: notificationData,
+        title:
+          remoteMessage.notification?.title ||
+          callerName ||
+          "Cuộc gọi Viora đến",
+      });
+      console.info("[FCM background] incoming call notification scheduled", {
+        messageId: remoteMessage.messageId,
+        notificationId,
+      });
+      return;
+    }
 
     if (remoteMessage.notification) {
       console.info("[FCM background] system notification delegated", {

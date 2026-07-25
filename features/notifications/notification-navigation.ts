@@ -53,7 +53,22 @@ export const navigateNotification = (
   }
 
   const reference = notification.reference;
-  if (!reference) return;
+  if (!reference) {
+    appRouter.push({
+      pathname: "/notification/[notificationId]",
+      params: {
+        avatarUrl: notification.sender?.avatarUrl ?? "",
+        content: notification.content,
+        createdAt: notification.createdAt,
+        imageUrl: notification.imageUrl ?? "",
+        notificationId: notification.id,
+        senderName:
+          notification.sender?.displayName ?? "Hệ thống Viora",
+        title: notification.title,
+      },
+    });
+    return;
+  }
 
   if (reference.type === 0) {
     appRouter.push({ pathname: "/users/[userId]", params: { userId: reference.id } });

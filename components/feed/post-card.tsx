@@ -14,8 +14,9 @@ import {
 
 import { showAppToast } from "@/components/common/app-toast";
 import { ViewableImage } from "@/components/common/viewable-image";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import { deletePost, reportPost } from "@/services/post.service";
-import { colors, spacing, typography } from "@/theme";
+import { spacing, typography } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 
 const reactions = [
@@ -312,7 +313,7 @@ export function PostCard({
             {post.isAuthorVerified && (
               <Ionicons
                 accessibilityLabel="Tài khoản đã xác minh"
-                color={colors.primary}
+                color={colors.verified}
                 name="checkmark-circle"
                 size={16}
               />
@@ -642,10 +643,11 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: colors.border,
-    borderTopWidth: 1,
     marginBottom: spacing.sm,
+    overflow: "hidden",
     position: "relative",
   },
   dangerText: { color: colors.danger },
@@ -692,7 +694,7 @@ const styles = StyleSheet.create({
   },
   reactionPicker: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 999,
     borderWidth: 1,
@@ -718,7 +720,7 @@ const styles = StyleSheet.create({
   },
   reportTitle: { color: colors.text, fontSize: 15, fontWeight: "800" },
   sheet: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     marginBottom: -1,

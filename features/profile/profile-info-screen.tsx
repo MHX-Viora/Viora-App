@@ -3,7 +3,8 @@ import { router } from "expo-router";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 type InfoSection = {
   title: string;
@@ -48,10 +49,10 @@ export function ProfileInfoScreen({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 14,
+    borderWidth: 1,
     gap: spacing.xs,
     padding: spacing.md,
   },

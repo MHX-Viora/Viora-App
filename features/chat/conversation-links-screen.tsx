@@ -16,7 +16,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getConversationLinks } from "@/services/chat.service";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { ChatSharedLink } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
   empty: { color: colors.textMuted, padding: spacing.xl, textAlign: "center" },
   header: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -231,14 +232,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  retryText: { color: colors.white, fontSize: 14, fontWeight: "800" },
+  retryText: {
+    color: colors.primaryContrast,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   row: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     padding: spacing.md,
   },
   screen: { backgroundColor: colors.background, flex: 1 },

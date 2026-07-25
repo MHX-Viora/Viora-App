@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import type React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors } from "@/theme";
+import { reelsColors as colors } from "@/features/reels/reels-colors";
 
 type ReelActionProps = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -38,7 +38,7 @@ export function ReelAction({
         <Ionicons
           color={selected ? selectedColor : colors.white}
           name={icon}
-          size={31}
+          size={24}
         />
       </Pressable>
       {value && <Text style={styles.actionValue}>{value}</Text>}
@@ -50,16 +50,24 @@ const styles = StyleSheet.create({
   actionGroup: { alignItems: "center", gap: 0 },
   actionValue: {
     color: colors.white,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "600",
     lineHeight: 14,
-    marginTop: -8,
+    marginTop: -5,
   },
   circleAction: {
     alignItems: "center",
-    borderRadius: 28,
-    height: 56,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 23,
+    borderWidth: 1,
+    elevation: 5,
+    height: 46,
     justifyContent: "center",
-    width: 56,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 2, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    width: 46,
   },
 });

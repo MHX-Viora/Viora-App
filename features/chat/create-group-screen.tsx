@@ -131,7 +131,7 @@ const FriendRow = memo(function FriendRow({
             {friend.displayName}
           </Text>
           {friend.isVerified ? (
-            <Ionicons color={colors.primary} name="checkmark-circle" size={16} />
+            <Ionicons color={colors.verified} name="checkmark-circle" size={16} />
           ) : null}
         </View>
         <Text style={styles.statusText}>

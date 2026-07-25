@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReelsGridViewer } from "@/components/reels/reels-grid-viewer";
-import { colors, spacing } from "@/theme";
+import { reelsColors as colors } from "@/features/reels/reels-colors";
+import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 
 export function ReelsSearchModal({
@@ -253,6 +254,10 @@ function EmptySearch({
 const styles = StyleSheet.create({
   backButton: {
     alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 20,
+    borderWidth: 1,
     height: 40,
     justifyContent: "center",
     width: 40,
@@ -277,11 +282,12 @@ const styles = StyleSheet.create({
   },
   floatingInput: { color: colors.white },
   floatingSearchBox: {
-    backgroundColor: "rgba(15,23,42,0.42)",
-    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
   },
   header: {
     alignItems: "center",
+    backgroundColor: colors.surface,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -295,10 +301,10 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingVertical: 0,
   },
-  screen: { backgroundColor: colors.surface, flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
   searchBox: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 20,
     borderWidth: 1,
@@ -314,6 +320,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   skeletonItem: {
+    backgroundColor: colors.surface,
+    borderColor: colors.borderSubtle,
+    borderRadius: 10,
+    borderWidth: 1,
     paddingBottom: spacing.md,
     paddingHorizontal: 3,
     width: "33.333%",

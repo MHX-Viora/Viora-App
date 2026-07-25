@@ -6,6 +6,11 @@ import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
+  CallAvatarHalo,
+  CallBackdrop,
+} from "@/components/calls/call-visuals";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import {
   clearActiveVoiceCall,
   clearIncomingCall,
   getActiveVoiceCall,
@@ -32,7 +37,7 @@ import {
   startCallRealtime,
 } from "@/services/call-realtime.service";
 import { createVoicePeer } from "@/services/webrtc-call.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import { CallStatus, CallType } from "@/types/call";
 
 type VoicePeer = Awaited<ReturnType<typeof createVoicePeer>>;
@@ -520,6 +525,7 @@ export function VoiceCallScreen() {
 
   return (
     <View style={[styles.screen, { paddingBottom: Math.max(insets.bottom, spacing.xl), paddingTop: Math.max(insets.top, spacing.xl) }]}>
+      <CallBackdrop />
       {isVideoCall && remoteStreamUrl ? (
         <RTCView objectFit="cover" streamURL={remoteStreamUrl} style={styles.remoteVideo} />
       ) : null}
@@ -539,13 +545,15 @@ export function VoiceCallScreen() {
       </View>
       <View style={styles.identity}>
         {!isVideoCall || !remoteStreamUrl ? (
-          avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Ionicons color={colors.primary} name="person" size={48} />
-            </View>
-          )
+          <CallAvatarHalo>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Ionicons color={colors.primary} name="person" size={48} />
+              </View>
+            )}
+          </CallAvatarHalo>
         ) : null}
         {!isVideoCall ? (
           <>
@@ -613,7 +621,13 @@ export function VoiceCallScreen() {
 }
 
 const styles = StyleSheet.create({
-  avatar: { borderRadius: 56, height: 112, width: 112 },
+  avatar: {
+    borderColor: "rgba(36, 221, 228, 0.82)",
+    borderRadius: 56,
+    borderWidth: 2,
+    height: 112,
+    width: 112,
+  },
   avatarFallback: {
     alignItems: "center",
     backgroundColor: colors.white,
@@ -624,18 +638,33 @@ const styles = StyleSheet.create({
   },
   controls: {
     alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
+    padding: spacing.md,
   },
-  controlActive: { backgroundColor: "rgba(0, 104, 255, 0.8)" },
-  controlDisabled: { backgroundColor: "rgba(240, 68, 56, 0.55)" },
+  controlActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
+  controlDisabled: {
+    backgroundColor: "rgba(255, 84, 112, 0.28)",
+    borderColor: colors.danger,
+  },
   endButton: {
     alignItems: "center",
     backgroundColor: colors.danger,
     borderRadius: 30,
     height: 60,
     justifyContent: "center",
+    shadowColor: colors.danger,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 14,
     transform: [{ rotate: "135deg" }],
     width: 60,
   },
@@ -658,11 +687,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.text,
   },
-  screen: { backgroundColor: "#101828", flex: 1, paddingHorizontal: spacing.xl },
+  screen: {
+    backgroundColor: colors.background,
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+  },
   secondaryButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
+    backgroundColor: "rgba(14, 28, 49, 0.72)",
+    borderColor: colors.borderSubtle,
     borderRadius: 26,
+    borderWidth: 1,
     height: 52,
     justifyContent: "center",
     width: 52,
@@ -670,8 +705,13 @@ const styles = StyleSheet.create({
   status: { color: "rgba(255, 255, 255, 0.72)", fontSize: 15, fontWeight: "800" },
   topBar: {
     alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
     flexDirection: "row",
     minHeight: 48,
+    paddingHorizontal: spacing.xs,
   },
   videoHeaderInfo: {
     alignItems: "center",

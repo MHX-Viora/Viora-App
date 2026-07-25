@@ -100,7 +100,7 @@ function ForwardTargetRow({
             {title}
           </Text>
           {isVerified ? (
-            <Ionicons color={colors.primary} name="checkmark-circle" size={16} />
+            <Ionicons color={colors.verified} name="checkmark-circle" size={16} />
           ) : null}
         </View>
         <Text numberOfLines={1} style={styles.subtitle}>

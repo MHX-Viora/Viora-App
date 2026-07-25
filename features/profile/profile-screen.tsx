@@ -8,6 +8,7 @@ import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { ProfileQrModal } from "@/components/profile/profile-qr-modal";
 import { ProfileSettingsSheet } from "@/components/profile/profile-settings-sheet";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { logout } from "@/services/auth.service";
 import { getPosts } from "@/services/feed.service";
@@ -22,7 +23,6 @@ import {
 } from "@/services/share-link.service";
 import { getMyStatistics } from "@/services/user.service";
 import { clearSession, getSession } from "@/stores/session-store";
-import { colors } from "@/theme";
 import type { User } from "@/types/auth";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
@@ -410,13 +410,13 @@ export function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { backgroundColor: colors.surface, flexGrow: 1 },
+  content: { backgroundColor: colors.background, flexGrow: 1 },
   loading: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
   },
   loadingText: { color: colors.textMuted, fontSize: 14 },
-  screen: { backgroundColor: colors.surface, flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
 });

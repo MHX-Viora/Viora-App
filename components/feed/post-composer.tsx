@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
 import { FixedTopBar } from "@/components/layout/fixed-top-bar";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export function PostComposer({ avatar, onCreatePress, onImagePress, onSearchPress }: { avatar: string; onCreatePress: () => void; onImagePress: () => void; onSearchPress: () => void }) {
   return (
@@ -48,14 +49,21 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: colors.border,
+    elevation: 8,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 4, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
   },
   prompt: {
-    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
     borderRadius: 18,
     borderWidth: 1,
     flex: 1,

@@ -18,7 +18,7 @@ import { formatReelCount } from "@/services/reel.service";
 import { colors, spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 
-const ITEM_GAP = 1;
+const ITEM_GAP = 0;
 const GRID_GAP = 2;
 const VIDEO_TILE_WIDTH = (Dimensions.get("window").width - GRID_GAP * 2) / 3;
 

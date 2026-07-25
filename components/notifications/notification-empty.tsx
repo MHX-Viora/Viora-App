@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { notificationColors as colors } from "@/features/notifications/notification-colors";
+import { spacing } from "@/theme";
 
 type Props = {
   message?: string;

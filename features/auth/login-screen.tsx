@@ -16,11 +16,13 @@ import {
   AuthFooterLink,
   AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { login, saveAuthSession } from "@/services/auth.service";
 import { registerPushNotifications } from "@/services/push-notification.service";
 import { startRealtime } from "@/services/realtime.service";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export function LoginScreen() {
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
@@ -87,8 +89,7 @@ export function LoginScreen() {
   };
   return (
     <SafeAreaView style={styles.screen}>
-      <View pointerEvents="none" style={styles.blueGlow} />
-      <View pointerEvents="none" style={styles.cyanGlow} />
+      <AuthBackground compact />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
@@ -189,26 +190,16 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  blueGlow: {
-    backgroundColor: "#DDE4FF",
-    borderRadius: 220,
-    height: 440,
-    left: -110,
-    position: "absolute",
-    right: -30,
-    top: -180,
-    transform: [{ rotate: "-12deg" }],
-  },
   card: {
-    backgroundColor: "rgba(255,255,255,0.94)",
-    borderColor: "rgba(255,255,255,0.85)",
-    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 18,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.xl,
-    shadowColor: "#5D7396",
-    shadowOffset: { height: 6, width: 0 },
-    shadowOpacity: 0.12,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.28,
     shadowRadius: 18,
   },
   container: { gap: spacing.xl, maxWidth: 430, width: "100%" },
@@ -218,19 +209,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
   },
-  cyanGlow: {
-    backgroundColor: "#E1FBFC",
-    borderRadius: 240,
-    bottom: -170,
-    height: 400,
-    left: -60,
-    position: "absolute",
-    right: -110,
-    transform: [{ rotate: "10deg" }],
-  },
   flex: { flex: 1 },
   forgotButton: { alignSelf: "flex-end", marginTop: -spacing.xs },
-  forgotText: { color: "#3157B7", fontSize: 13, fontWeight: "700" },
+  forgotText: { color: colors.primary, fontSize: 13, fontWeight: "700" },
   googleButton: {
     alignItems: "center",
     backgroundColor: "#E7EEFC",
@@ -245,10 +226,10 @@ const styles = StyleSheet.create({
   googleText: { color: colors.text, fontSize: 16, fontWeight: "700" },
   heading: { alignItems: "center", gap: spacing.xs },
   pressed: { opacity: 0.8 },
-  screen: { backgroundColor: "#F4F7FF", flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
   separator: { alignItems: "center", flexDirection: "row", gap: spacing.md },
   separatorLine: { backgroundColor: "#CCD3E0", flex: 1, height: 1 },
   separatorText: { color: colors.textMuted, fontSize: 12 },
-  subtitle: { color: "#304263", fontSize: 14, textAlign: "center" },
-  title: { color: "#071A38", fontSize: 26, fontWeight: "900" },
+  subtitle: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
+  title: { color: colors.text, fontSize: 26, fontWeight: "900" },
 });

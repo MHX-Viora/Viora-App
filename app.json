@@ -30,6 +30,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS",
+        "android.permission.USE_FULL_SCREEN_INTENT",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA"
@@ -59,15 +60,16 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/with-notifee-call-config",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/viora_logo.png",
-          "imageWidth": 200,
+          "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#FFFFFF",
           "dark": {
-            "backgroundColor": "#ffffff"
+            "backgroundColor": "#FFFFFF"
           }
         }
       ],
@@ -81,7 +83,9 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Cho phép Viora dùng camera để quét mã QR hồ sơ."
+          "cameraPermission": "Cho phép Viora dùng camera để quay video và quét mã QR hồ sơ.",
+          "microphonePermission": "Cho phép Viora dùng micro để ghi âm khi quay video.",
+          "recordAudioAndroid": true
         }
       ],
       [

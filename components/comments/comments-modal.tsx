@@ -25,7 +25,8 @@ import {
   type UiComment,
   useCommentsModal,
 } from "@/components/comments/use-comments-modal";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 const QUICK_EMOJIS = ["❤️", "😂", "😍", "🔥", "👏", "👍"];
 
@@ -64,7 +65,7 @@ export function CommentsModal({
 
   useEffect(() => {
     if (visible) {
-      void SystemUI.setBackgroundColorAsync(colors.white);
+      void SystemUI.setBackgroundColorAsync(colors.background);
     }
   }, [visible]);
 
@@ -393,7 +394,7 @@ function CommentContent({
             </Pressable>
             {isVerified && (
               <Ionicons
-                color={colors.primary}
+                color={colors.verified}
                 name="checkmark-circle"
                 size={16}
               />
@@ -435,7 +436,7 @@ function CommentContent({
                   </Text>
                 ) : null}
               </Pressable>
-              <Pressable onPress={onReply}>
+              <Pressable onPress={onReply} style={styles.replyAction}>
                 <Text style={styles.metaText}>Trả lời</Text>
               </Pressable>
             </>
@@ -492,8 +493,14 @@ const styles = StyleSheet.create({
   authorRow: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
   avatar: {
     backgroundColor: colors.border,
+    borderColor: colors.primary,
     borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 1,
     height: AVATAR_SIZE,
+    shadowColor: colors.glow,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.45,
+    shadowRadius: 7,
     width: AVATAR_SIZE,
   },
   cancelReply: { color: colors.primary, fontSize: 13, fontWeight: "800" },
@@ -512,12 +519,21 @@ const styles = StyleSheet.create({
   },
   commentBody: { flex: 1 },
   commentBubble: {
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
     borderRadius: 16,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  commentGroup: { paddingVertical: spacing.xs },
+  commentGroup: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginHorizontal: spacing.sm,
+    marginVertical: spacing.xs,
+    overflow: "hidden",
+    paddingVertical: spacing.xs,
+  },
   commentRow: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -525,10 +541,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   composer: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    elevation: 12,
     left: 0,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -539,8 +554,10 @@ const styles = StyleSheet.create({
   content: { color: colors.text, fontSize: 15, lineHeight: 22, marginTop: 3 },
   emojiButton: {
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
     borderRadius: 16,
+    borderWidth: 1,
     height: 32,
     justifyContent: "center",
     width: 32,
@@ -558,6 +575,7 @@ const styles = StyleSheet.create({
   footer: { padding: spacing.md },
   header: {
     alignItems: "center",
+    backgroundColor: colors.surface,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -575,7 +593,7 @@ const styles = StyleSheet.create({
   },
   inputRow: {
     alignItems: "flex-end",
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 22,
     borderWidth: 1,
@@ -584,11 +602,21 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   keyboardView: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.background,
     flex: 1,
     position: "relative",
   },
-  likeAction: { alignItems: "center", flexDirection: "row", gap: 4 },
+  likeAction: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 4,
+    minHeight: 28,
+    paddingHorizontal: spacing.sm,
+  },
   likeCount: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
   likedCount: { color: colors.primary, fontWeight: "800" },
   list: { flex: 1 },
@@ -601,9 +629,18 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
   },
   metaText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  modalRoot: { backgroundColor: colors.white, flex: 1 },
+  modalRoot: { backgroundColor: colors.background, flex: 1 },
   repliesButton: { marginLeft: 62, paddingVertical: spacing.xs },
   replyButton: { color: colors.textMuted, fontSize: 13, fontWeight: "800" },
+  replyAction: {
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 28,
+    paddingHorizontal: spacing.sm,
+  },
   replyingBar: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
@@ -620,14 +657,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
-  replyIndent: { marginLeft: 34 },
+  replyIndent: {
+    borderLeftColor: colors.border,
+    borderLeftWidth: 1,
+    marginLeft: 34,
+  },
   replyLoading: {
     alignItems: "flex-start",
     marginLeft: 62,
     paddingVertical: spacing.xs,
   },
   replyMention: { color: colors.primary, fontWeight: "800" },
-  screen: { backgroundColor: colors.white, flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
   sendButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
@@ -652,7 +693,7 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
   },
   skeletonBubble: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceElevated,
     borderRadius: 16,
     gap: spacing.sm,
     paddingHorizontal: spacing.md,

@@ -1,7 +1,8 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export function ProfileHeader({
   onOpenFriends,
@@ -52,17 +53,22 @@ export function ProfileHeader({
 const styles = StyleSheet.create({
   header: {
     alignItems: "center",
-    backgroundColor: "#F7F8FD",
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xs,
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingTop: 40,
   },
   headerAction: {
     alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 18,
     height: 40,
     justifyContent: "center",
     width: 40,

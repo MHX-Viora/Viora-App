@@ -36,6 +36,7 @@ import {
   subscribeRealtimeConversationMutedChanges,
   subscribeRealtimeConversationPinnedChanges,
 } from "@/features/chat/chat-events";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { getGroupShareLink } from "@/services/share-link.service";
 import {
@@ -54,7 +55,7 @@ import {
   transferGroupOwner,
 } from "@/services/chat.service";
 import { getUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { ChatGroupMember, Conversation } from "@/types/chat";
 import {
   canManageGroup,
@@ -743,6 +744,13 @@ export function ConversationSettingsScreen() {
                 <Switch
                   disabled={loading !== null}
                   onValueChange={togglePin}
+                  thumbColor={
+                    conversation.isPinned ? colors.primary : colors.textMuted
+                  }
+                  trackColor={{
+                    false: colors.borderSubtle,
+                    true: colors.primarySoft,
+                  }}
                   value={conversation.isPinned}
                 />
               }
@@ -755,6 +763,13 @@ export function ConversationSettingsScreen() {
                 <Switch
                   disabled={loading !== null}
                   onValueChange={toggleMute}
+                  thumbColor={
+                    conversation.isMuted ? colors.primary : colors.textMuted
+                  }
+                  trackColor={{
+                    false: colors.borderSubtle,
+                    true: colors.primarySoft,
+                  }}
                   value={conversation.isMuted}
                 />
               }
@@ -865,10 +880,10 @@ export function ConversationSettingsScreen() {
               ]}
             >
               {loading === "leave" ? (
-                <ActivityIndicator color={colors.white} />
+                <ActivityIndicator color={colors.danger} />
               ) : (
                 <>
-                  <Ionicons color={colors.white} name="log-out-outline" size={20} />
+                  <Ionicons color={colors.danger} name="log-out-outline" size={20} />
                   <Text style={styles.leaveText}>Rời nhóm</Text>
                 </>
               )}
@@ -885,10 +900,10 @@ export function ConversationSettingsScreen() {
               ]}
             >
               {loading === "delete" ? (
-                <ActivityIndicator color={colors.white} />
+                <ActivityIndicator color={colors.danger} />
               ) : (
                 <>
-                  <Ionicons color={colors.white} name="trash-outline" size={20} />
+                  <Ionicons color={colors.danger} name="trash-outline" size={20} />
                   <Text style={styles.leaveText}>Giải tán nhóm</Text>
                 </>
               )}
@@ -929,7 +944,7 @@ export function ConversationSettingsScreen() {
                 <View style={styles.groupQrBox}>
                   <QRCode
                     backgroundColor={colors.white}
-                    color={colors.text}
+                    color={colors.primaryContrast}
                     size={190}
                     value={groupShareLink}
                   />
@@ -948,7 +963,11 @@ export function ConversationSettingsScreen() {
                   onPress={() => void shareGroupLink()}
                   style={styles.shareButton}
                 >
-                  <Ionicons color={colors.white} name="share-social-outline" size={18} />
+                  <Ionicons
+                    color={colors.primaryContrast}
+                    name="share-social-outline"
+                    size={18}
+                  />
                   <Text style={styles.shareButtonText}>Chia sẻ đường dẫn</Text>
                 </Pressable>
               </>
@@ -1052,7 +1071,7 @@ export function ConversationSettingsScreen() {
                 style={styles.renamePrimary}
               >
                 {loading === "name" ? (
-                  <ActivityIndicator color={colors.white} size="small" />
+                  <ActivityIndicator color={colors.primaryContrast} size="small" />
                 ) : (
                   <Text style={styles.renamePrimaryText}>Lưu</Text>
                 )}
@@ -1066,11 +1085,19 @@ export function ConversationSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  avatar: { borderRadius: 44, height: 88, width: 88 },
+  avatar: {
+    borderColor: colors.border,
+    borderRadius: 44,
+    borderWidth: 2,
+    height: 88,
+    width: 88,
+  },
   avatarFallback: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
+    borderColor: colors.border,
     borderRadius: 44,
+    borderWidth: 2,
     height: 88,
     justifyContent: "center",
     width: 88,
@@ -1082,12 +1109,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: spacing.xl,
   },
-  content: { gap: spacing.lg, padding: spacing.md },
+  content: { gap: spacing.md, padding: spacing.md },
   disabledAction: { opacity: 0.65 },
   errorText: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   header: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -1103,20 +1130,30 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.borderSubtle,
+    borderRadius: 18,
+    borderWidth: 1,
     height: 36,
     justifyContent: "center",
     width: 36,
   },
   info: {
     alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 14,
+    borderWidth: 1,
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.lg,
   },
   leaveButton: {
     alignItems: "center",
-    backgroundColor: colors.danger,
-    borderRadius: 8,
+    backgroundColor: "rgba(255, 84, 112, 0.12)",
+    borderColor: "rgba(255, 84, 112, 0.58)",
+    borderRadius: 14,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
@@ -1125,15 +1162,17 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     alignItems: "center",
-    backgroundColor: colors.danger,
-    borderRadius: 8,
+    backgroundColor: "rgba(255, 84, 112, 0.12)",
+    borderColor: "rgba(255, 84, 112, 0.58)",
+    borderRadius: 14,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
     minHeight: 48,
     paddingHorizontal: spacing.md,
   },
-  leaveText: { color: colors.white, fontSize: 15, fontWeight: "900" },
+  leaveText: { color: colors.danger, fontSize: 15, fontWeight: "900" },
   memberCount: { color: colors.textMuted, fontSize: 13, fontWeight: "700" },
   modalOverlay: {
     alignItems: "center",
@@ -1154,7 +1193,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  retryText: { color: colors.white, fontSize: 14, fontWeight: "800" },
+  retryText: {
+    color: colors.primaryContrast,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   emptyOwnerCandidates: { flexGrow: 1, justifyContent: "center" },
   emptyOwnerText: {
     color: colors.textMuted,
@@ -1228,7 +1271,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 42,
   },
-  renamePrimaryText: { color: colors.white, fontSize: 14, fontWeight: "900" },
+  renamePrimaryText: {
+    color: colors.primaryContrast,
+    fontSize: 14,
+    fontWeight: "900",
+  },
   renameSecondary: {
     alignItems: "center",
     backgroundColor: colors.background,
@@ -1260,7 +1307,11 @@ const styles = StyleSheet.create({
     marginTop: -spacing.xs,
     minHeight: 44,
   },
-  shareButtonText: { color: colors.white, fontSize: 15, fontWeight: "900" },
+  shareButtonText: {
+    color: colors.primaryContrast,
+    fontSize: 15,
+    fontWeight: "900",
+  },
   shareHandle: {
     alignSelf: "center",
     backgroundColor: colors.border,

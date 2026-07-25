@@ -49,11 +49,54 @@ const isReferenceType = (value: number): value is NotificationReferenceType =>
 const mapSender = (value: unknown): NotificationSender | null => {
   if (!isRecord(value)) return null;
 
+  const displayName = toString(
+    value.displayName,
+    toString(value.name, toString(value.fullName)),
+  );
+  const avatarUrl = toString(
+    value.avatarUrl,
+    toString(value.avatar, toString(value.imageUrl)),
+  );
+  const id = toString(value.id, toString(value.userId));
+  if (!displayName && !avatarUrl && !id) return null;
+
   return {
-    avatarUrl: toString(value.avatarUrl),
-    displayName: toString(value.displayName, "Viora"),
-    id: toString(value.id),
+    avatarUrl,
+    displayName: displayName || "Ban quản trị Viora",
+    id,
     isVerified: value.isVerified === true,
+  };
+};
+
+const mapFlatSender = (
+  value: Record<string, unknown>,
+): NotificationSender | null => {
+  const displayName = toString(
+    value.senderDisplayName,
+    toString(
+      value.senderName,
+      toString(value.adminName, toString(value.createdByName)),
+    ),
+  );
+  const avatarUrl = toString(
+    value.senderAvatarUrl,
+    toString(
+      value.senderAvatar,
+      toString(value.adminAvatarUrl, toString(value.createdByAvatarUrl)),
+    ),
+  );
+  const id = toString(
+    value.senderId,
+    toString(value.adminId, toString(value.createdById)),
+  );
+  if (!displayName && !avatarUrl && !id) return null;
+
+  return {
+    avatarUrl,
+    displayName: displayName || "Ban quản trị Viora",
+    id,
+    isVerified:
+      value.senderIsVerified === true || value.adminIsVerified === true,
   };
 };
 
@@ -83,6 +126,9 @@ export const mapNotification = (value: unknown): NotificationItemModel => {
     throw new Error("Phản hồi thông báo không hợp lệ.");
   }
 
+  const nestedSender =
+    value.sender ?? value.admin ?? value.createdBy ?? value.author;
+
   return {
     content: toString(value.content),
     createdAt: normalizeCreatedAt(
@@ -92,10 +138,17 @@ export const mapNotification = (value: unknown): NotificationItemModel => {
       value.timestamp,
     ),
     id: toString(value.id, toString(value.notificationId)),
-    imageUrl: typeof value.imageUrl === "string" ? value.imageUrl : null,
+    imageUrl:
+      toString(
+        value.imageUrl,
+        toString(
+          value.image,
+          toString(value.thumbnailUrl, toString(value.bannerUrl)),
+        ),
+      ) || null,
     isRead: value.isRead === true || value.read === true,
     reference: mapReference(value.reference) ?? mapFlatReference(value),
-    sender: mapSender(value.sender),
+    sender: mapSender(nestedSender) ?? mapFlatSender(value),
     title: toString(value.title, "Thông báo"),
     type: toNumber(value.type, toNumber(value.notificationType)),
   };
@@ -132,20 +185,33 @@ export const mapNotificationsPage = (value: unknown): NotificationsPage => {
 
 export const mapRealtimeNotification = (
   payload: NotificationPayload,
-): NotificationItemModel => ({
-  content: payload.content ?? "",
-  createdAt: normalizeCreatedAt(payload.createdAt),
-  id: payload.notificationId,
-  imageUrl: payload.imageUrl,
-  isRead: false,
-  reference:
-    payload.referenceId && payload.referenceType !== null
-      ? {
-          id: payload.referenceId,
-          type: payload.referenceType,
-        }
-      : null,
-  sender: null,
-  title: payload.title,
-  type: payload.notificationType,
-});
+): NotificationItemModel => {
+  const value = payload as NotificationPayload & Record<string, unknown>;
+  const nestedSender =
+    value.sender ?? value.admin ?? value.createdBy ?? value.author;
+
+  return {
+    content: payload.content ?? "",
+    createdAt: normalizeCreatedAt(payload.createdAt),
+    id: payload.notificationId,
+    imageUrl:
+      toString(
+        value.imageUrl,
+        toString(
+          value.image,
+          toString(value.thumbnailUrl, toString(value.bannerUrl)),
+        ),
+      ) || null,
+    isRead: false,
+    reference:
+      payload.referenceId && payload.referenceType !== null
+        ? {
+            id: payload.referenceId,
+            type: payload.referenceType,
+          }
+        : null,
+    sender: mapSender(nestedSender) ?? mapFlatSender(value),
+    title: payload.title,
+    type: payload.notificationType,
+  };
+};

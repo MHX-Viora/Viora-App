@@ -21,7 +21,8 @@ import { ViewableImage } from "@/components/common/viewable-image";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { updateProfile } from "@/services/user.service";
 import { getSession, updateUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { Gender, GenderLabel, User } from "@/types/auth";
 
 const GENDERS: { label: GenderLabel; value: Gender }[] = [
@@ -171,7 +172,7 @@ export function EditProfileScreen() {
               onPress={() => pickImage(setCoverUri)}
               style={styles.coverButton}
             >
-              <Ionicons color={colors.white} name="camera" size={15} />
+              <Ionicons color={colors.primaryContrast} name="camera" size={15} />
               <Text style={styles.imageButtonText}>Đổi ảnh bìa</Text>
             </Pressable>
           </View>
@@ -306,12 +307,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   genderRow: { flexDirection: "row", gap: spacing.sm },
-  genderSelected: { backgroundColor: "#E0EBFF", borderColor: colors.primary },
+  genderSelected: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+  },
   genderText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
-  genderTextSelected: { color: "#1239A6" },
+  genderTextSelected: { color: colors.primary },
   header: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -326,9 +330,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
-  imageButtonText: { color: colors.white, fontSize: 12, fontWeight: "700" },
+  imageButtonText: {
+    color: colors.primaryContrast,
+    fontSize: 12,
+    fontWeight: "700",
+  },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 10,
     borderWidth: 1,
@@ -340,7 +348,7 @@ const styles = StyleSheet.create({
   label: { color: colors.text, fontSize: 13, fontWeight: "700" },
   loading: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
   },

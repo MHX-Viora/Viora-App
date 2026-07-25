@@ -4,7 +4,8 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { searchConversationMessages } from "@/services/chat.service";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { ChatSearchResult } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 
@@ -103,9 +104,9 @@ const styles = StyleSheet.create({
   center: { alignItems: "center", flex: 1, justifyContent: "center" },
   content: { color: colors.text, fontSize: 15, fontWeight: "800" },
   empty: { color: colors.textMuted, padding: spacing.xl, textAlign: "center" },
-  header: { backgroundColor: colors.surface, borderBottomColor: colors.border, borderBottomWidth: 1, padding: spacing.md },
+  header: { backgroundColor: "rgba(10, 23, 41, 0.94)", borderBottomColor: colors.border, borderBottomWidth: 1, padding: spacing.md },
   meta: { color: colors.textMuted, fontSize: 12, marginTop: spacing.xs },
-  row: { backgroundColor: colors.surface, borderBottomColor: colors.border, borderBottomWidth: 1, padding: spacing.md },
+  row: { backgroundColor: colors.surfaceElevated, borderColor: "rgba(152, 80, 232, 0.56)", borderRadius: 12, borderWidth: 1, marginHorizontal: spacing.md, marginTop: spacing.sm, padding: spacing.md },
   screen: { backgroundColor: colors.background, flex: 1 },
-  searchInput: { backgroundColor: colors.background, borderColor: colors.border, borderRadius: 8, borderWidth: 1, color: colors.text, fontSize: 15, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  searchInput: { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, fontSize: 15, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
 });

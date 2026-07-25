@@ -41,7 +41,7 @@ function PreviewMemberRow({ member }: { member: ChatGroupPreviewMember }) {
             {member.displayName}
           </Text>
           {member.isVerified ? (
-            <Ionicons color={colors.primary} name="checkmark-circle" size={15} />
+            <Ionicons color={colors.verified} name="checkmark-circle" size={15} />
           ) : null}
         </View>
       </View>

@@ -3,7 +3,8 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 export function ProfileOverview({
   actionSlot,
@@ -50,7 +51,7 @@ export function ProfileOverview({
           {isVerified && (
             <Ionicons
               accessibilityLabel="Tai khoan da xac minh"
-              color={colors.primary}
+              color={colors.verified}
               name="checkmark-circle"
               size={20}
             />
@@ -66,7 +67,7 @@ export function ProfileOverview({
                 pressed && styles.editButtonPressed,
               ]}
             >
-              <Ionicons color={colors.white} name="pencil" size={14} />
+              <Ionicons color={colors.primaryContrast} name="pencil" size={14} />
             </Pressable>
           )}
         </View>
@@ -80,9 +81,9 @@ export function ProfileOverview({
 
 const styles = StyleSheet.create({
   avatar: {
-    borderColor: colors.surface,
+    borderColor: colors.primary,
     borderRadius: 43,
-    borderWidth: 4,
+    borderWidth: 3,
     bottom: -38,
     height: 86,
     left: spacing.md,
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginTop: spacing.sm,
   },
-  cover: { height: 170, width: "100%" },
+  cover: { borderRadius: 12, height: 170, width: "100%" },
   editButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
@@ -106,7 +107,12 @@ const styles = StyleSheet.create({
   },
   editButtonPressed: { opacity: 0.82, transform: [{ scale: 0.95 }] },
   handle: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
-  hero: { marginBottom: 38, position: "relative" },
+  hero: {
+    marginBottom: 38,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    position: "relative",
+  },
   identity: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   name: { color: colors.text, flexShrink: 1, fontSize: 24, fontWeight: "800" },
   nameRow: {

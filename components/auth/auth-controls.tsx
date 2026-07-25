@@ -10,7 +10,8 @@ import {
   View,
 } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 type AuthFieldProps = Pick<
   TextInputProps,
@@ -94,11 +95,11 @@ export function AuthPrimaryButton({
       ]}
     >
       {isLoading ? (
-        <ActivityIndicator color={colors.white} />
+        <ActivityIndicator color={colors.primaryContrast} />
       ) : (
         <>
           <Text style={styles.primaryButtonText}>{label}</Text>
-          <Ionicons color={colors.white} name="arrow-forward" size={22} />
+          <Ionicons color={colors.primaryContrast} name="arrow-forward" size={22} />
         </>
       )}
     </Pressable>
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.58 },
   field: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(9, 23, 41, 0.70)",
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -136,6 +137,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 48,
     paddingHorizontal: spacing.md,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
   fieldGroup: { gap: spacing.xs },
   footerLink: { color: colors.primary, fontSize: 14, fontWeight: "800" },
@@ -145,7 +150,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "center",
   },
-  footerText: { color: colors.text, fontSize: 14 },
+  footerText: { color: colors.textMuted, fontSize: 14 },
   input: { color: colors.text, flex: 1, fontSize: 15, paddingVertical: 12 },
   label: { color: colors.text, fontSize: 13, fontWeight: "600" },
   pressed: { opacity: 0.82 },
@@ -153,16 +158,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.primary,
     borderRadius: 24,
+    borderColor: "rgba(255,255,255,0.20)",
+    borderWidth: 1,
     elevation: 3,
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
     minHeight: 56,
     paddingHorizontal: spacing.xl,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 14,
+    shadowColor: colors.glow,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.7,
+    shadowRadius: 16,
   },
-  primaryButtonText: { color: colors.white, fontSize: 16, fontWeight: "800" },
+  primaryButtonText: {
+    color: colors.primaryContrast,
+    fontSize: 16,
+    fontWeight: "900",
+  },
 });

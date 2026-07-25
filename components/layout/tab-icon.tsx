@@ -1,14 +1,24 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 
-import { colors } from '@/theme';
+import { communityColors as colors } from '@/features/feed/community-colors';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export function TabIcon({ focused, name }: { focused: boolean; name: IconName }) {
+export function TabIcon({
+  focused,
+  name,
+}: {
+  focused: boolean;
+  name: IconName;
+}) {
   return (
     <View style={[styles.container, focused && styles.focused]}>
-      <Ionicons name={name} size={23} color={focused ? colors.primary : colors.textMuted} />
+      <Ionicons
+        color={focused ? colors.primary : colors.textMuted}
+        name={name}
+        size={23}
+      />
     </View>
   );
 }
@@ -16,12 +26,17 @@ export function TabIcon({ focused, name }: { focused: boolean; name: IconName })
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    height: 34,
+    borderRadius: 18,
+    height: 32,
     justifyContent: 'center',
-    width: 48,
+    width: 44,
   },
   focused: {
     backgroundColor: colors.primarySoft,
-    borderRadius: 12,
+    elevation: 9,
+    shadowColor: colors.primary,
+    shadowOffset: { height: 0, width: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
   },
 });

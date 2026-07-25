@@ -10,7 +10,8 @@ import {
 
 import { PostCard } from "@/components/feed/post-card";
 import { ReelsGridViewer } from "@/components/reels/reels-grid-viewer";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
 
@@ -285,10 +286,10 @@ const styles = StyleSheet.create({
   statItem: { alignItems: "center", flex: 1 },
   statLabel: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
   stats: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
     marginHorizontal: spacing.md,
     marginTop: 32,
@@ -302,9 +303,12 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   tabs: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 10,
+    borderWidth: 1,
     flexDirection: "row",
+    marginHorizontal: spacing.md,
     marginTop: spacing.sm,
   },
   tabText: { color: colors.textMuted, fontSize: 14, fontWeight: "500" },

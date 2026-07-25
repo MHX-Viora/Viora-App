@@ -33,7 +33,8 @@ import {
   type UserProfile,
 } from "@/services/user.service";
 import { getUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
 
@@ -572,12 +573,24 @@ function ActionButton({
     >
       {loading ? (
         <ActivityIndicator
-          color={primary || danger ? colors.white : colors.text}
+          color={
+            danger
+              ? colors.white
+              : primary
+                ? colors.primaryContrast
+                : colors.text
+          }
           size="small"
         />
       ) : (
         <Ionicons
-          color={primary || danger ? colors.white : colors.text}
+          color={
+            danger
+              ? colors.white
+              : primary
+                ? colors.primaryContrast
+                : colors.text
+          }
           name={icon}
           size={17}
         />
@@ -586,6 +599,7 @@ function ActionButton({
         style={[
           styles.actionText,
           (primary || danger) && styles.emphasisActionText,
+          primary && styles.primaryActionText,
         ]}
       >
         {label}
@@ -620,7 +634,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
   },
-  content: { backgroundColor: colors.surface, flexGrow: 1 },
+  content: { backgroundColor: colors.background, flexGrow: 1 },
   dangerAction: {
     backgroundColor: colors.danger,
     borderColor: colors.danger,
@@ -628,7 +642,7 @@ const styles = StyleSheet.create({
   emphasisActionText: { color: colors.white },
   header: {
     alignItems: "center",
-    backgroundColor: "#F7F8FD",
+    backgroundColor: colors.surfaceElevated,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -652,7 +666,7 @@ const styles = StyleSheet.create({
   },
   loading: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     flex: 1,
     gap: spacing.sm,
     justifyContent: "center",
@@ -662,5 +676,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  screen: { backgroundColor: colors.surface, flex: 1 },
+  primaryActionText: { color: colors.primaryContrast },
+  screen: { backgroundColor: colors.background, flex: 1 },
 });

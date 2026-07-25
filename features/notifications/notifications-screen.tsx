@@ -14,12 +14,13 @@ import { NotificationItem } from "@/components/notifications/notification-item";
 import { NotificationSkeleton } from "@/components/notifications/notification-skeleton";
 import { subscribeRealtimeNotifications } from "@/features/notifications/notification-events";
 import { navigateNotification } from "@/features/notifications/notification-navigation";
+import { notificationColors as colors } from "@/features/notifications/notification-colors";
 import {
     getNotifications,
     markAllNotificationsRead,
     markNotificationRead,
 } from "@/services/notification.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
 import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
 

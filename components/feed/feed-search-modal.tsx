@@ -13,8 +13,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PostCard } from "@/components/feed/post-card";
+import { communityColors as colors } from "@/features/feed/community-colors";
 import { getPosts } from "@/services/feed.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 
 const PAGE_SIZE = 10;
@@ -256,6 +257,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
+    backgroundColor: colors.surface,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -264,6 +266,10 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 20,
+    borderWidth: 1,
     height: 40,
     justifyContent: "center",
     width: 40,
@@ -278,7 +284,7 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1 },
   searchBox: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 20,
     borderWidth: 1,
@@ -303,10 +309,12 @@ const styles = StyleSheet.create({
   },
   skeletonCard: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: colors.border,
-    borderTopWidth: 1,
+    marginHorizontal: spacing.sm,
     marginBottom: spacing.sm,
+    overflow: "hidden",
     paddingBottom: spacing.md,
   },
   skeletonHeader: {

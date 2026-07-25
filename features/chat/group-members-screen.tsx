@@ -28,7 +28,8 @@ import {
   transferGroupOwner,
 } from "@/services/chat.service";
 import { getUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 import type { ChatGroupMember } from "@/types/chat";
 
 const PAGE_SIZE = 30;
@@ -79,7 +80,7 @@ const MemberRow = memo(function MemberRow({
             {member.displayName}
           </Text>
           {member.isVerified ? (
-            <Ionicons color={colors.primary} name="checkmark-circle" size={16} />
+            <Ionicons color={colors.verified} name="checkmark-circle" size={16} />
           ) : null}
         </View>
         <Text style={styles.status}>
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
   footer: { padding: spacing.lg },
   header: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: "rgba(10, 23, 41, 0.94)",
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -456,12 +457,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   listContent: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     flexGrow: 1,
     paddingBottom: spacing.xl,
   },
   loading: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
   },
@@ -476,19 +477,22 @@ const styles = StyleSheet.create({
   role: { color: colors.textMuted, fontSize: 12, fontWeight: "800" },
   row: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
     minHeight: 76,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  screen: { backgroundColor: colors.surface, flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
   searchBox: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,
     borderRadius: 8,
     borderWidth: 1,
@@ -504,7 +508,7 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   searchWrap: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     padding: spacing.md,

@@ -2,7 +2,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import type React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { communityColors as colors } from "@/features/feed/community-colors";
+import { spacing } from "@/theme";
 
 type SettingsRowProps = {
   danger?: boolean;
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
   },
   rowIcon: {
     alignItems: "center",
-    backgroundColor: colors.primarySoft,
+    backgroundColor: "transparent",
     borderRadius: 10,
     height: 38,
     justifyContent: "center",
