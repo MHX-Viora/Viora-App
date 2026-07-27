@@ -99,7 +99,10 @@
         "expo-notifications",
         {
           "icon": "./assets/images/viora_logo.png",
-          "color": "#2868D7"
+          "color": "#2868D7",
+          "sounds": [
+            "./assets/audio/nhac_chuong.mp3"
+          ]
         }
       ],
       "@react-native-firebase/app",

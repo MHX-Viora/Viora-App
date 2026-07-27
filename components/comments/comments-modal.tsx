@@ -25,6 +25,8 @@ import {
   type UiComment,
   useCommentsModal,
 } from "@/components/comments/use-comments-modal";
+import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
+import { MentionText } from "@/components/mentions/mention-text";
 import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 
@@ -57,6 +59,7 @@ export function CommentsModal({
     loadReplies,
     replyStateByComment,
     replyTarget,
+    selectMention,
     setDraftComment,
     setReplyTarget,
     submit,
@@ -211,6 +214,7 @@ export function CommentsModal({
                   </Pressable>
                 ))}
               </View>
+              <MentionSuggestions onSelect={selectMention} value={draftComment} />
               <View style={styles.inputRow}>
                 <TextInput
                   multiline
@@ -265,6 +269,7 @@ function CommentItem({
     <View style={styles.commentGroup}>
       <CommentContent
         content={comment.content}
+        mentions={comment.mentions}
         isVerified={comment.user.isVerified}
         isLiked={comment.isLiked}
         likeCount={comment.likeCount}
@@ -297,6 +302,7 @@ function CommentItem({
         <View key={reply.id} style={styles.replyIndent}>
           <CommentContent
             content={reply.content}
+            mentions={reply.mentions}
             isVerified={reply.user.isVerified}
             isLiked={reply.isLiked}
             likeCount={reply.likeCount}
@@ -329,6 +335,7 @@ function CommentContent({
   isVerified,
   isLiked,
   likeCount,
+  mentions,
   onLike,
   onOpenUser,
   onReply,
@@ -339,6 +346,7 @@ function CommentContent({
   userName,
 }: {
   content: string;
+  mentions?: import("@/types/mention").MentionReference[];
   isVerified: boolean;
   isLiked: boolean;
   likeCount: number;
@@ -404,7 +412,7 @@ function CommentContent({
             {replyToUser && (
               <Text style={styles.replyMention}>@{replyToUser} </Text>
             )}
-            {content}
+            <MentionText mentions={mentions}>{content}</MentionText>
           </Text>
         </View>
         <View style={styles.metaRow}>

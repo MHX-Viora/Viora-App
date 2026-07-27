@@ -8,9 +8,12 @@ import { Platform } from "react-native";
 
 import { getCurrentNotificationData } from "@/utils/push-notification-time";
 import {
+  dismissIncomingCallNotification,
   INCOMING_CALL_CHANNEL_ID,
   replaceDelegatedIncomingCallNotification,
 } from "@/services/incoming-call-notification.service";
+import { showRichChatNotification } from "@/services/chat-push-notification.service";
+import { isCallLifecycleNotificationType } from "@/features/calls/call-waiting";
 
 const firstText = (...values: unknown[]) => {
   for (const value of values) {
@@ -47,6 +50,14 @@ if (Platform.OS !== "web") {
       ttl: remoteMessage.ttl,
     });
 
+    if (isCallLifecycleNotificationType(data.type)) {
+      const callId = firstText(data.callId);
+      if (callId) {
+        await dismissIncomingCallNotification(callId);
+      }
+      return;
+    }
+
     if (
       data.type === "IncomingCall" &&
       remoteMessage.notification?.android?.channelId !==
@@ -67,11 +78,20 @@ if (Platform.OS !== "web") {
         callId: firstText(data.callId),
         data: notificationData,
         title:
-          remoteMessage.notification?.title ||
           callerName ||
+          remoteMessage.notification?.title ||
           "Cuộc gọi Viora đến",
       });
       console.info("[FCM background] incoming call notification scheduled", {
+        messageId: remoteMessage.messageId,
+        notificationId,
+      });
+      return;
+    }
+
+    if (data.type === "chat") {
+      const notificationId = await showRichChatNotification(notificationData);
+      console.info("[FCM background] rich chat notification displayed", {
         messageId: remoteMessage.messageId,
         notificationId,
       });

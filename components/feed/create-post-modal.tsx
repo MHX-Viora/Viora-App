@@ -18,10 +18,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ViewableImage } from "@/components/common/viewable-image";
+import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { communityColors as colors } from "@/features/feed/community-colors";
 import { normalizeFeedImageUri } from "@/features/feed/image-source";
 import { spacing, typography } from "@/theme";
 import type { CreatePostInput } from "@/types/feed";
+import type { MentionReference, MentionUser } from "@/types/mention";
+import { activeMentionIds, insertMention } from "@/utils/mention-composer";
 
 type Props = {
   imageUris: string[];
@@ -53,6 +56,7 @@ export function CreatePostModal({
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [visibility, setVisibility] = useState(0);
+  const [mentions, setMentions] = useState<MentionReference[]>([]);
 
   useEffect(() => {
     if (!visible) {
@@ -65,6 +69,7 @@ export function CreatePostModal({
       setShowLocationInput(false);
       setIsGettingLocation(false);
       setVisibility(0);
+      setMentions([]);
     }
   }, [visible]);
 
@@ -140,6 +145,7 @@ export function CreatePostModal({
       longitude,
       post: "",
       visibility,
+      mentionUserIds: activeMentionIds(body, mentions),
     });
   };
 
@@ -246,6 +252,17 @@ export function CreatePostModal({
               ref={inputRef}
               scrollEnabled={false}
               style={styles.input}
+              value={body}
+            />
+            <MentionSuggestions
+              onSelect={(user: MentionUser) => {
+                setBody((value) => insertMention(value, user));
+                setMentions((current) =>
+                  current.some((item) => item.userId === user.id)
+                    ? current
+                    : [...current, { userId: user.id, displayName: user.displayName }],
+                );
+              }}
               value={body}
             />
 

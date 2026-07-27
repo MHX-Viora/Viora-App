@@ -171,6 +171,7 @@ export type ChatMessage = {
   reply: ChatReply | null;
   reactions: ChatReaction[];
   sendStatus?: "sending" | "failed" | "sent";
+  mentions?: import("@/types/mention").MentionReference[];
 };
 
 export type ConversationReadEvent = {

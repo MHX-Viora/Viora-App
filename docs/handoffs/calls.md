@@ -24,6 +24,21 @@ description is not ready. Peer creation is guarded by one shared promise.
 ## Media lifecycle
 
 - Video callers create local media immediately for self-preview.
+- Incoming-call notifications use the boosted bundled `nhac_chuong.mp3` on the
+  receiver. Audio callers hear the same track as ringback until answer/timeout.
+- Android incoming calls are FCM data-only, high-priority messages with a
+  30-second TTL. The client owns presentation through Notifee's call category
+  and full-screen action, avoiding Firebase's normal default-channel banner.
+- Delayed call-screen navigation is cancelled on unmount to prevent stale
+  `router.replace()` calls while the root navigator is unavailable.
+- Notifee vibration durations must all be positive; a leading zero rejects
+  channel creation and prevents both incoming UI notification and ringtone.
+- Full-screen notification actions run only from background delivery. Foreground
+  calls use `IncomingCallHost`, avoiding duplicate activity/wake-lock activation.
+- Ringback cleanup relies on the audio hook's native release during unmount;
+  effects never call `pause()` on an already released shared player.
+- The audio-call screen has a 30-second local timeout. The backend
+  `CallTimeoutHostedService` remains responsible for persisting missed status.
 - Mic and camera buttons change the local track `enabled` state.
 - Camera switching uses the native video track `_switchCamera`.
 - Terminal realtime events close the peer and stop every local track, including

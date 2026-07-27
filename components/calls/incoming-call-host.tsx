@@ -12,6 +12,7 @@ import {
 } from "@/features/calls/call-events";
 import { communityColors as colors } from "@/features/feed/community-colors";
 import { rejectVoiceCall } from "@/services/call.service";
+import { dismissIncomingCallNotification } from "@/services/incoming-call-notification.service";
 import { spacing } from "@/theme";
 import { CallType } from "@/types/call";
 import type { IncomingCallEvent } from "@/types/call";
@@ -31,6 +32,7 @@ export function IncomingCallHost() {
     if (!incomingCall || isConnecting) return;
     setIsConnecting(true);
     const nextCall = incomingCall;
+    await dismissIncomingCallNotification(nextCall.callId).catch(() => undefined);
     clearIncomingCall(nextCall.callId);
     setIncomingCall(null);
     setIsConnecting(false);
@@ -52,6 +54,7 @@ export function IncomingCallHost() {
     try {
       await rejectVoiceCall(incomingCall.callId);
     } finally {
+      await dismissIncomingCallNotification(incomingCall.callId).catch(() => undefined);
       cleanup();
     }
   }, [cleanup, incomingCall]);
@@ -62,7 +65,10 @@ export function IncomingCallHost() {
         setIncomingCall((current) => current ?? event);
       }),
       subscribeCallLifecycle((event) => {
-        if (event.callId === incomingCall?.callId) cleanup();
+        if (event.callId === incomingCall?.callId) {
+          void dismissIncomingCallNotification(event.callId).catch(() => undefined);
+          cleanup();
+        }
       }),
     ];
     return () => {

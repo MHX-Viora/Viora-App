@@ -828,6 +828,7 @@ export const sendChatMessage = async (input: {
   conversationId: string;
   content: string;
   replyToMessageId?: string;
+  mentionUserIds?: string[];
   attachments: SendMessageAttachment[];
 }): Promise<ChatMessage> => {
   const uploadedAttachments = await uploadChatAttachments(input.attachments);
@@ -844,6 +845,7 @@ export const sendChatMessage = async (input: {
     conversationId: input.conversationId,
     messageType: getMessageType(input.content, input.attachments),
     replyMessageId: input.replyToMessageId,
+    mentionUserIds: input.mentionUserIds,
   };
 
   const response = await authenticatedFetch(`${BASE_URL}/api/chat/messages`, {

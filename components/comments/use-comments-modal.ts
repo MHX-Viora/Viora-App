@@ -9,6 +9,8 @@ import {
 } from "@/services/comment.service";
 import { getUser } from "@/stores/session-store";
 import type { Comment, Reply } from "@/types/comment";
+import type { MentionReference, MentionUser } from "@/types/mention";
+import { activeMentionIds, insertMention } from "@/utils/mention-composer";
 
 const PAGE_SIZE = 20;
 
@@ -63,6 +65,7 @@ export function useCommentsModal({
   >({});
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const [draftComment, setDraftComment] = useState("");
+  const [draftMentions, setDraftMentions] = useState<MentionReference[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
 
   const loadComments = useCallback(
@@ -191,7 +194,7 @@ export function useCommentsModal({
     }
   };
 
-  const submitReply = async (content: string, target: ReplyTarget) => {
+  const submitReply = async (content: string, target: ReplyTarget, mentionUserIds: string[]) => {
     const tempId = `local-reply-${Date.now()}`;
     const currentUser = await getOptimisticUser();
     const optimisticReply: UiReply = {
@@ -229,7 +232,7 @@ export function useCommentsModal({
     setReplyTarget(null);
 
     try {
-      const reply = await createReply({ commentId: target.commentId, content });
+      const reply = await createReply({ commentId: target.commentId, content, mentionUserIds });
       setReplyStateByComment((state) => ({
         ...state,
         [target.commentId]: {
@@ -270,7 +273,7 @@ export function useCommentsModal({
     }
   };
 
-  const submitComment = async (content: string, currentPostId: string) => {
+  const submitComment = async (content: string, currentPostId: string, mentionUserIds: string[]) => {
     const tempId = `local-comment-${Date.now()}`;
     const currentUser = await getOptimisticUser();
     const optimisticComment: UiComment = {
@@ -291,6 +294,7 @@ export function useCommentsModal({
     try {
       const newComment = await createComment({
         content,
+        mentionUserIds,
         postId: currentPostId,
       });
       setComments((current) =>
@@ -311,14 +315,16 @@ export function useCommentsModal({
     const content = draftComment.trim();
     if (!postId || !content) return;
 
+    const mentionUserIds = activeMentionIds(draftComment, draftMentions);
     setDraftComment("");
+    setDraftMentions([]);
 
     if (replyTarget) {
-      await submitReply(content, replyTarget);
+      await submitReply(content, replyTarget, mentionUserIds);
       return;
     }
 
-    await submitComment(content, postId);
+    await submitComment(content, postId, mentionUserIds);
   };
 
   const toggleCommentLike = async (commentId: string) => {
@@ -361,6 +367,14 @@ export function useCommentsModal({
     close,
     comments,
     draftComment,
+    selectMention: (user: MentionUser) => {
+      setDraftComment((value) => insertMention(value, user));
+      setDraftMentions((current) =>
+        current.some((item) => item.userId === user.id)
+          ? current
+          : [...current, { userId: user.id, displayName: user.displayName }],
+      );
+    },
     errorMessage,
     hideReplies,
     isLoading,

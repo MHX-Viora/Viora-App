@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { setAudioModeAsync } from "expo-audio";
+import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { router, useLocalSearchParams } from "expo-router";
 import { type ComponentType, useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
@@ -18,6 +18,12 @@ import {
   subscribeCallAccepted,
   subscribeCallLifecycle,
 } from "@/features/calls/call-events";
+import {
+  CALL_ANSWER_TIMEOUT_MS,
+  isWaitingForAnswer,
+  OUTGOING_RINGBACK_VOLUME,
+  shouldNavigateAwayFromCall,
+} from "@/features/calls/call-waiting";
 import {
   acceptVoiceCall,
   cancelVoiceCall,
@@ -71,6 +77,9 @@ export function VoiceCallScreen() {
   const avatarUrl = params.avatarUrl || null;
   const callType = Number(params.callType ?? CallType.Audio) === CallType.Video ? CallType.Video : CallType.Audio;
   const isVideoCall = callType === CallType.Video;
+  const ringbackPlayer = useAudioPlayer(
+    require("../../assets/audio/nhac_cho.mp3"),
+  );
   const mode = params.mode ?? "caller";
   const peerRef = useRef<VoicePeer | null>(null);
   const peerPromiseRef = useRef<Promise<VoicePeer> | null>(null);
@@ -80,6 +89,11 @@ export function VoiceCallScreen() {
   const hasSentOfferRef = useRef(false);
   const hasInitializedRef = useRef(false);
   const isEndingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const hasNavigatedAwayRef = useRef(false);
+  const navigationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const activeCall = callId ? getActiveVoiceCall() : null;
   const [status, setStatus] = useState<"calling" | "connecting" | "active" | "ending" | "ended">(
     activeCall?.callId === callId ? activeCall.status : mode === "caller" ? "calling" : "connecting",
@@ -96,6 +110,17 @@ export function VoiceCallScreen() {
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [isMicrophoneEnabled, setIsMicrophoneEnabled] = useState(true);
   const [isSpeakerEnabled, setIsSpeakerEnabled] = useState(isVideoCall);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current);
+        navigationTimeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   const rememberCall = useCallback(
     (
@@ -148,6 +173,15 @@ export function VoiceCallScreen() {
     cleanup(shouldClosePeer);
     setStatus("ended");
     const navigateAway = () => {
+      if (
+        !shouldNavigateAwayFromCall(
+          isMountedRef.current,
+          hasNavigatedAwayRef.current,
+        )
+      ) {
+        return;
+      }
+      hasNavigatedAwayRef.current = true;
       if (router.canGoBack()) {
         router.back();
         return;
@@ -161,8 +195,14 @@ export function VoiceCallScreen() {
         router.replace("/");
       }
     };
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current);
+      navigationTimeoutRef.current = null;
+    }
     if (delayMs > 0) {
-      setTimeout(() => {
+      navigationTimeoutRef.current = setTimeout(() => {
+        navigationTimeoutRef.current = null;
+        if (!isMountedRef.current) return;
         setStatus("ended");
         navigateAway();
       }, delayMs);
@@ -341,6 +381,8 @@ export function VoiceCallScreen() {
     const unsubscribers = [
       subscribeCallAccepted(async (payload) => {
         if (mode !== "caller" || getPayloadCallId(payload) !== callId) return;
+        setStatus("connecting");
+        rememberCall("connecting");
         try {
           await createAndSendOfferOnce();
         } catch (error) {
@@ -350,6 +392,8 @@ export function VoiceCallScreen() {
       }),
       onCallRealtime("CallAccepted", async (payload) => {
         if (mode !== "caller" || getPayloadCallId(payload) !== callId) return;
+        setStatus("connecting");
+        rememberCall("connecting");
         try {
           await createAndSendOfferOnce();
         } catch (error) {
@@ -458,6 +502,8 @@ export function VoiceCallScreen() {
       try {
         const call = await getVoiceCall(callId);
         if (!isMounted || call.status !== CallStatus.Accepted || hasSentOfferRef.current) return;
+        setStatus("connecting");
+        rememberCall("connecting");
         await createAndSendOfferOnce();
       } catch (error) {
         console.info("[Call] accepted polling skipped", error instanceof Error ? error.message : String(error));
@@ -471,7 +517,7 @@ export function VoiceCallScreen() {
       isMounted = false;
       clearInterval(timer);
     };
-  }, [callId, createAndSendOfferOnce, mode, status]);
+  }, [callId, createAndSendOfferOnce, mode, rememberCall, status]);
 
   useEffect(() => {
     if (status !== "active" || !connectedAtMs) return;
@@ -482,17 +528,53 @@ export function VoiceCallScreen() {
   }, [connectedAtMs, status]);
 
   useEffect(() => {
+    if (isVideoCall || !isWaitingForAnswer(mode, status)) return;
+
+    const timer = setTimeout(() => {
+      if (isEndingRef.current) return;
+      console.info("[Call] unanswered audio call timed out", {
+        callId,
+        timeoutMs: CALL_ANSWER_TIMEOUT_MS,
+      });
+      leaveCall();
+    }, CALL_ANSWER_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [callId, isVideoCall, leaveCall, mode, status]);
+
+  useEffect(() => {
+    const shouldPlay = !isVideoCall && isWaitingForAnswer(mode, status);
+    try {
+      ringbackPlayer.loop = true;
+      ringbackPlayer.volume = OUTGOING_RINGBACK_VOLUME;
+
+      if (shouldPlay) {
+        ringbackPlayer.play();
+      } else {
+        ringbackPlayer.pause();
+        void ringbackPlayer.seekTo(0).catch(() => undefined);
+      }
+    } catch (error) {
+      console.info(
+        "[Call][Audio] ringback player unavailable",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }, [isVideoCall, mode, ringbackPlayer, status]);
+
+  useEffect(() => {
     void setAudioModeAsync({
       allowsRecording: true,
       playsInSilentMode: true,
-      shouldRouteThroughEarpiece: !isSpeakerEnabled,
+      shouldRouteThroughEarpiece:
+        status === "active" ? !isSpeakerEnabled : false,
     }).catch((error) => {
       console.info(
         "[Call][Audio] route update failed",
         error instanceof Error ? error.message : String(error),
       );
     });
-  }, [isSpeakerEnabled]);
+  }, [isSpeakerEnabled, status]);
 
   const toggleMicrophone = useCallback(() => {
     setIsMicrophoneEnabled((current) => {
@@ -533,19 +615,22 @@ export function VoiceCallScreen() {
         <Pressable accessibilityLabel="Thu nhỏ cuộc gọi" onPress={minimizeCall} style={styles.iconButton}>
           <Ionicons color={colors.white} name="chevron-down" size={26} />
         </Pressable>
-        {isVideoCall ? (
-          <View style={styles.videoHeaderInfo}>
-            <Text numberOfLines={1} style={styles.videoHeaderName}>
-              {displayName}
-            </Text>
-            <Text style={styles.videoHeaderStatus}>{statusText}</Text>
-          </View>
-        ) : null}
-        {isVideoCall ? <View style={styles.headerBalance} /> : null}
+        <View style={styles.videoHeaderInfo}>
+          <Text numberOfLines={1} style={styles.videoHeaderName}>
+            {displayName}
+          </Text>
+          <Text style={styles.videoHeaderStatus}>{statusText}</Text>
+        </View>
+        <View style={styles.headerBalance} />
       </View>
       <View style={styles.identity}>
         {!isVideoCall || !remoteStreamUrl ? (
-          <CallAvatarHalo>
+          <CallAvatarHalo
+            animated={
+              !isVideoCall &&
+              (status === "calling" || status === "connecting")
+            }
+          >
             {avatarUrl ? (
               <Image source={{ uri: avatarUrl }} style={styles.avatar} />
             ) : (
@@ -554,14 +639,6 @@ export function VoiceCallScreen() {
               </View>
             )}
           </CallAvatarHalo>
-        ) : null}
-        {!isVideoCall ? (
-          <>
-            <Text numberOfLines={1} style={styles.name}>
-              {displayName}
-            </Text>
-            <Text style={styles.status}>{statusText}</Text>
-          </>
         ) : null}
       </View>
       {isVideoCall && localStreamUrl ? (
@@ -682,7 +759,6 @@ const styles = StyleSheet.create({
     top: 96,
     width: 110,
   },
-  name: { color: colors.white, fontSize: 28, fontWeight: "900", maxWidth: "100%" },
   remoteVideo: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.text,
@@ -702,7 +778,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 52,
   },
-  status: { color: "rgba(255, 255, 255, 0.72)", fontSize: 15, fontWeight: "800" },
   topBar: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,

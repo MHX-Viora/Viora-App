@@ -1,3 +1,5 @@
+import type { MentionReference } from "@/types/mention";
+
 export type Comment = {
   id: string;
   content: string;
@@ -12,6 +14,7 @@ export type Comment = {
     avatarUrl: string;
     isVerified: boolean;
   };
+  mentions?: MentionReference[];
 };
 
 export type Reply = {
@@ -31,6 +34,7 @@ export type Reply = {
     avatarUrl: string;
     isVerified: boolean;
   };
+  mentions?: MentionReference[];
 };
 
 export type CommentLikeResult = {

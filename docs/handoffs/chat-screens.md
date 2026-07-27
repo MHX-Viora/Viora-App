@@ -38,3 +38,13 @@
 ## Verification
 - `npm run lint`
 - `npx tsc --noEmit`
+# Rich message notifications
+
+- Android chat pushes use Notifee `MessagingStyle` and one stable notification
+  ID per conversation.
+- Private chat uses the sender name/avatar. Group chat uses the conversation
+  name/avatar and keeps the sender identity on each message.
+- Push payloads include `conversationType`, `conversationName`,
+  `conversationAvatarUrl`, and `messageType`.
+- Empty attachment messages map to readable image/video/file/audio/sticker
+  previews.

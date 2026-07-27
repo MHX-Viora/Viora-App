@@ -77,9 +77,11 @@ export const getComments = async ({
 
 export const createComment = async ({
   content,
+  mentionUserIds,
   postId,
 }: {
   content: string;
+  mentionUserIds?: string[];
   postId: string;
 }): Promise<Comment> => {
   const response = await authenticatedFetch(
@@ -90,7 +92,7 @@ export const createComment = async ({
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, mentionUserIds }),
     },
   );
   const text = await response.text();
@@ -141,9 +143,11 @@ export const getReplies = async ({
 export const createReply = async ({
   commentId,
   content,
+  mentionUserIds,
 }: {
   commentId: string;
   content: string;
+  mentionUserIds?: string[];
 }): Promise<Reply> => {
   const response = await authenticatedFetch(
     `${BASE_URL}/api/comments/${commentId}/replies`,
@@ -153,7 +157,7 @@ export const createReply = async ({
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, mentionUserIds }),
     },
   );
   const text = await response.text();

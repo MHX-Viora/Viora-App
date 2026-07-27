@@ -11,6 +11,7 @@ import {
   emitCallLifecycle,
   emitIncomingCall,
 } from "@/features/calls/call-events";
+import { dismissIncomingCallNotification } from "@/services/incoming-call-notification.service";
 import {
   emitRealtimeConversationRead,
   emitRealtimeConversation,
@@ -28,9 +29,11 @@ import {
 import { showChatRealtimeNotification } from "@/services/chat-foreground-notification.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
+import { startWithRetry } from "@/services/realtime-start-retry";
 import { getAccessToken } from "@/stores/session-store";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+const INITIAL_RECONNECT_DELAYS_MS = [0, 2000, 5000, 10000, 30000] as const;
 
 let connection: HubConnection | null = null;
 let shouldRunRealtime = false;
@@ -44,6 +47,13 @@ const handleNotificationPayload = (payload: unknown, eventName: string) => {
     void showRealtimeNotification(notification);
   } catch {
     console.info(`[Realtime] ignored ${eventName} payload`, payload);
+  }
+};
+
+const handleCallLifecyclePayload = (payload: unknown, eventName: string) => {
+  const event = emitCallLifecycle(eventName, payload);
+  if (event) {
+    void dismissIncomingCallNotification(event.callId).catch(() => undefined);
   }
 };
 
@@ -89,6 +99,9 @@ const getRealtimeConnection = () => {
 
     connection.onclose((error) => {
       console.info("[Realtime] closed", error?.message);
+      if (shouldRunRealtime) {
+        void startRealtime();
+      }
     });
 
     connection.on("ReceiveMessage", (payload) => {
@@ -132,19 +145,19 @@ const getRealtimeConnection = () => {
       emitCallAccepted(payload);
     });
     connection.on("CallRejected", (payload) => {
-      emitCallLifecycle("CallRejected", payload);
+      handleCallLifecyclePayload(payload, "CallRejected");
     });
     connection.on("CallCancelled", (payload) => {
-      emitCallLifecycle("CallCancelled", payload);
+      handleCallLifecyclePayload(payload, "CallCancelled");
     });
     connection.on("CallEnded", (payload) => {
-      emitCallLifecycle("CallEnded", payload);
+      handleCallLifecyclePayload(payload, "CallEnded");
     });
     connection.on("CallMissed", (payload) => {
-      emitCallLifecycle("CallMissed", payload);
+      handleCallLifecyclePayload(payload, "CallMissed");
     });
     connection.on("CallTimeout", (payload) => {
-      emitCallLifecycle("CallTimeout", payload);
+      handleCallLifecyclePayload(payload, "CallTimeout");
     });
     connection.on("FriendRequestReceived", (payload) => {
       handleNotificationPayload(payload, "FriendRequestReceived");
@@ -205,20 +218,33 @@ export const startRealtime = async () => {
 
   const realtimeConnection = getRealtimeConnection();
   if (realtimeConnection.state === HubConnectionState.Disconnected) {
-    startPromise = realtimeConnection
-      .start()
-      .then(() => {
+    startPromise = startWithRetry({
+      delaysMs: INITIAL_RECONNECT_DELAYS_MS,
+      isConnected: () =>
+        realtimeConnection.state === HubConnectionState.Connected,
+      onFailure: (error, nextDelayMs) => {
+        if (!shouldRunRealtime) return;
+        console.info("[Realtime] initial connection failed; retrying", {
+          message: error instanceof Error ? error.message : String(error),
+          nextDelayMs,
+        });
+      },
+      shouldContinue: () => shouldRunRealtime,
+      sleep: (delayMs) =>
+        new Promise((resolve) => {
+          setTimeout(resolve, delayMs);
+        }),
+      start: () => realtimeConnection.start(),
+    })
+      .then(async (connected) => {
+        if (!connected) return;
         console.info("[ChatSync] SignalR connected", {
           source: "signalr",
           timestamp: new Date().toISOString(),
         });
-      })
-      .catch((error: unknown) => {
-        if (shouldRunRealtime) {
-          console.info(
-            "[Realtime] connection failed",
-            error instanceof Error ? error.message : String(error),
-          );
+
+        if (!shouldRunRealtime) {
+          await realtimeConnection.stop();
         }
       })
       .finally(() => {
@@ -231,9 +257,6 @@ export const startRealtime = async () => {
 
 export const stopRealtime = async () => {
   shouldRunRealtime = false;
-  if (startPromise) {
-    await startPromise;
-  }
 
   if (connection && connection.state !== HubConnectionState.Disconnected) {
     await connection.stop();

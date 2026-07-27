@@ -1,17 +1,43 @@
 import notifee, {
   AndroidCategory,
   AndroidImportance,
+  AndroidStyle,
   AndroidVisibility,
 } from "@notifee/react-native";
 import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
-export const INCOMING_CALL_CHANNEL_ID = "incoming-calls";
+import {
+  CALL_ANSWER_TIMEOUT_MS,
+  getIncomingCallNotificationId,
+  INCOMING_CALL_RINGTONE_ANDROID,
+  INCOMING_CALL_RINGTONE_FILE,
+  INCOMING_CALL_VIBRATION_PATTERN,
+  shouldUseFullScreenCallAction,
+} from "@/features/calls/call-waiting";
+
+export const INCOMING_CALL_CHANNEL_ID = "incoming-calls-v2";
 export const INCOMING_CALL_CATEGORY_ID = "incoming_calls";
 export const INCOMING_CALL_ACCEPT_ACTION = "incoming_call_accept";
 export const INCOMING_CALL_REJECT_ACTION = "incoming_call_reject";
 export const INCOMING_CALL_LOCAL_SOURCE = "incoming-call-local";
-const INCOMING_CALL_VIBRATION_PATTERN = [0, 500, 250, 500, 250, 900];
+export const dismissIncomingCallNotification = async (callId: string) => {
+  const notificationId = getIncomingCallNotificationId(callId);
+  if (!notificationId) return;
+
+  if (Platform.OS === "android") {
+    await notifee.cancelNotification(notificationId);
+  }
+
+  const notifications = await Notifications.getPresentedNotificationsAsync();
+  await Promise.all(
+    notifications
+      .filter((notification) => notification.request.content.data?.callId === callId)
+      .map((notification) =>
+        Notifications.dismissNotificationAsync(notification.request.identifier),
+      ),
+  );
+};
 
 export const ensureIncomingCallNotificationChannel = async () => {
   await Notifications.setNotificationCategoryAsync(
@@ -44,7 +70,7 @@ export const ensureIncomingCallNotificationChannel = async () => {
     importance: AndroidImportance.HIGH,
     lights: true,
     lightColor: "#24DDE4",
-    sound: "default",
+    sound: INCOMING_CALL_RINGTONE_ANDROID,
     vibration: true,
     vibrationPattern: INCOMING_CALL_VIBRATION_PATTERN,
   });
@@ -60,7 +86,7 @@ export const ensureIncomingCallNotificationChannel = async () => {
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       name: "Cuộc gọi đến",
       showBadge: true,
-      sound: "default",
+      sound: INCOMING_CALL_RINGTONE_FILE,
       vibrationPattern: INCOMING_CALL_VIBRATION_PATTERN,
     },
   );
@@ -90,14 +116,21 @@ export const scheduleIncomingCallNotification = async ({
         : typeof data.callerAvatar === "string"
           ? data.callerAvatar
           : undefined;
+    const callerName = title || "Người dùng Viora";
+    const isVideoCall = String(data.callType) === "1";
+    const callDescription =
+      body ||
+      (isVideoCall
+        ? "Cuộc gọi video đến · Chạm để trả lời"
+        : "Cuộc gọi thoại đến · Chạm để trả lời");
 
     return notifee.displayNotification({
       id:
         typeof data.callId === "string"
-          ? `incoming-call-${data.callId}`
+          ? getIncomingCallNotificationId(data.callId)
           : undefined,
-      title: title || "Người dùng Viora",
-      body: body || "Đang gọi cho bạn...",
+      title: callerName,
+      body: callDescription,
       data: notificationData,
       android: {
         actions: [
@@ -118,10 +151,12 @@ export const scheduleIncomingCallNotification = async ({
         channelId: INCOMING_CALL_CHANNEL_ID,
         circularLargeIcon: true,
         color: "#24DDE4",
-        fullScreenAction: {
-          id: INCOMING_CALL_ACCEPT_ACTION,
-          launchActivity: "default",
-        },
+        fullScreenAction: shouldUseFullScreenCallAction(AppState.currentState)
+          ? {
+              id: INCOMING_CALL_ACCEPT_ACTION,
+              launchActivity: "default",
+            }
+          : undefined,
         importance: AndroidImportance.HIGH,
         largeIcon: callerAvatar,
         lightUpScreen: true,
@@ -132,6 +167,13 @@ export const scheduleIncomingCallNotification = async ({
           launchActivity: "default",
         },
         smallIcon: "notification_icon",
+        style: {
+          summary: "Viora · Cuộc gọi đến",
+          text: callDescription,
+          title: callerName,
+          type: AndroidStyle.BIGTEXT,
+        },
+        timeoutAfter: CALL_ANSWER_TIMEOUT_MS,
         vibrationPattern: INCOMING_CALL_VIBRATION_PATTERN,
         visibility: AndroidVisibility.PUBLIC,
       },
@@ -146,7 +188,7 @@ export const scheduleIncomingCallNotification = async ({
       data: { ...data, deliverySource: INCOMING_CALL_LOCAL_SOURCE },
       interruptionLevel: "timeSensitive",
       priority: Notifications.AndroidNotificationPriority.MAX,
-      sound: "default",
+      sound: INCOMING_CALL_RINGTONE_FILE,
       sticky: true,
       subtitle: "Cuộc gọi Viora đến",
       title: title || "Người dùng Viora",

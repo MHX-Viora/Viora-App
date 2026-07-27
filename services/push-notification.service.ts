@@ -22,6 +22,7 @@ import {
 } from "@/services/device-token.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { navigateNotificationData } from "@/features/notifications/notification-response-navigation";
+import { mapNotification } from "@/features/notifications/notification.mapper";
 import { getActiveChatConversation } from "@/features/chat/chat-events";
 import {
   emitCallLifecycle,
@@ -30,12 +31,16 @@ import {
 import { claimChatNotification } from "@/utils/chat-notification-dedupe";
 import {
   ensureIncomingCallNotificationChannel,
+  dismissIncomingCallNotification,
   INCOMING_CALL_ACCEPT_ACTION,
   INCOMING_CALL_LOCAL_SOURCE,
   INCOMING_CALL_REJECT_ACTION,
   scheduleIncomingCallNotification,
 } from "@/services/incoming-call-notification.service";
+import { isCallLifecycleNotificationType } from "@/features/calls/call-waiting";
 import { rejectVoiceCall } from "@/services/call.service";
+import { requestNotificationPermission } from "@/services/notification-permission-flow";
+import { showRealtimeNotification } from "@/services/foreground-notification.service";
 
 const DEVICE_ID_KEY = "viora.device-id";
 const LAST_FCM_TOKEN_KEY = "viora.last-fcm-token";
@@ -273,37 +278,35 @@ const registerPushNotificationsInternal = async () => {
       return null;
     }
 
-    if (Platform.OS === "android") {
-      await ensureIncomingCallNotificationChannel();
-      await Notifications.setNotificationChannelAsync("default", {
-        importance: Notifications.AndroidImportance.HIGH,
-        name: "default",
-        sound: "default",
-      });
+    const finalPermissions = await requestNotificationPermission({
+      ensureRequiredChannel: async () => {
+        if (Platform.OS !== "android") return;
 
-      const channels = await Notifications.getNotificationChannelsAsync();
-      console.info(
-        "[Push] Android notification channels",
-        channels.map((channel) => ({
-          id: channel.id,
-          importance: channel.importance,
-          name: channel.name,
-        })),
-      );
-    }
-
-    const permissions = await Notifications.getPermissionsAsync();
-    console.info("[Push] permission current", {
-      android: permissions.android,
-      canAskAgain: permissions.canAskAgain,
-      granted: permissions.granted,
-      status: permissions.status,
+        await Notifications.setNotificationChannelAsync("default", {
+          importance: Notifications.AndroidImportance.HIGH,
+          name: "default",
+          sound: "default",
+        });
+      },
+      getPermissions: async () => {
+        const permissions = await Notifications.getPermissionsAsync();
+        console.info("[Push] permission current", {
+          android: permissions.android,
+          canAskAgain: permissions.canAskAgain,
+          granted: permissions.granted,
+          status: permissions.status,
+        });
+        return permissions;
+      },
+      onOptionalSetupError: (error) => {
+        console.info(
+          "[Push] optional notification channel setup failed",
+          error instanceof Error ? error.message : String(error),
+        );
+      },
+      requestPermissions: Notifications.requestPermissionsAsync,
+      setupOptionalChannels: ensureIncomingCallNotificationChannel,
     });
-
-    const finalPermissions =
-      permissions.status === "granted"
-        ? permissions
-        : await Notifications.requestPermissionsAsync();
 
     console.info("[Push] permission final", {
       android: finalPermissions.android,
@@ -446,10 +449,19 @@ export const setupNotificationHandling = () => {
             : "Bạn có một cuộc gọi Viora đến"),
         data,
         title:
-          remoteMessage.notification?.title ||
           callerName ||
+          remoteMessage.notification?.title ||
           "Cuộc gọi Viora đến",
       });
+      return;
+    }
+    if (isCallLifecycleNotificationType(data.type)) {
+      const event = emitCallLifecycle(String(data.type), data);
+      if (event) {
+        await dismissIncomingCallNotification(event.callId).catch(
+          () => undefined,
+        );
+      }
       return;
     }
     if (data.type === "MissedCall") {
@@ -457,6 +469,15 @@ export const setupNotificationHandling = () => {
       return;
     }
     if (data.type === "chat") void syncChatUnreadCount("fcm-foreground");
+    if (data.type !== "chat") {
+      await showRealtimeNotification(
+        mapNotification({
+          ...data,
+          content: data.content ?? remoteMessage.notification?.body,
+          title: data.title ?? remoteMessage.notification?.title,
+        }),
+      );
+    }
   });
 
   Notifications.setNotificationHandler({

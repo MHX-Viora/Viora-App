@@ -36,6 +36,8 @@ import { ChatComposerNotice } from "@/components/chat/chat-composer-notice";
 import { ChatMediaViewer } from "@/components/chat/chat-media-viewer";
 import { PendingAttachmentPreview } from "@/components/chat/pending-attachment-preview";
 import { showAppToast } from "@/components/common/app-toast";
+import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
+import { MentionText } from "@/components/mentions/mention-text";
 import {
   CHAT_PAGE_SIZE,
   CHAT_STICKERS,
@@ -78,6 +80,8 @@ import type {
   Conversation,
   SendMessageAttachment,
 } from "@/types/chat";
+import type { MentionReference } from "@/types/mention";
+import { activeMentionIds, insertMention } from "@/utils/mention-composer";
 import { formatChatTime } from "@/utils/chat-time";
 import {
   getRealtimeConversationGroupName,
@@ -640,9 +644,12 @@ function MessageRow({
           />
         ) : null}
         {!message.isDeleted && textContent ? (
-          <Text style={[styles.messageText, message.isMine && styles.mineText]}>
+          <MentionText
+            mentions={message.mentions}
+            style={[styles.messageText, message.isMine && styles.mineText]}
+          >
             {textContent}
-          </Text>
+          </MentionText>
         ) : null}
         {!message.isDeleted && message.attachments.map((attachment) => (
           <AttachmentView
@@ -758,6 +765,7 @@ export function ChatScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [content, setContent] = useState("");
+  const [draftMentions, setDraftMentions] = useState<MentionReference[]>([]);
   const [attachments, setAttachments] = useState<SendMessageAttachment[]>([]);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -1495,6 +1503,7 @@ export function ChatScreen() {
     if (dissolvedRef.current) return;
     if (!content.trim() && attachments.length === 0) return;
     const draftContent = content.trim();
+    const mentionUserIds = activeMentionIds(content, draftMentions);
     const draftAttachments = attachments;
     const draftReply = replyTo;
     const optimisticId = `pending-${Date.now()}`;
@@ -1537,6 +1546,7 @@ export function ChatScreen() {
 
     setMessages((current) => [optimisticMessage, ...current]);
     setContent("");
+    setDraftMentions([]);
     setAttachments([]);
     setReplyTo(null);
     scrollToEndAfterLayout(true);
@@ -1546,6 +1556,7 @@ export function ChatScreen() {
         content: draftContent,
         conversationId,
         replyToMessageId: draftReply?.id,
+        mentionUserIds,
       });
       const sentMessage = {
         ...normalizeMessage(message),
@@ -1573,7 +1584,7 @@ export function ChatScreen() {
         ),
       );
     }
-  }, [attachments, canSendInConversation, content, conversationId, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
+  }, [attachments, canSendInConversation, content, conversationId, draftMentions, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
 
   const startCall = useCallback(async (callType: CallType) => {
     if (conversationDetails?.conversationType !== "Private" || isStartingCall) return;
@@ -2031,6 +2042,18 @@ export function ChatScreen() {
               <Ionicons color={colors.white} name="stop" size={18} />
             </Pressable>
           )}
+          <MentionSuggestions
+            onSelect={(user) => {
+              setContent((value) => insertMention(value, user));
+              setDraftMentions((current) =>
+                current.some((item) => item.userId === user.id)
+                  ? current
+                  : [...current, { userId: user.id, displayName: user.displayName }],
+              );
+            }}
+            showAvatar={conversationDetails?.conversationType !== "Group"}
+            value={content}
+          />
           <TextInput
             multiline
             onChangeText={setContent}

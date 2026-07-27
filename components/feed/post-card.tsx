@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Linking,
   Modal,
   Pressable,
   StyleSheet,
@@ -14,10 +15,12 @@ import {
 
 import { showAppToast } from "@/components/common/app-toast";
 import { ViewableImage } from "@/components/common/viewable-image";
+import { MentionText } from "@/components/mentions/mention-text";
 import { communityColors as colors } from "@/features/feed/community-colors";
 import { deletePost, reportPost } from "@/services/post.service";
 import { spacing, typography } from "@/theme";
 import type { FeedPost } from "@/types/feed";
+import { normalizePostLink } from "@/utils/post-link";
 
 const reactions = [
   { color: "#1877F2", icon: "thumbs-up" as const, label: "Like", type: 0 },
@@ -163,6 +166,7 @@ export function PostCard({
   );
   const reactionAnimation = useRef(new Animated.Value(0)).current;
   const visibility = getVisibilityInfo(post.visibility);
+  const linkUrl = useMemo(() => normalizePostLink(post.link), [post.link]);
   const currentReaction = reactions.find(
     (reaction) => reaction.type === post.reactionType,
   );
@@ -280,6 +284,18 @@ export function PostCard({
     }
   };
 
+  const openPostLink = async () => {
+    if (!linkUrl) return;
+    try {
+      await Linking.openURL(linkUrl);
+    } catch {
+      Alert.alert(
+        "KhÃ´ng thá»ƒ má»Ÿ liÃªn káº¿t",
+        "LiÃªn káº¿t nÃ y khÃ´ng há»£p lá»‡ hoáº·c khÃ´ng Ä‘Æ°á»£c há»— trá»£.",
+      );
+    }
+  };
+
   return (
     <Pressable
       accessibilityRole={onOpenPost ? "button" : undefined}
@@ -359,12 +375,13 @@ export function PostCard({
           >
             {post.body}
           </Text>
-          <Text
+          <MentionText
             numberOfLines={isBodyExpanded ? undefined : 5}
+            mentions={post.mentions}
             style={styles.body}
           >
             {post.body}
-          </Text>
+          </MentionText>
           {isBodyExpandable ? (
             <Pressable
               accessibilityRole="button"
@@ -377,6 +394,26 @@ export function PostCard({
             </Pressable>
           ) : null}
         </View>
+      ) : null}
+
+      {linkUrl ? (
+        <Pressable
+          accessibilityHint="Má»Ÿ liÃªn káº¿t trong trÃ¬nh duyá»‡t"
+          accessibilityLabel={linkUrl}
+          accessibilityRole="link"
+          onPress={(event) => {
+            event.stopPropagation();
+            void openPostLink();
+          }}
+          style={({ pressed }) => [
+            styles.linkPressable,
+            pressed && styles.linkPressed,
+          ]}
+        >
+          <Text numberOfLines={2} style={styles.linkText}>
+            {linkUrl}
+          </Text>
+        </Pressable>
       ) : null}
 
       {post.images.length > 0 && (
@@ -656,6 +693,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md,
+  },
+  linkPressable: {
+    marginBottom: spacing.md,
+    marginHorizontal: spacing.md,
+  },
+  linkPressed: { opacity: 0.65 },
+  linkText: {
+    color: colors.primary,
+    fontSize: 14,
+    lineHeight: 20,
+    textDecorationLine: "underline",
   },
   media: { backgroundColor: colors.border, height: 180, width: "49.5%" },
   mediaGrid: {

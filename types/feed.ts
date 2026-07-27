@@ -1,3 +1,5 @@
+import type { MentionReference } from "@/types/mention";
+
 export type FeedPost = {
   id: string;
   author: string;
@@ -5,6 +7,7 @@ export type FeedPost = {
   avatar: string;
   isAuthorVerified: boolean;
   isMine: boolean;
+  link: string | null;
   location: string | null;
   publishedAt: string;
   body: string;
@@ -17,6 +20,7 @@ export type FeedPost = {
   comments: number;
   shares: number;
   visibility: number;
+  mentions?: MentionReference[];
 };
 
 export type ReactionResponse = {
@@ -36,6 +40,7 @@ export type ApiPost = {
   postType: number;
   visibility: number;
   location: string | null;
+  link?: string | null;
   createdAt: string;
   user?: {
     id: string;
@@ -57,6 +62,7 @@ export type ApiPost = {
   isReacted: boolean;
   reactionType: number;
   isSaved: boolean;
+  mentions?: MentionReference[];
 };
 
 export type PostsResponse = {
@@ -76,4 +82,5 @@ export type CreatePostInput = {
   longitude?: number;
   post?: string;
   visibility: number;
+  mentionUserIds?: string[];
 };

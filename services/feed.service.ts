@@ -7,6 +7,7 @@ import type {
   PostsResponse,
 } from "@/types/feed";
 import { formatPostTime } from "@/utils/post-format";
+import { normalizePostLink } from "@/utils/post-link";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -91,6 +92,7 @@ export const mapFeedPost = (
   isMine: !!currentUser?.id && post.user?.id === currentUser.id,
   isReacted: post.isReacted ?? false,
   isSaved: post.isSaved ?? false,
+  link: normalizePostLink(post.link),
   location: post.location?.trim() || null,
   publishedAt: formatPostTime(post.createdAt),
   reactionType: post.reactionType ?? 0,
@@ -98,6 +100,7 @@ export const mapFeedPost = (
   saveCount: post.saveCount ?? 0,
   shares: post.shareCount ?? 0,
   visibility: post.visibility ?? 0,
+  mentions: post.mentions ?? [],
 });
 
 export const getPosts = async ({
@@ -175,6 +178,10 @@ export const createPost = async (
   if (payload.link?.trim()) {
     formData.append("link", payload.link.trim());
   }
+
+  payload.mentionUserIds?.forEach((id) =>
+    formData.append("mentionUserIds", id),
+  );
 
   payload.files.forEach((uri, index) => appendFile(formData, uri, index));
 

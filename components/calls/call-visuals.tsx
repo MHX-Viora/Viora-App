@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { type ReactNode, useEffect, useRef } from "react";
+import { Animated, Easing, StyleSheet, View } from "react-native";
 
 import { communityColors as colors } from "@/features/feed/community-colors";
 
@@ -15,17 +15,117 @@ export function CallBackdrop() {
 }
 
 export function CallAvatarHalo({
+  animated = false,
   children,
   size = 232,
 }: {
+  animated?: boolean;
   children: ReactNode;
   size?: number;
 }) {
+  const outerPulse = useRef(new Animated.Value(0)).current;
+  const middlePulse = useRef(new Animated.Value(0)).current;
+  const innerPulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!animated) {
+      outerPulse.setValue(0);
+      middlePulse.setValue(0);
+      innerPulse.setValue(0);
+      return;
+    }
+
+    const pulse = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(outerPulse, {
+            duration: 1200,
+            easing: Easing.out(Easing.ease),
+            toValue: 1,
+            useNativeDriver: true,
+          }),
+          Animated.timing(outerPulse, {
+            duration: 700,
+            easing: Easing.in(Easing.ease),
+            toValue: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.delay(220),
+          Animated.timing(middlePulse, {
+            duration: 1050,
+            easing: Easing.out(Easing.ease),
+            toValue: 1,
+            useNativeDriver: true,
+          }),
+          Animated.timing(middlePulse, {
+            duration: 630,
+            easing: Easing.in(Easing.ease),
+            toValue: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.delay(420),
+          Animated.timing(innerPulse, {
+            duration: 900,
+            easing: Easing.out(Easing.ease),
+            toValue: 1,
+            useNativeDriver: true,
+          }),
+          Animated.timing(innerPulse, {
+            duration: 550,
+            easing: Easing.in(Easing.ease),
+            toValue: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    );
+    pulse.start();
+
+    return () => pulse.stop();
+  }, [animated, innerPulse, middlePulse, outerPulse]);
+
+  const animatedRingStyle = (value: Animated.Value, maxScale: number) => ({
+    opacity: value.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.78, 0.24],
+    }),
+    transform: [
+      {
+        scale: value.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, maxScale],
+        }),
+      },
+    ],
+  });
+
   return (
     <View style={[styles.halo, { height: size, width: size }]}>
-      <View style={[styles.ring, styles.outerRing]} />
-      <View style={[styles.ring, styles.middleRing]} />
-      <View style={[styles.ring, styles.innerRing]} />
+      <Animated.View
+        style={[
+          styles.ring,
+          styles.outerRing,
+          animatedRingStyle(outerPulse, 1.12),
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.ring,
+          styles.middleRing,
+          animatedRingStyle(middlePulse, 1.09),
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.ring,
+          styles.innerRing,
+          animatedRingStyle(innerPulse, 1.06),
+        ]}
+      />
       <View style={styles.avatarContent}>{children}</View>
     </View>
   );

@@ -1,9 +1,7 @@
-import * as Notifications from "expo-notifications";
-
 import { getActiveChatConversation } from "@/features/chat/chat-events";
 import type { NewMessageNotificationEvent } from "@/types/chat";
+import { showRichChatNotification } from "@/services/chat-push-notification.service";
 import { claimChatNotification } from "@/utils/chat-notification-dedupe";
-import { getCurrentNotificationData } from "@/utils/push-notification-time";
 
 const getMessagePreview = (event: NewMessageNotificationEvent) => {
   const content = event.message.content.trim();
@@ -43,18 +41,20 @@ export const showChatRealtimeNotification = async (
   }
 
   try {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        body: getMessagePreview(event),
-        data: getCurrentNotificationData({
-          conversationId: event.conversationId,
-          deliverySource: "signalr-local",
-          messageId: event.message.id,
-          type: "chat",
-        }),
-        title: event.sender?.displayName ?? event.conversationName,
-      },
-      trigger: null,
+    await showRichChatNotification({
+      conversationAvatarUrl: event.conversationAvatarUrl,
+      conversationId: event.conversationId,
+      conversationName: event.conversationName,
+      conversationType: String(event.conversationType),
+      createdAt: event.message.createdAt,
+      deliverySource: "signalr-local",
+      messageId: event.message.id,
+      messageType: String(event.message.messageType),
+      messagePreview: getMessagePreview(event),
+      senderAvatarUrl: event.sender?.avatarUrl,
+      senderId: event.sender?.id,
+      senderName: event.sender?.displayName ?? event.conversationName,
+      type: "chat",
     });
   } catch (error) {
     console.info(

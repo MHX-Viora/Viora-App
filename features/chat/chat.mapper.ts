@@ -243,6 +243,19 @@ export const mapMessage = (value: unknown): ChatMessage | null => {
     isEdited: asBoolean(payload.isEdited),
     isMine: asBoolean(payload.isMine),
     messageType,
+    mentions: asArray(payload.mentions)
+      .map((item) =>
+        isRecord(item)
+          ? {
+              displayName: asString(item.displayName),
+              userId: asString(item.userId),
+            }
+          : null,
+      )
+      .filter(
+        (item): item is { displayName: string; userId: string } =>
+          Boolean(item?.displayName && item.userId),
+      ),
     reactions: asArray(payload.reactions).map(mapReaction).filter((item): item is ChatReaction => item !== null),
     reply: mapReply(payload.reply ?? payload.replyMessage ?? payload.replyTo),
     sender,
