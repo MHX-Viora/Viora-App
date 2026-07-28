@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,9 +17,14 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { showAppToast } from "@/components/common/app-toast";
 import { changePassword } from "@/services/account.service";
 import { clearAuthSession } from "@/services/auth.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ChangePasswordScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -146,6 +151,9 @@ function PasswordField({
   placeholder: string;
   value: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isVisible, setIsVisible] = useState(false);
 
   return (
@@ -184,7 +192,7 @@ function PasswordField({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

@@ -19,13 +19,18 @@ import { openProfileByUserId } from "@/features/profile/open-profile";
 import { formatReelCount, getReelById } from "@/services/reel.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { getReelShareLink } from "@/services/share-link.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const firstParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] ?? "" : value ?? "";
 
 export function ReelPreviewScreen() {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ reelId?: string | string[] }>();
   const reelId = useMemo(() => firstParam(params.reelId).trim(), [params.reelId]);
@@ -172,7 +177,7 @@ export function ReelPreviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     alignItems: "center",
     flex: 1,

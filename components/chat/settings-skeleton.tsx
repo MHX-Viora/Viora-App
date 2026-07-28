@@ -1,8 +1,14 @@
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function SettingsSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.skeletonContent}>
       <View style={styles.skeletonAvatar} />
@@ -20,7 +26,7 @@ export function SettingsSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   skeletonAvatar: {
     alignSelf: "center",
     backgroundColor: colors.border,

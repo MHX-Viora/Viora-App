@@ -24,8 +24,10 @@ import { emitRealtimeConversation } from "@/features/chat/chat-events";
 import { createGroupConversation } from "@/services/chat.service";
 import { getSelectableFriends } from "@/services/friend.service";
 import { getUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { SelectableFriend } from "@/types/chat-group";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 20;
 
@@ -71,6 +73,9 @@ function SelectedMember({
   locked: boolean;
   onRemove: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.selectedItem}>
       <View>
@@ -110,6 +115,10 @@ const FriendRow = memo(function FriendRow({
   isSelected: boolean;
   onToggle: (friend: SelectableFriend) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -148,6 +157,9 @@ const FriendRow = memo(function FriendRow({
 });
 
 export function CreateGroupScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{
     defaultAvatarUrl?: string | string[];
     defaultIsVerified?: string | string[];
@@ -488,7 +500,7 @@ export function CreateGroupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatarPicker: { alignSelf: "center", position: "relative" },
   cameraBadge: {
     alignItems: "center",

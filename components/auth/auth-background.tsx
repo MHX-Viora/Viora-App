@@ -1,10 +1,15 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function AuthBackground({ compact = false }: { compact?: boolean }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <View style={styles.cyanGlow} />
@@ -23,7 +28,7 @@ export function AuthBackground({ compact = false }: { compact?: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   brand: {
     alignItems: "center",
     flexDirection: "row",
@@ -39,7 +44,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   cyanGlow: {
-    backgroundColor: "rgba(36, 221, 228, 0.16)",
+    backgroundColor: colors.visuals.rgb_36_221_228_0_16,
     borderRadius: 180,
     height: 330,
     position: "absolute",
@@ -60,7 +65,7 @@ const styles = StyleSheet.create({
     width: 42,
   },
   orbitLarge: {
-    borderColor: "rgba(36, 221, 228, 0.12)",
+    borderColor: colors.visuals.rgb_36_221_228_0_12,
     borderRadius: 260,
     borderWidth: 1,
     height: 520,
@@ -70,7 +75,7 @@ const styles = StyleSheet.create({
     width: 520,
   },
   orbitSmall: {
-    borderColor: "rgba(152, 80, 232, 0.16)",
+    borderColor: colors.visuals.rgb_152_80_232_0_16,
     borderRadius: 150,
     borderWidth: 1,
     bottom: -65,
@@ -80,7 +85,7 @@ const styles = StyleSheet.create({
     width: 300,
   },
   purpleGlow: {
-    backgroundColor: "rgba(152, 80, 232, 0.14)",
+    backgroundColor: colors.visuals.rgb_152_80_232_0_14,
     borderRadius: 210,
     bottom: -150,
     height: 410,

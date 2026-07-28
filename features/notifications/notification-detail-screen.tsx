@@ -1,17 +1,22 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { notificationColors as colors } from "@/features/notifications/notification-colors";
 import { spacing } from "@/theme";
 import { formatNotificationTime } from "@/utils/notification-time";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const firstParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] ?? "" : value ?? "";
 
 export function NotificationDetailScreen() {
+  const { theme } = useTheme();
+  const colors = theme.notifications;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     avatarUrl?: string | string[];
@@ -86,7 +91,7 @@ export function NotificationDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     borderColor: colors.border,
     borderRadius: 28,

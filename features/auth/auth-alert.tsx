@@ -1,13 +1,15 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { AuthAlertOptions, AuthAlertProps } from "@/types/auth";
+import { type ThemeColors, useTheme } from "@/theme";
 
-const alertStyles = {
+
+const createAlertStyles = (colors: ThemeColors) => ({
   error: {
-    backgroundColor: "#FFF0F3",
+    backgroundColor: colors.dangerSoft,
     color: colors.danger,
     icon: "alert-circle" as const,
   },
@@ -17,11 +19,11 @@ const alertStyles = {
     icon: "information-circle" as const,
   },
   success: {
-    backgroundColor: "#EAF8F0",
-    color: "#168A51",
+    backgroundColor: colors.successSoft,
+    color: colors.successText,
     icon: "checkmark-circle" as const,
   },
-};
+});
 
 export function useAuthAlert() {
   const [alert, setAlert] = useState<AuthAlertOptions | null>(null);
@@ -45,6 +47,10 @@ export function AuthAlert({
   onAction,
   onClose,
 }: AuthAlertProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const alertStyles = useMemo(() => createAlertStyles(colors), [colors]);
   if (!alert) return null;
 
   const appearance = alertStyles[alert.kind ?? "info"];
@@ -114,7 +120,7 @@ export function AuthAlert({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actions: { flexDirection: "row", gap: spacing.sm, width: "100%" },
   card: {
     alignItems: "center",
@@ -125,7 +131,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     maxWidth: 360,
     padding: spacing.xl,
-    shadowColor: "#101828",
+    shadowColor: colors.visuals.hex_101828,
     shadowOffset: { height: 12, width: 0 },
     shadowOpacity: 0.18,
     shadowRadius: 28,
@@ -147,7 +153,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     alignItems: "center",
-    backgroundColor: "rgba(13, 24, 37, 0.52)",
+    backgroundColor: colors.visuals.rgb_13_24_37_0_52,
     flex: 1,
     justifyContent: "center",
     padding: spacing.lg,

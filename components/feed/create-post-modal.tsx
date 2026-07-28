@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,12 +19,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ViewableImage } from "@/components/common/viewable-image";
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { normalizeFeedImageUri } from "@/features/feed/image-source";
 import { spacing, typography } from "@/theme";
 import type { CreatePostInput } from "@/types/feed";
 import type { MentionReference, MentionUser } from "@/types/mention";
 import { activeMentionIds, insertMention } from "@/utils/mention-composer";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type Props = {
   imageUris: string[];
@@ -45,6 +46,9 @@ export function CreatePostModal({
   onSubmit,
   visible,
 }: Props) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [body, setBody] = useState("");
@@ -351,7 +355,7 @@ export function CreatePostModal({
                         onPress={() => onRemoveImage(index)}
                         style={styles.removeImageButton}
                       >
-                        <Ionicons color="#ffffff" name="close" size={18} />
+                        <Ionicons color={colors.visuals.hex_ffffff} name="close" size={18} />
                       </Pressable>
                     </View>
                   );
@@ -381,7 +385,7 @@ export function CreatePostModal({
               ]}
             >
               <View style={[styles.footerIconWrap, styles.photoIconWrap]}>
-                <Ionicons color="#00B140" name="image" size={19} />
+                <Ionicons color={colors.visuals.hex_00B140} name="image" size={19} />
               </View>
               <Text style={styles.footerButtonText}>Ảnh {imageUris.length}/4</Text>
             </Pressable>
@@ -395,7 +399,7 @@ export function CreatePostModal({
               ]}
             >
               <View style={[styles.footerIconWrap, styles.linkIconWrap]}>
-                <Ionicons color="#0068FF" name="link" size={19} />
+                <Ionicons color={colors.visuals.hex_0068FF} name="link" size={19} />
               </View>
               <Text style={styles.footerButtonText}>Link</Text>
             </Pressable>
@@ -410,7 +414,7 @@ export function CreatePostModal({
               ]}
             >
               <View style={[styles.footerIconWrap, styles.locationIconWrap]}>
-                <Ionicons color="#0068FF" name="location" size={19} />
+                <Ionicons color={colors.visuals.hex_0068FF} name="location" size={19} />
               </View>
               <Text style={styles.footerButtonText}>
                 {isGettingLocation ? "Đang lấy..." : "Vị trí"}
@@ -439,9 +443,9 @@ export function CreatePostModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   backdrop: {
-    backgroundColor: "rgba(2, 7, 18, 0.72)",
+    backgroundColor: colors.visuals.rgb_2_7_18_0_72,
     flex: 1,
     justifyContent: "flex-end",
   },
@@ -575,7 +579,7 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     alignItems: "center",
-    backgroundColor: "rgba(5, 10, 20, 0.82)",
+    backgroundColor: colors.visuals.rgb_5_10_20_0_82,
     borderRadius: 14,
     height: 28,
     justifyContent: "center",
@@ -621,7 +625,7 @@ const styles = StyleSheet.create({
   submittingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    backgroundColor: "rgba(2, 7, 18, 0.66)",
+    backgroundColor: colors.visuals.rgb_2_7_18_0_66,
     justifyContent: "center",
     padding: spacing.xl,
     zIndex: 20,

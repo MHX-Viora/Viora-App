@@ -1,19 +1,23 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { searchConversationMessages } from "@/services/chat.service";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { ChatSearchResult } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 30;
 const normalizeConversationId = (value: string) =>
   value.replace(/-(attachments|links|report|search)(?:-|$).*/, "");
 
 export function ConversationSearchScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { conversationId: rawConversationId = "" } = useLocalSearchParams<{ conversationId?: string }>();
   const conversationId = normalizeConversationId(rawConversationId);
@@ -100,13 +104,13 @@ export function ConversationSearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: { alignItems: "center", flex: 1, justifyContent: "center" },
   content: { color: colors.text, fontSize: 15, fontWeight: "800" },
   empty: { color: colors.textMuted, padding: spacing.xl, textAlign: "center" },
-  header: { backgroundColor: "rgba(10, 23, 41, 0.94)", borderBottomColor: colors.border, borderBottomWidth: 1, padding: spacing.md },
+  header: { backgroundColor: colors.visuals.rgb_10_23_41_0_94, borderBottomColor: colors.border, borderBottomWidth: 1, padding: spacing.md },
   meta: { color: colors.textMuted, fontSize: 12, marginTop: spacing.xs },
-  row: { backgroundColor: colors.surfaceElevated, borderColor: "rgba(152, 80, 232, 0.56)", borderRadius: 12, borderWidth: 1, marginHorizontal: spacing.md, marginTop: spacing.sm, padding: spacing.md },
+  row: { backgroundColor: colors.surfaceElevated, borderColor: colors.visuals.rgb_152_80_232_0_56, borderRadius: 12, borderWidth: 1, marginHorizontal: spacing.md, marginTop: spacing.sm, padding: spacing.md },
   screen: { backgroundColor: colors.background, flex: 1 },
   searchInput: { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderRadius: 12, borderWidth: 1, color: colors.text, fontSize: 15, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
 });

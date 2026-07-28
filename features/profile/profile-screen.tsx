@@ -1,14 +1,18 @@
 ﻿import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
+import {
+  TAB_BAR_BOTTOM,
+  TAB_BAR_HEIGHT,
+} from "@/components/layout/tab-bar-style";
 import { ProfileContent } from "@/components/profile/profile-content";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { ProfileQrModal } from "@/components/profile/profile-qr-modal";
 import { ProfileSettingsSheet } from "@/components/profile/profile-settings-sheet";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { logout } from "@/services/auth.service";
 import { getPosts } from "@/services/feed.service";
@@ -26,6 +30,8 @@ import { clearSession, getSession } from "@/stores/session-store";
 import type { User } from "@/types/auth";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
+import { spacing, type ThemeColors, useTheme } from "@/theme";
+
 
 const PROFILE_PAGE_SIZE = 30;
 
@@ -36,6 +42,12 @@ const formatCount = (value: number) => {
 };
 
 export function ProfileScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const profileBottomPadding =
+    TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.xl;
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileContentLoading, setIsProfileContentLoading] = useState(true);
@@ -307,7 +319,10 @@ export function ProfileScreen() {
         onOpenSettings={() => setShowSettings(true)}
       />
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: profileBottomPadding },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <ProfileOverview
@@ -409,7 +424,7 @@ export function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { backgroundColor: colors.background, flexGrow: 1 },
   loading: {
     alignItems: "center",

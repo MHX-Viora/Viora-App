@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ProfilePhotoPicker({
   avatarUri,
@@ -16,6 +19,9 @@ export function ProfilePhotoPicker({
   onAvatarChange: (uri: string) => void;
   onCoverChange: (uri: string) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const pickImage = async (
     options: Pick<ImagePicker.ImagePickerOptions, "allowsEditing" | "aspect">,
@@ -61,7 +67,7 @@ export function ProfilePhotoPicker({
             style={styles.coverImage}
           />
         ) : (
-          <Ionicons color="#7A8496" name="image-outline" size={34} />
+          <Ionicons color={colors.visuals.hex_7A8496} name="image-outline" size={34} />
         )}
         <View style={styles.coverEditBadge}>
           <Ionicons color={colors.white} name="camera" size={15} />
@@ -83,7 +89,7 @@ export function ProfilePhotoPicker({
             style={styles.avatarImage}
           />
         ) : (
-          <Ionicons color="#60758B" name="person-outline" size={56} />
+          <Ionicons color={colors.visuals.hex_60758B} name="person-outline" size={56} />
         )}
         <View style={styles.cameraBadge}>
           <Ionicons color={colors.white} name="camera" size={18} />
@@ -98,7 +104,7 @@ export function ProfilePhotoPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   addPhotoText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
   avatarButton: {
     alignItems: "center",
@@ -109,7 +115,7 @@ const styles = StyleSheet.create({
     height: 104,
     justifyContent: "center",
     marginTop: -52,
-    shadowColor: "#6D7890",
+    shadowColor: colors.visuals.hex_6D7890,
     shadowOpacity: 0.14,
     shadowRadius: 10,
     width: 104,
@@ -117,7 +123,7 @@ const styles = StyleSheet.create({
   avatarImage: { borderRadius: 44, height: 88, width: 88 },
   cameraBadge: {
     alignItems: "center",
-    backgroundColor: "#0868D9",
+    backgroundColor: colors.visuals.hex_0868D9,
     borderColor: colors.white,
     borderRadius: 15,
     borderWidth: 3,
@@ -130,7 +136,7 @@ const styles = StyleSheet.create({
   },
   coverPlaceholder: {
     alignItems: "center",
-    backgroundColor: "#DCE8FF",
+    backgroundColor: colors.visuals.hex_DCE8FF,
     borderRadius: 10,
     height: 170,
     justifyContent: "center",
@@ -140,7 +146,7 @@ const styles = StyleSheet.create({
   },
   coverEditBadge: {
     alignItems: "center",
-    backgroundColor: "rgba(15,23,42,0.72)",
+    backgroundColor: colors.visuals.rgb_15_23_42_0_72,
     borderRadius: 14,
     flexDirection: "row",
     gap: spacing.xs,

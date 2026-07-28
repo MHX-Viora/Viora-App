@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { memo, useCallback, useEffect, useRef, useState, useTransition, useMemo } from "react";
 import {
   Animated,
   Pressable,
@@ -10,10 +10,11 @@ import {
 
 import { PostCard } from "@/components/feed/post-card";
 import { ReelsGridViewer } from "@/components/reels/reels-grid-viewer";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type ProfileTab = "posts" | "videos";
 
@@ -54,6 +55,9 @@ export function ProfileContent({
   reelsPaused?: boolean;
   stats: readonly { label: string; value: string }[];
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
   const [, startTabTransition] = useTransition();
   const isPostsTab = activeTab === "posts";
@@ -137,6 +141,9 @@ export function ProfileContent({
 }
 
 function ProfileContentSkeleton({ activeTab }: { activeTab: ProfileTab }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
   const isPostsTab = activeTab === "posts";
 
@@ -202,6 +209,10 @@ const ProfileTabButton = memo(function ProfileTabButton({
   label: string;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       accessibilityRole="tab"
@@ -217,7 +228,7 @@ const ProfileTabButton = memo(function ProfileTabButton({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   activeIndicator: {
     backgroundColor: colors.primary,
     bottom: -1,

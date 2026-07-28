@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,10 +10,11 @@ import {
   type GestureResponderEvent,
 } from "react-native";
 
-import { notificationColors as colors } from "@/features/notifications/notification-colors";
 import { spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
 import { formatNotificationTime } from "@/utils/notification-time";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type Props = {
   isMarkingRead?: boolean;
@@ -28,6 +29,9 @@ function NotificationItemComponent({
   onMarkRead,
   onPress,
 }: Props) {
+  const { theme } = useTheme();
+  const colors = theme.notifications;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const senderName = notification.sender?.displayName ?? notification.title;
   const handleMarkRead = (event: GestureResponderEvent) => {
     event.stopPropagation();
@@ -121,7 +125,7 @@ export const NotificationItem = memo(
     previous.onPress === next.onPress,
 );
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     borderColor: colors.border,
     borderRadius: 26,

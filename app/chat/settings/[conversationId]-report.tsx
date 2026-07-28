@@ -1,12 +1,17 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export default function ConversationReportRoute() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
   return (
@@ -36,7 +41,7 @@ export default function ConversationReportRoute() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     alignItems: "center",
     flex: 1,
@@ -46,7 +51,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",

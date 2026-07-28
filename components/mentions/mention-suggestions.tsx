@@ -1,10 +1,11 @@
 import { Image } from "expo-image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { searchMentionUsers } from "@/services/mention.service";
 import type { MentionUser } from "@/types/mention";
 import { getMentionQuery } from "@/utils/mention-composer";
+import { type ThemeColors, useTheme } from "@/theme";
 
 export function MentionSuggestions({
   onSelect,
@@ -17,6 +18,9 @@ export function MentionSuggestions({
   showAvatar?: boolean;
   value: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [users, setUsers] = useState<MentionUser[]>([]);
   const query = getMentionQuery(value);
   const keyword = query?.keyword;
@@ -56,15 +60,15 @@ export function MentionSuggestions({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: { borderRadius: 18, height: 36, width: 36 },
   container: {
-    backgroundColor: "#171A21",
-    borderColor: "#303744",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
     overflow: "hidden",
   },
-  name: { color: "#F7F8FA", flex: 1, fontSize: 14, fontWeight: "700" },
+  name: { color: colors.text, flex: 1, fontSize: 14, fontWeight: "700" },
   row: { alignItems: "center", flexDirection: "row", gap: 10, padding: 10 },
 });

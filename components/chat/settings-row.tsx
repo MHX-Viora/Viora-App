@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type SettingsRowProps = {
   danger?: boolean;
@@ -22,6 +24,9 @@ export function SettingsRow({
   right,
   title,
 }: SettingsRowProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole={onPress ? "button" : undefined}
@@ -48,8 +53,8 @@ export function SettingsRow({
   );
 }
 
-const styles = StyleSheet.create({
-  dangerIcon: { backgroundColor: "rgba(239, 71, 111, 0.12)" },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  dangerIcon: { backgroundColor: colors.visuals.rgb_239_71_111_0_12 },
   dangerText: { color: colors.danger },
   row: {
     alignItems: "center",

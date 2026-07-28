@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
@@ -21,12 +21,17 @@ import { registerPushNotifications } from "@/services/push-notification.service"
 import { startRealtime } from "@/services/realtime.service";
 import { createProfile } from "@/services/user.service";
 import { updateUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Gender, GenderLabel } from "@/types/auth";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const GENDERS: GenderLabel[] = ["Nam", "Nữ", "Khác"];
 
 export function CompleteProfileScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const [avatarUri, setAvatarUri] = useState<string>();
   const [coverUri, setCoverUri] = useState<string>();
@@ -178,7 +183,7 @@ export function CompleteProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { gap: spacing.xl, maxWidth: 430, width: "100%" },
   content: { flexGrow: 1, justifyContent: "center", padding: spacing.md },
   fieldGroup: { gap: spacing.sm },
@@ -188,7 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: spacing.xl,
     padding: spacing.xl,
-    shadowColor: "#7D8799",
+    shadowColor: colors.visuals.hex_7D8799,
     shadowOpacity: 0.08,
     shadowRadius: 14,
   },
@@ -203,9 +208,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   genderRow: { flexDirection: "row", gap: spacing.sm },
-  genderSelected: { backgroundColor: "#E0EBFF", borderColor: colors.primary },
+  genderSelected: { backgroundColor: colors.visuals.hex_E0EBFF, borderColor: colors.primary },
   genderText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
-  genderTextSelected: { color: "#1239A6" },
+  genderTextSelected: { color: colors.visuals.hex_1239A6 },
   heading: { alignItems: "center", gap: spacing.xs },
   input: { color: colors.text, flex: 1, fontSize: 15, paddingVertical: 12 },
   label: { color: colors.text, fontSize: 13, fontWeight: "700" },
@@ -217,12 +222,12 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing.md,
   },
-  screen: { backgroundColor: "#F5F7FD", flex: 1 },
+  screen: { backgroundColor: colors.visuals.hex_F5F7FD, flex: 1 },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     maxWidth: 300,
     textAlign: "center",
   },
-  title: { color: "#071A38", fontSize: 26, fontWeight: "900" },
+  title: { color: colors.visuals.hex_071A38, fontSize: 26, fontWeight: "900" },
 });

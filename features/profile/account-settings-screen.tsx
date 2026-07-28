@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import {
@@ -13,10 +14,14 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { showAppToast } from "@/components/common/app-toast";
 import { useUserSettings } from "@/hooks/use-user-settings";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 function SettingsSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.skeletonContent}>
       <View style={styles.skeletonRow}>
@@ -34,6 +39,9 @@ function Section({
   children: React.ReactNode;
   title: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -43,6 +51,9 @@ function Section({
 }
 
 export function AccountSettingsScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const {
     draft,
@@ -178,7 +189,7 @@ export function AccountSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     alignItems: "center",
     flex: 1,
@@ -262,7 +273,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.xs },
   sectionBody: {
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderColor: colors.visuals.rgb_152_80_232_0_56,
     borderRadius: 14,
     borderWidth: 1,
     overflow: "hidden",

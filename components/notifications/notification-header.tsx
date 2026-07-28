@@ -1,7 +1,9 @@
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { notificationColors as colors } from "@/features/notifications/notification-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type Props = {
   onMarkAllRead: () => void;
@@ -9,6 +11,9 @@ type Props = {
 };
 
 export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
+  const { theme } = useTheme();
+  const colors = theme.notifications;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.header}>
       <View>
@@ -30,7 +35,7 @@ export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   action: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.border,

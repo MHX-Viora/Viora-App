@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Location from "expo-location";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,9 +14,14 @@ import {
   fetchWeather,
   type CurrentWeather,
 } from "@/features/utilities/weather";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function WeatherCard() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [weather, setWeather] = useState<CurrentWeather | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -88,7 +93,7 @@ export function WeatherCard() {
       <View style={styles.card}>
       <View style={styles.topRow}>
         <View style={styles.badge}>
-          <Ionicons color="#FFE08A" name="location" size={13} />
+          <Ionicons color={colors.visuals.hex_FFE08A} name="location" size={13} />
           <Text numberOfLines={1} style={styles.badgeText}>
             {weather?.locationName ?? "Đang xác định vị trí"} · Hiện tại
           </Text>
@@ -130,7 +135,7 @@ export function WeatherCard() {
       <View style={styles.details}>
         <View style={styles.detailItem}>
           <Ionicons
-            color="rgba(255,255,255,0.8)"
+            color={colors.visuals.rgb_255_255_255_0_8}
             name="thermometer-outline"
             size={16}
           />
@@ -141,7 +146,7 @@ export function WeatherCard() {
         </View>
         <View style={styles.detailItem}>
           <Ionicons
-            color="rgba(255,255,255,0.8)"
+            color={colors.visuals.rgb_255_255_255_0_8}
             name="speedometer-outline"
             size={16}
           />
@@ -172,33 +177,33 @@ export function WeatherCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   badge: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
   badgeText: {
-    color: "rgba(255,255,255,0.86)",
+    color: colors.visuals.rgb_255_255_255_0_86,
     fontSize: 12,
     fontWeight: "600",
   },
   card: {
-    backgroundColor: "#2568B8",
+    backgroundColor: colors.visuals.hex_2568B8,
     borderRadius: 20,
     minHeight: 184,
     padding: spacing.lg,
   },
-  condition: { color: "rgba(255,255,255,0.82)", fontSize: 14, marginTop: 2 },
+  condition: { color: colors.visuals.rgb_255_255_255_0_82, fontSize: 14, marginTop: 2 },
   conditionIcon: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_12,
     borderRadius: 28,
     height: 56,
     justifyContent: "center",
     width: 56,
   },
   detailItem: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
-  detailText: { color: "rgba(255,255,255,0.8)", fontSize: 12 },
+  detailText: { color: colors.visuals.rgb_255_255_255_0_8, fontSize: 12 },
   details: {
     alignItems: "center",
-    borderTopColor: "rgba(255,255,255,0.15)",
+    borderTopColor: colors.visuals.rgb_255_255_255_0_15,
     borderTopWidth: 1,
     flexDirection: "row",
     gap: spacing.md,

@@ -1,10 +1,9 @@
 import { Tabs } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { TabIcon } from "@/components/layout/tab-icon";
-import { floatingTabBarStyle } from "@/components/layout/tab-bar-style";
-import { communityColors as navigationColors } from "@/features/feed/community-colors";
-import { colors } from "@/theme";
+import { createFloatingTabBarStyle } from "@/components/layout/tab-bar-style";
+import { useTheme } from "@/theme";
 import {
   getChatUnreadCount,
   subscribeChatUnreadCount,
@@ -14,18 +13,25 @@ import {
   subscribeNotificationUnreadCount,
 } from "@/utils/notification-unread-count";
 
-const tabBadgeStyle = {
-  backgroundColor: colors.danger,
-  color: colors.white,
-  fontSize: 10,
-  fontWeight: "800" as const,
-  minWidth: 18,
-};
-
 const getBadge = (count: number) =>
   count > 0 ? (count > 99 ? "99+" : count) : undefined;
 
 export default function TabLayout() {
+  const { theme } = useTheme();
+  const floatingTabBarStyle = useMemo(
+    () => createFloatingTabBarStyle(theme),
+    [theme],
+  );
+  const tabBadgeStyle = useMemo(
+    () => ({
+      backgroundColor: theme.colors.danger,
+      color: theme.colors.white,
+      fontSize: 10,
+      fontWeight: "800" as const,
+      minWidth: 18,
+    }),
+    [theme],
+  );
   const [unreadNotificationCount, setUnreadNotificationCountState] = useState(
     getNotificationUnreadCount(),
   );
@@ -43,9 +49,10 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: navigationColors.primary,
+        sceneStyle: { backgroundColor: theme.colors.background },
+        tabBarActiveTintColor: theme.colors.primary,
         tabBarHideOnKeyboard: true,
-        tabBarInactiveTintColor: navigationColors.textMuted,
+        tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarLabelPosition: "below-icon",
         tabBarItemStyle: {
           borderRadius: 16,

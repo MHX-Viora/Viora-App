@@ -6,15 +6,20 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { PostCard } from "@/components/feed/post-card";
 import { ReelsGridViewer } from "@/components/reels/reels-grid-viewer";
+import {
+  TAB_BAR_BOTTOM,
+  TAB_BAR_HEIGHT,
+} from "@/components/layout/tab-bar-style";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { useProfileActivityList } from "@/hooks/use-profile-activity-list";
 import {
@@ -23,12 +28,12 @@ import {
 } from "@/services/profile-activity.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { getPostShareLink, getReelShareLink } from "@/services/share-link.service";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { ProfileActivityContentType, ProfileActivityKind } from "@/types/profile-activity";
 import type { Reel } from "@/types/reel";
-import { Share } from "react-native";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type ActivityList = ReturnType<typeof useProfileActivityList<FeedPost>>;
 type ReelActivityList = ReturnType<typeof useProfileActivityList<Reel>>;
@@ -43,6 +48,9 @@ function SegmentButton<T extends string>({
   onPress: () => void;
   value: T;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -57,6 +65,9 @@ function SegmentButton<T extends string>({
 }
 
 function ActivitySkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.skeletonWrap}>
       {Array.from({ length: 4 }).map((_, index) => (
@@ -79,6 +90,9 @@ function EmptyState({
   contentType: ProfileActivityContentType;
   kind: ProfileActivityKind;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isPosts = contentType === "posts";
   const message =
     kind === "reacted"
@@ -102,6 +116,9 @@ function EmptyState({
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.center}>
       <Text style={styles.errorText}>{message}</Text>
@@ -113,6 +130,12 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 export function ProfileActivityScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const listBottomPadding =
+    TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.lg;
   const params = useLocalSearchParams<{ kind?: string | string[] }>();
   const initialKind: ProfileActivityKind =
     (Array.isArray(params.kind) ? params.kind[0] : params.kind) === "saved"
@@ -282,6 +305,7 @@ export function ProfileActivityScreen() {
         <FlatList
           contentContainerStyle={[
             styles.listContent,
+            { paddingBottom: listBottomPadding },
             (list.items as FeedPost[]).length === 0 && styles.emptyList,
           ]}
           data={list.items as FeedPost[]}
@@ -315,6 +339,7 @@ export function ProfileActivityScreen() {
         <FlatList
           contentContainerStyle={[
             styles.reelsContent,
+            { paddingBottom: listBottomPadding },
             (list.items as Reel[]).length === 0 && styles.emptyList,
           ]}
           data={[0]}
@@ -355,7 +380,7 @@ export function ProfileActivityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     alignItems: "center",
     flex: 1,

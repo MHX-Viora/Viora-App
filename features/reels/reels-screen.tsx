@@ -2,7 +2,7 @@
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import {
   Alert,
@@ -20,7 +20,7 @@ import {
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { showAppToast } from "@/components/common/app-toast";
 import {
-  floatingTabBarStyle,
+  createFloatingTabBarStyle,
   TAB_BAR_BOTTOM,
   TAB_BAR_HEIGHT,
 } from "@/components/layout/tab-bar-style";
@@ -31,7 +31,6 @@ import { ReelsHeader } from "@/components/reels/reels-header";
 import { ReelsSearchModal } from "@/components/reels/reels-search-modal";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { reels } from "@/features/reels/data";
-import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { reactPost, savePost } from "@/services/post.service";
 import { getReelShareLink } from "@/services/share-link.service";
 import {
@@ -41,6 +40,8 @@ import {
 } from "@/services/reel.service";
 import { spacing } from "@/theme";
 import type { Reel, ReelSort } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 20;
 const ITEM_GAP = 0;
@@ -85,6 +86,13 @@ const SORT_EMPTY_MESSAGES: Record<
 };
 
 export function ReelsScreen() {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const floatingTabBarStyle = useMemo(
+    () => createFloatingTabBarStyle(theme),
+    [theme],
+  );
   const isFocused = useIsFocused();
   const navigation = useNavigation();
   const reelsListRef = useRef<FlatList<Reel>>(null);
@@ -158,7 +166,7 @@ export function ReelsScreen() {
     return () => {
       parent?.setOptions({ tabBarStyle: floatingTabBarStyle });
     };
-  }, [isSearchDetailVisible, navigation]);
+  }, [floatingTabBarStyle, isSearchDetailVisible, navigation]);
 
   const searchReels = useCallback(
     async (keyword: string) => {
@@ -488,6 +496,9 @@ export function ReelsScreen() {
 }
 
 function EmptyReels({ message, sort }: { message: string; sort: ReelSort }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const emptyMessage = SORT_EMPTY_MESSAGES[sort];
 
   return (
@@ -504,6 +515,9 @@ function EmptyReels({ message, sort }: { message: string; sort: ReelSort }) {
 }
 
 function ReelsLoadingSkeleton({ height }: { height: number }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.42)).current;
 
   useEffect(() => {
@@ -550,7 +564,7 @@ function ReelsLoadingSkeleton({ height }: { height: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   centerState: {
     alignItems: "center",
     flex: 1,
@@ -559,7 +573,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   centerText: {
-    color: "rgba(255,255,255,0.72)",
+    color: colors.visuals.rgb_255_255_255_0_72,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
@@ -572,7 +586,7 @@ const styles = StyleSheet.create({
   },
   container: { backgroundColor: colors.reelBackground, flex: 1 },
   skeletonAvatar: {
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_18,
     borderRadius: 24,
     height: 48,
     width: 48,
@@ -586,33 +600,33 @@ const styles = StyleSheet.create({
     right: spacing.md,
   },
   skeletonCircle: {
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_18,
     borderRadius: 24,
     height: 48,
     width: 48,
   },
   skeletonCopy: { flex: 1, gap: spacing.sm, paddingRight: spacing.lg },
   skeletonLine: {
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_16,
     borderRadius: 4,
     height: 14,
     width: "72%",
   },
   skeletonLineShort: {
-    backgroundColor: "rgba(97,211,242,0.2)",
+    backgroundColor: colors.visuals.rgb_97_211_242_0_2,
     borderRadius: 4,
     height: 14,
     width: "48%",
   },
   skeletonLineWide: {
-    backgroundColor: "rgba(255,255,255,0.22)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_22,
     borderRadius: 5,
     height: 18,
     width: "54%",
   },
   skeletonPlay: {
     alignSelf: "center",
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_16,
     borderRadius: 28,
     height: 56,
     marginTop: "72%",
@@ -628,7 +642,7 @@ const styles = StyleSheet.create({
   },
   skeletonVideoFrame: {
     aspectRatio: 9 / 16,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_08,
     maxHeight: "100%",
     width: "100%",
   },

@@ -16,15 +16,20 @@ import {
 import { showAppToast } from "@/components/common/app-toast";
 import { ViewableImage } from "@/components/common/viewable-image";
 import { MentionText } from "@/components/mentions/mention-text";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { deletePost, reportPost } from "@/services/post.service";
 import { spacing, typography } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import { normalizePostLink } from "@/utils/post-link";
+import { type ThemeColors, useTheme } from "@/theme";
 
-const reactions = [
-  { color: "#1877F2", icon: "thumbs-up" as const, label: "Like", type: 0 },
-  { color: "#F33E58", icon: "heart" as const, label: "Love", type: 1 },
+
+type ReactionItem =
+  | { color: string; icon: "heart" | "thumbs-up"; label: string; type: number }
+  | { emoji: string; label: string; type: number };
+
+const createReactions = (colors: ThemeColors): ReactionItem[] => [
+  { color: colors.visuals.hex_1877F2, icon: "thumbs-up", label: "Like", type: 0 },
+  { color: colors.visuals.hex_F33E58, icon: "heart", label: "Love", type: 1 },
   { emoji: "\u{1F602}", label: "Haha", type: 2 },
   { emoji: "\u{1F62E}", label: "Wow", type: 3 },
   { emoji: "\u{1F622}", label: "Sad", type: 4 },
@@ -55,7 +60,7 @@ const getVisibilityInfo = (visibility: number) => {
 
 function PostAction({
   active,
-  activeColor = colors.primary,
+  activeColor,
   activeValueColor,
   icon,
   label,
@@ -70,6 +75,10 @@ function PostAction({
   onPress?: () => void;
   value?: number;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const resolvedActiveColor = activeColor ?? colors.primary;
   return (
     <Pressable
       accessibilityLabel={label}
@@ -78,7 +87,7 @@ function PostAction({
       style={styles.action}
     >
       <Ionicons
-        color={active ? activeColor : colors.textMuted}
+        color={active ? resolvedActiveColor : colors.textMuted}
         name={icon}
         size={25}
       />
@@ -101,9 +110,12 @@ function ReactionIcon({
   reaction,
   size = 20,
 }: {
-  reaction: (typeof reactions)[number];
+  reaction: ReactionItem;
   size?: number;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.reactionIconFrame}>
       {"icon" in reaction ? (
@@ -154,6 +166,10 @@ export function PostCard({
   onShare,
   post,
 }: Props) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const reactions = useMemo(() => createReactions(colors), [colors]);
   const [showReactions, setShowReactions] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
@@ -530,7 +546,7 @@ export function PostCard({
         <View style={styles.spacer} />
         <PostAction
           active={post.isSaved}
-          activeColor="#F5B400"
+          activeColor={colors.visuals.hex_F5B400}
           activeValueColor={colors.textMuted}
           icon={post.isSaved ? "bookmark" : "bookmark-outline"}
           label="Lưu"
@@ -624,7 +640,7 @@ export function PostCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   action: {
     alignItems: "center",
     flexDirection: "row",
@@ -786,7 +802,7 @@ const styles = StyleSheet.create({
   },
   sheetActionText: { color: colors.text, fontSize: 16, fontWeight: "800" },
   sheetBackdrop: {
-    backgroundColor: "rgba(0,0,0,0.38)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_38,
     flex: 1,
     justifyContent: "flex-end",
   },

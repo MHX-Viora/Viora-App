@@ -10,7 +10,7 @@ import {
 } from "@livekit/react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Track } from "livekit-client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -24,6 +24,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { endGroupCall, joinGroupCall } from "@/services/group-call.service";
 import { subscribeCallLifecycle } from "@/features/calls/call-events";
 import { getUser } from "@/stores/session-store";
+import { type ThemeColors, useTheme } from "@/theme";
 import { CallType, type GroupCallJoin } from "@/types/call";
 
 type ControlProps = {
@@ -35,6 +36,9 @@ type ControlProps = {
 };
 
 function Control({ active = true, danger, icon, label, onPress }: ControlProps) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityLabel={label}
@@ -42,7 +46,7 @@ function Control({ active = true, danger, icon, label, onPress }: ControlProps) 
       onPress={onPress}
       style={[styles.control, !active && styles.controlOff, danger && styles.controlDanger]}
     >
-      <Ionicons color="#fff" name={icon} size={21} />
+      <Ionicons color={colors.white} name={icon} size={21} />
     </Pressable>
   );
 }
@@ -56,6 +60,9 @@ function RoomContent({
   callId: string;
   isVideo: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const room = useRoomContext();
   const { isCameraEnabled, isMicrophoneEnabled, localParticipant } =
     useLocalParticipant();
@@ -199,6 +206,9 @@ function RoomContent({
 }
 
 export function GroupCallScreen() {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { callId } = useLocalSearchParams<{ callId: string }>();
   const [join, setJoin] = useState<GroupCallJoin | null>(null);
   const [userId, setUserId] = useState("");
@@ -224,7 +234,7 @@ export function GroupCallScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.center}>
-        <Ionicons color="#ff5577" name="alert-circle" size={48} />
+        <Ionicons color={colors.danger} name="alert-circle" size={48} />
         <Text style={styles.error}>{error}</Text>
         <Pressable onPress={() => router.back()} style={styles.back}>
           <Text style={styles.backText}>Quay lại</Text>
@@ -235,7 +245,7 @@ export function GroupCallScreen() {
   if (!join) {
     return (
       <SafeAreaView style={styles.center}>
-        <ActivityIndicator color="#30d5c8" size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
         <Text style={styles.loading}>Đang kết nối cuộc gọi...</Text>
       </SafeAreaView>
     );
@@ -261,26 +271,26 @@ export function GroupCallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  avatar: { alignItems: "center", backgroundColor: "#18344c", flex: 1, justifyContent: "center" },
-  avatarText: { color: "#fff", fontSize: 42, fontWeight: "800" },
-  back: { backgroundColor: "#167f89", borderRadius: 24, paddingHorizontal: 28, paddingVertical: 13 },
-  backText: { color: "#fff", fontWeight: "700" },
-  center: { alignItems: "center", backgroundColor: "#071622", flex: 1, gap: 18, justifyContent: "center", padding: 28 },
-  control: { alignItems: "center", backgroundColor: "#1b5160", borderRadius: 22, height: 44, justifyContent: "center", width: 44 },
-  controlDanger: { backgroundColor: "#e33d55" },
-  controlOff: { backgroundColor: "#6d3547" },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  avatar: { alignItems: "center", backgroundColor: colors.surface, flex: 1, justifyContent: "center" },
+  avatarText: { color: colors.white, fontSize: 42, fontWeight: "800" },
+  back: { backgroundColor: colors.primaryPressed, borderRadius: 24, paddingHorizontal: 28, paddingVertical: 13 },
+  backText: { color: colors.primaryContrast, fontWeight: "700" },
+  center: { alignItems: "center", backgroundColor: colors.reelBackground, flex: 1, gap: 18, justifyContent: "center", padding: 28 },
+  control: { alignItems: "center", backgroundColor: colors.primaryPressed, borderRadius: 22, height: 44, justifyContent: "center", width: 44 },
+  controlDanger: { backgroundColor: colors.danger },
+  controlOff: { backgroundColor: colors.textMuted },
   controls: { alignItems: "center", flexDirection: "row", gap: 6, justifyContent: "center", paddingHorizontal: 6, paddingVertical: 14 },
-  error: { color: "#fff", fontSize: 16, textAlign: "center" },
+  error: { color: colors.white, fontSize: 16, textAlign: "center" },
   grid: { flexGrow: 1, gap: 8, padding: 8 },
   header: { alignItems: "center", padding: 12 },
-  loading: { color: "#b9cbd6" },
-  name: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  nameBadge: { backgroundColor: "rgba(0,0,0,0.55)", bottom: 8, left: 8, maxWidth: "85%", paddingHorizontal: 8, paddingVertical: 5, position: "absolute" },
+  loading: { color: colors.textMuted },
+  name: { color: colors.white, fontSize: 12, fontWeight: "700" },
+  nameBadge: { backgroundColor: colors.overlay, bottom: 8, left: 8, maxWidth: "85%", paddingHorizontal: 8, paddingVertical: 5, position: "absolute" },
   room: { flex: 1 },
-  screen: { backgroundColor: "#071622", flex: 1 },
-  subtitle: { color: "#91a8b5", marginTop: 2 },
-  tile: { aspectRatio: 0.78, backgroundColor: "#102536", borderRadius: 14, flex: 1, margin: 4, overflow: "hidden" },
-  title: { color: "#fff", fontSize: 20, fontWeight: "800" },
+  screen: { backgroundColor: colors.reelBackground, flex: 1 },
+  subtitle: { color: colors.textMuted, marginTop: 2 },
+  tile: { aspectRatio: 0.78, backgroundColor: colors.surface, borderRadius: 14, flex: 1, margin: 4, overflow: "hidden" },
+  title: { color: colors.white, fontSize: 20, fontWeight: "800" },
   video: { flex: 1 },
 });

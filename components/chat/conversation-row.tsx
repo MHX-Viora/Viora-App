@@ -1,8 +1,8 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
@@ -11,6 +11,8 @@ import {
   getConversationTitle,
   getLastMessageText,
 } from "@/utils/conversation-list";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type ConversationRowProps = {
   conversation: Conversation;
@@ -25,6 +27,9 @@ export function ConversationRow({
   onOpen,
   onOpenMenu,
 }: ConversationRowProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const title = getConversationTitle(conversation);
   const avatar = getConversationAvatar(conversation);
   const isPrivate = conversation.conversationType === "Private";
@@ -109,7 +114,7 @@ export function ConversationRow({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     borderColor: colors.borderSubtle,
     borderRadius: 24,
@@ -141,7 +146,7 @@ const styles = StyleSheet.create({
   row: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.62)",
+    borderColor: colors.visuals.rgb_152_80_232_0_62,
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",

@@ -1,6 +1,6 @@
 ﻿import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -33,10 +33,11 @@ import {
   type UserProfile,
 } from "@/services/user.service";
 import { getUser } from "@/stores/session-store";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PROFILE_PAGE_SIZE = 30;
 
@@ -65,6 +66,9 @@ const canOpenConversation = (profile: UserProfile) => {
 };
 
 export function UserProfileScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { userId } = useLocalSearchParams<{ userId?: string }>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<FeedPost[]>([]);
@@ -502,6 +506,9 @@ function ProfileActions({
   onFollow: () => void;
   onFriend: () => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const normalizedFriendshipStatus = friendshipStatus?.toLowerCase();
   const isFriendActionDisabled = isActionLoading;
   const isFriendAccepted = normalizedFriendshipStatus === "accepted";
@@ -558,6 +565,9 @@ function ActionButton({
   onPress: () => void;
   primary?: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -608,7 +618,7 @@ function ActionButton({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionButton: {
     alignItems: "center",
     backgroundColor: colors.background,

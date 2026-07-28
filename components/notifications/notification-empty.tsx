@@ -1,14 +1,19 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 
-import { notificationColors as colors } from "@/features/notifications/notification-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type Props = {
   message?: string;
 };
 
 export function NotificationEmpty({ message }: Props) {
+  const { theme } = useTheme();
+  const colors = theme.notifications;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.empty}>
       <Ionicons color={colors.primary} name="notifications-outline" size={44} />
@@ -18,7 +23,7 @@ export function NotificationEmpty({ message }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   caption: {
     color: colors.textMuted,
     fontSize: 14,

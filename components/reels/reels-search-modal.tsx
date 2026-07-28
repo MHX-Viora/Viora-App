@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Animated,
   Modal,
@@ -12,9 +12,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ReelsGridViewer } from "@/components/reels/reels-grid-viewer";
-import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ReelsSearchModal({
   onClose,
@@ -43,6 +44,9 @@ export function ReelsSearchModal({
   paused?: boolean;
   visible: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Reel[]>([]);
   const [error, setError] = useState("");
@@ -102,7 +106,7 @@ export function ReelsSearchModal({
         accessibilityLabel="Tìm kiếm video ngắn"
         onChangeText={setQuery}
         placeholder="Tìm video, người đăng, hashtag..."
-        placeholderTextColor="rgba(255,255,255,0.78)"
+        placeholderTextColor={colors.visuals.rgb_255_255_255_0_78}
         returnKeyType="search"
         style={[styles.input, styles.floatingInput]}
         value={query}
@@ -197,6 +201,9 @@ export function ReelsSearchModal({
 }
 
 function ReelSearchSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
@@ -242,6 +249,9 @@ function EmptySearch({
   description: string;
   title: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.emptyState}>
       <Ionicons color={colors.textMuted} name="videocam-outline" size={38} />
@@ -251,7 +261,7 @@ function EmptySearch({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   backButton: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,

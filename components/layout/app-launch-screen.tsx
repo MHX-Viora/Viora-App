@@ -1,11 +1,16 @@
+import { useMemo } from "react";
 import { Image } from "expo-image";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { AuthBackground } from "@/components/auth/auth-background";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function AppLaunchScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View
       accessibilityLabel="Đang khởi động Viora"
@@ -33,9 +38,9 @@ export function AppLaunchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   brand: {
-    color: "#071A38",
+    color: colors.visuals.hex_071A38,
     fontSize: 38,
     fontWeight: "900",
     letterSpacing: 2.4,
@@ -48,7 +53,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     position: "absolute",
   },
-  loadingText: { color: "#52637A", fontSize: 12, letterSpacing: 0.4 },
+  loadingText: { color: colors.visuals.hex_52637A, fontSize: 12, letterSpacing: 0.4 },
   logo: {
     backgroundColor: colors.white,
     borderRadius: 24,
@@ -57,8 +62,8 @@ const styles = StyleSheet.create({
   },
   logoFrame: {
     alignItems: "center",
-    backgroundColor: "rgba(36, 221, 228, 0.10)",
-    borderColor: "rgba(36, 221, 228, 0.55)",
+    backgroundColor: colors.visuals.rgb_36_221_228_0_10,
+    borderColor: colors.visuals.rgb_36_221_228_0_55,
     borderRadius: 34,
     borderWidth: 1,
     height: 108,
@@ -76,5 +81,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 100,
   },
-  tagline: { color: "#52637A", fontSize: 14, marginTop: spacing.xs },
+  tagline: { color: colors.visuals.hex_52637A, fontSize: 14, marginTop: spacing.xs },
 });

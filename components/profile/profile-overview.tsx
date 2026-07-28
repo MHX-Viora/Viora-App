@@ -1,10 +1,12 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ProfileOverview({
   actionSlot,
@@ -27,6 +29,9 @@ export function ProfileOverview({
   onEdit?: () => void;
   showEditButton?: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <>
       <View style={styles.hero}>
@@ -79,7 +84,7 @@ export function ProfileOverview({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     borderColor: colors.primary,
     borderRadius: 43,

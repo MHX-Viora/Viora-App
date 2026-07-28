@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { spacing } from "@/theme";
 import type { ReelSort } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const REELS_HEADER_HEIGHT = 90;
 const REELS_HEADER_PADDING_TOP = 40;
@@ -25,6 +27,9 @@ export function ReelsHeader({
   onSearchPress: () => void;
   onSortChange: (sort: ReelSort) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <View style={styles.row}>
@@ -71,7 +76,7 @@ export function ReelsHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   active: {
     color: colors.primary,
     fontSize: 14,

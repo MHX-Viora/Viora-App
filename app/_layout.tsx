@@ -1,6 +1,11 @@
 import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import {
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider as NavigationThemeProvider,
+} from "@react-navigation/native";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppState, View } from "react-native";
 import "react-native-reanimated";
 
@@ -22,6 +27,7 @@ import {
 import { startRealtime, stopRealtime } from "@/services/realtime.service";
 import { getSession } from "@/stores/session-store";
 import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
+import { ThemeProvider, useTheme } from "@/theme";
 
 let appSyncPromise: Promise<void> | null = null;
 
@@ -71,7 +77,23 @@ const synchronizeAuthenticatedApp = (reason: "cold-start" | "resume") => {
   return appSyncPromise;
 };
 
-export default function RootLayout() {
+function RootLayoutContent() {
+  const { theme } = useTheme();
+  const navigationTheme = useMemo(() => {
+    const base = theme.isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: theme.colors.background,
+        border: theme.colors.border,
+        card: theme.colors.surfaceElevated,
+        notification: theme.colors.danger,
+        primary: theme.colors.primary,
+        text: theme.colors.text,
+      },
+    };
+  }, [theme]);
   const segments = useSegments();
   const hasRegisteredPushNotifications = useRef(false);
   const hasHydratedAuthenticatedState = useRef(false);
@@ -192,8 +214,9 @@ export default function RootLayout() {
   }, [segments]);
 
   return (
-    <View style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }}>
+    <NavigationThemeProvider value={navigationTheme}>
+      <View style={{ backgroundColor: theme.colors.background, flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="friends" />
@@ -225,12 +248,24 @@ export default function RootLayout() {
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="__/auth/links" />
         <Stack.Screen name="complete-profile" />
-      </Stack>
-      <StatusBar style="light" />
-      <ActiveCallBanner />
-      <IncomingCallHost />
-      <AppToastHost />
-      {!isAppReady && <AppLaunchScreen />}
-    </View>
+        </Stack>
+        <StatusBar
+          backgroundColor={theme.colors.background}
+          style={theme.isDark ? "light" : "dark"}
+        />
+        <ActiveCallBanner />
+        <IncomingCallHost />
+        <AppToastHost />
+        {!isAppReady && <AppLaunchScreen />}
+      </View>
+    </NavigationThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutContent />
+    </ThemeProvider>
   );
 }

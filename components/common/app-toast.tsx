@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, spacing } from "@/theme";
+import { spacing, type AppTheme, useTheme } from "@/theme";
 
 type ToastType = "success" | "error";
 
@@ -29,6 +29,8 @@ export const showAppToast = (payload: ToastPayload) => {
 };
 
 export function AppToastHost() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(-120)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -104,7 +106,7 @@ export function AppToastHost() {
               />
             </>
           ) : (
-            <Ionicons color={colors.danger} name={icon} size={14} />
+            <Ionicons color={theme.colors.danger} name={icon} size={14} />
           )}
         </View>
         <View style={styles.copy}>
@@ -120,13 +122,13 @@ export function AppToastHost() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   copy: { flex: 1 },
   appIcon: { borderRadius: 5, height: 20, width: 20 },
   checkBadge: {
     alignItems: "center",
-    backgroundColor: "#2F7DFF",
-    borderColor: "#111111",
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.text,
     borderRadius: 6,
     borderWidth: 1,
     bottom: -2,
@@ -136,8 +138,8 @@ const styles = StyleSheet.create({
     right: -4,
     width: 12,
   },
-  errorIcon: { backgroundColor: "rgba(239, 71, 111, 0.16)" },
-  errorMessage: { color: colors.danger },
+  errorIcon: { backgroundColor: theme.colors.primarySoft },
+  errorMessage: { color: theme.colors.danger },
   host: {
     alignItems: "center",
     left: 0,
@@ -155,7 +157,7 @@ const styles = StyleSheet.create({
     width: 22,
   },
   message: {
-    color: "#D3D3D3",
+    color: theme.colors.toastText,
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 18,
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   toast: {
     alignItems: "center",
     alignSelf: "center",
-    backgroundColor: "#111111",
+    backgroundColor: theme.colors.toastBackground,
     borderRadius: 10,
     elevation: 10,
     flexDirection: "row",
@@ -172,7 +174,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    shadowColor: "#000000",
+    shadowColor: theme.colors.shadow,
     shadowOffset: { height: 7, width: 0 },
     shadowOpacity: 0.28,
     shadowRadius: 14,

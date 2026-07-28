@@ -1,0 +1,103 @@
+import type { AppTheme, ThemeColors } from "./types";
+import { classicVisuals } from "./visuals";
+
+const classicColors: ThemeColors = {
+  avatarBorder: "#DADDE1",
+  background: "#F0F2F5",
+  badge: "#1877F2",
+  black: "#000000",
+  border: "#DADDE1",
+  borderRead: "#DADDE1",
+  borderSubtle: "#DADDE1",
+  card: "#FFFFFF",
+  danger: "#E53935",
+  dangerSoft: "#FDECEC",
+  divider: "#DADDE1",
+  glow: "transparent",
+  icon: "#65676B",
+  input: "#F0F2F5",
+  messageMine: "#E7F3FF",
+  messageOther: "#FFFFFF",
+  overlay: "rgba(0, 0, 0, 0.32)",
+  placeholder: "#8A8D91",
+  primary: "#1877F2",
+  primaryContrast: "#FFFFFF",
+  primaryPressed: "#1565D8",
+  primarySoft: "#E7F3FF",
+  qrBackground: "#FFFFFF",
+  qrForeground: "#111111",
+  reaction: "#E7F3FF",
+  reelBackground: "#000000",
+  secondaryBackground: "#E4E6EB",
+  shadow: "#000000",
+  success: "#43A047",
+  successSoft: "#EAF5EB",
+  successText: "#2E7D32",
+  surface: "#FFFFFF",
+  surfaceElevated: "#FFFFFF",
+  tabBar: "#FFFFFF",
+  tabBarBorder: "#DADDE1",
+  text: "#050505",
+  textMuted: "#65676B",
+  toastBackground: "#FFFFFF",
+  toastText: "#050505",
+  verified: "#1877F2",
+  visuals: classicVisuals,
+  white: "#FFFFFF",
+};
+
+// Video needs its own flat, high-contrast canvas. Reusing the light feed
+// surfaces here makes white playback controls disappear on white circles.
+const classicReelsColors: ThemeColors = {
+  ...classicColors,
+  avatarBorder: "#1877F2",
+  background: "#101820",
+  border: "#3B4652",
+  borderRead: "#3B4652",
+  borderSubtle: "#3B4652",
+  card: "#18232F",
+  divider: "#3B4652",
+  icon: "#FFFFFF",
+  input: "#263442",
+  messageMine: "#1877F2",
+  messageOther: "#263442",
+  placeholder: "#AAB2BD",
+  primarySoft: "#263B56",
+  secondaryBackground: "#263442",
+  surface: "#18232F",
+  surfaceElevated: "#263442",
+  tabBar: "#18232F",
+  tabBarBorder: "#3B4652",
+  text: "#FFFFFF",
+  textMuted: "#C7CDD4",
+  toastBackground: "#263442",
+  toastText: "#FFFFFF",
+};
+
+const classicNotificationColors: ThemeColors = {
+  ...classicColors,
+  // Preserve a clear unread state against the white notification cards.
+  surfaceElevated: "#E7F3FF",
+};
+
+export const classicTheme: AppTheme = {
+  colors: classicColors,
+  effects: {
+    blurEnabled: false,
+    cardRadius: 12,
+    glassEnabled: false,
+    glowEnabled: false,
+    gradientEnabled: false,
+    shadow: {
+      elevation: 1,
+      shadowColor: classicColors.shadow,
+      shadowOffset: { height: 1, width: 0 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+    },
+  },
+  isDark: false,
+  mode: "classic",
+  notifications: classicNotificationColors,
+  reels: classicReelsColors,
+};

@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,10 +21,14 @@ import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { login, saveAuthSession } from "@/services/auth.service";
 import { registerPushNotifications } from "@/services/push-notification.service";
 import { startRealtime } from "@/services/realtime.service";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function LoginScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -168,7 +172,7 @@ export function LoginScreen() {
                   pressed && styles.pressed,
                 ]}
               >
-                <Ionicons color="#4285F4" name="logo-google" size={22} />
+                <Ionicons color={colors.visuals.hex_4285F4} name="logo-google" size={22} />
                 <Text style={styles.googleText}>Đăng nhập Google</Text>
               </Pressable> */}
             </View>
@@ -190,7 +194,7 @@ export function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -215,8 +219,8 @@ const styles = StyleSheet.create({
   forgotText: { color: colors.primary, fontSize: 13, fontWeight: "700" },
   googleButton: {
     alignItems: "center",
-    backgroundColor: "#E7EEFC",
-    borderColor: "#CBD6EB",
+    backgroundColor: colors.visuals.hex_E7EEFC,
+    borderColor: colors.visuals.hex_CBD6EB,
     borderRadius: 10,
     borderWidth: 1,
     flexDirection: "row",
@@ -229,7 +233,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   screen: { backgroundColor: colors.background, flex: 1 },
   separator: { alignItems: "center", flexDirection: "row", gap: spacing.md },
-  separatorLine: { backgroundColor: "#CCD3E0", flex: 1, height: 1 },
+  separatorLine: { backgroundColor: colors.visuals.hex_CCD3E0, flex: 1, height: 1 },
   separatorText: { color: colors.textMuted, fontSize: 12 },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   title: { color: colors.text, fontSize: 26, fontWeight: "900" },

@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,8 +10,9 @@ import {
   View,
 } from "react-native";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type AuthFieldProps = Pick<
   TextInputProps,
@@ -37,6 +38,9 @@ export function AuthField({
   secure = false,
   ...inputProps
 }: AuthFieldProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   return (
@@ -82,6 +86,9 @@ export function AuthPrimaryButton({
   label: string;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -115,6 +122,9 @@ export function AuthFooterLink({
   onPress: () => void;
   prompt: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.footerRow}>
       <Text style={styles.footerText}>{prompt} </Text>
@@ -125,11 +135,11 @@ export function AuthFooterLink({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   disabled: { opacity: 0.58 },
   field: {
     alignItems: "center",
-    backgroundColor: "rgba(9, 23, 41, 0.70)",
+    backgroundColor: colors.visuals.rgb_9_23_41_0_70,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -158,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.primary,
     borderRadius: 24,
-    borderColor: "rgba(255,255,255,0.20)",
+    borderColor: colors.visuals.rgb_255_255_255_0_20,
     borderWidth: 1,
     elevation: 3,
     flexDirection: "row",

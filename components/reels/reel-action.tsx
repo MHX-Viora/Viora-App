@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { type ThemeColors, useTheme } from "@/theme";
 
-import { reelsColors as colors } from "@/features/reels/reels-colors";
+
 
 type ReelActionProps = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -19,11 +21,14 @@ export function ReelAction({
   selected,
   value,
 }: ReelActionProps) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const selectedColor =
     icon === "heart"
       ? colors.danger
       : icon === "bookmark"
-        ? "#FBBF24"
+        ? colors.visuals.hex_FBBF24
         : colors.primary;
 
   return (
@@ -46,7 +51,7 @@ export function ReelAction({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionGroup: { alignItems: "center", gap: 0 },
   actionValue: {
     color: colors.white,

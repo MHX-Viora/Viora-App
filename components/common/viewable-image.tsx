@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image, type ImageProps } from "expo-image";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Modal,
   Pressable,
@@ -10,7 +10,9 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type ViewableImageProps = Omit<ImageProps, "style"> & {
   style: StyleProp<ViewStyle>;
@@ -23,6 +25,9 @@ export function ViewableImage({
   style,
   ...imageProps
 }: ViewableImageProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [visible, setVisible] = useState(false);
 
   return (
@@ -71,10 +76,10 @@ export function ViewableImage({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   closeButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_14,
     borderRadius: 20,
     height: 40,
     justifyContent: "center",
@@ -87,7 +92,7 @@ const styles = StyleSheet.create({
   fullImage: { flex: 1, width: "100%" },
   previewWrap: { overflow: "hidden" },
   viewer: {
-    backgroundColor: "rgba(0,0,0,0.94)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_94,
     flex: 1,
   },
 });

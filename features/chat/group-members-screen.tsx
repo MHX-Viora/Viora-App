@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -28,9 +28,10 @@ import {
   transferGroupOwner,
 } from "@/services/chat.service";
 import { getUser } from "@/stores/session-store";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { ChatGroupMember } from "@/types/chat";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 30;
 
@@ -60,6 +61,10 @@ const MemberRow = memo(function MemberRow({
   onLongPress: (member: ChatGroupMember) => void;
   onOpenProfile: (member: ChatGroupMember) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -93,6 +98,9 @@ const MemberRow = memo(function MemberRow({
 });
 
 export function GroupMembersScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     conversationId?: string | string[];
@@ -427,7 +435,7 @@ export function GroupMembersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: { borderRadius: 26, height: 52, width: 52 },
   avatarFallback: {
     alignItems: "center",
@@ -449,7 +457,7 @@ const styles = StyleSheet.create({
   footer: { padding: spacing.lg },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -478,7 +486,7 @@ const styles = StyleSheet.create({
   row: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderColor: colors.visuals.rgb_152_80_232_0_56,
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",
@@ -550,7 +558,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   sheetOverlay: {
-    backgroundColor: "rgba(15,23,42,0.38)",
+    backgroundColor: colors.visuals.rgb_15_23_42_0_38,
     flex: 1,
     justifyContent: "flex-end",
   },

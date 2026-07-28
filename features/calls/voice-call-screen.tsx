@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { router, useLocalSearchParams } from "expo-router";
-import { type ComponentType, useCallback, useEffect, useRef, useState } from "react";
+import { type ComponentType, useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,7 +9,6 @@ import {
   CallAvatarHalo,
   CallBackdrop,
 } from "@/components/calls/call-visuals";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import {
   clearActiveVoiceCall,
   clearIncomingCall,
@@ -45,6 +44,8 @@ import {
 import { createVoicePeer } from "@/services/webrtc-call.service";
 import { spacing } from "@/theme";
 import { CallStatus, CallType } from "@/types/call";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type VoicePeer = Awaited<ReturnType<typeof createVoicePeer>>;
 const { RTCView } = require("@livekit/react-native-webrtc") as {
@@ -62,6 +63,9 @@ const getPayloadCallId = (payload: unknown) => {
 };
 
 export function VoiceCallScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     avatarUrl?: string;
@@ -618,7 +622,7 @@ export function VoiceCallScreen() {
       ) : null}
       <View style={styles.topBar}>
         <Pressable accessibilityLabel="Thu nhỏ cuộc gọi" onPress={minimizeCall} style={styles.iconButton}>
-          <Ionicons color={colors.white} name="chevron-down" size={26} />
+          <Ionicons color={colors.icon} name="chevron-down" size={26} />
         </Pressable>
         <View style={styles.videoHeaderInfo}>
           <Text numberOfLines={1} style={styles.videoHeaderName}>
@@ -702,9 +706,9 @@ export function VoiceCallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
-    borderColor: "rgba(36, 221, 228, 0.82)",
+    borderColor: colors.visuals.rgb_36_221_228_0_82,
     borderRadius: 56,
     borderWidth: 2,
     height: 112,
@@ -734,7 +738,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   controlDisabled: {
-    backgroundColor: "rgba(255, 84, 112, 0.28)",
+    backgroundColor: colors.visuals.rgb_255_84_112_0_28,
     borderColor: colors.danger,
   },
   endButton: {
@@ -755,7 +759,7 @@ const styles = StyleSheet.create({
   identity: { alignItems: "center", flex: 1, gap: spacing.md, justifyContent: "center", paddingHorizontal: spacing.xl },
   localVideo: {
     backgroundColor: colors.text,
-    borderColor: "rgba(255, 255, 255, 0.55)",
+    borderColor: colors.visuals.rgb_255_255_255_0_55,
     borderRadius: 8,
     borderWidth: 1,
     height: 160,
@@ -775,7 +779,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     alignItems: "center",
-    backgroundColor: "rgba(14, 28, 49, 0.72)",
+    backgroundColor: colors.visuals.rgb_14_28_49_0_72,
     borderColor: colors.borderSubtle,
     borderRadius: 26,
     borderWidth: 1,
@@ -801,13 +805,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   videoHeaderName: {
-    color: colors.white,
+    color: colors.text,
     fontSize: 16,
     fontWeight: "900",
     maxWidth: "100%",
   },
   videoHeaderStatus: {
-    color: "rgba(255, 255, 255, 0.72)",
+    color: colors.textMuted,
     fontSize: 13,
     fontWeight: "800",
   },

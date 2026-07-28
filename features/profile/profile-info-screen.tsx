@@ -1,10 +1,12 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type InfoSection = {
   title: string;
@@ -18,6 +20,9 @@ export function ProfileInfoScreen({
   sections: InfoSection[];
   title: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
@@ -47,10 +52,10 @@ export function ProfileInfoScreen({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderColor: colors.visuals.rgb_152_80_232_0_56,
     borderRadius: 14,
     borderWidth: 1,
     gap: spacing.xs,

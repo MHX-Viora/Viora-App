@@ -43,7 +43,6 @@ import {
   CHAT_STICKERS,
   GOOGLE_MAPS_URL_PATTERN,
 } from "@/constants/chat";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import {
   getActiveVoiceCall,
   subscribeCallLifecycle,
@@ -101,6 +100,8 @@ import {
 } from "@/utils/chat-message";
 import { useKeyboardVisible } from "@/hooks/chat/use-keyboard-visible";
 import { useChatPermissions } from "@/hooks/chat/use-chat-permissions";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 function AudioAttachment({
   attachment,
@@ -111,6 +112,9 @@ function AudioAttachment({
   isMine: boolean;
   onLongPress: () => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const player = useAudioPlayer(attachment.url);
   const status = useAudioPlayerStatus(player);
   const durationLabel = status.duration
@@ -181,6 +185,9 @@ function ImageAttachment({
   onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [hasError, setHasError] = useState(false);
   const [size, setSize] = useState({ height: 180, width: 220 });
 
@@ -244,6 +251,9 @@ function AttachmentView({
   onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (attachment.type === "image") {
     return (
       <ImageAttachment
@@ -332,6 +342,9 @@ function VideoAttachment({
   onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isLocalCacheUrl = attachment.url.startsWith("file://");
   const player = useVideoPlayer(attachment.url, (nextPlayer) => {
     nextPlayer.muted = true;
@@ -377,6 +390,9 @@ function LocationCard({
   onLongPress: () => void;
   url: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole="link"
@@ -405,6 +421,9 @@ function LocationCard({
 }
 
 function SystemMessage({ message }: { message: ChatMessage }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isVideoCall = message.content.startsWith("Cuộc gọi video");
   const isCallHistory =
     isVideoCall || message.content.startsWith("Cuộc gọi thoại");
@@ -493,6 +512,9 @@ function MessageRow({
   onReplyPress: (messageId: string) => void;
   onOpenAttachment: (attachment: ChatAttachment) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (message.messageType === MessageType.System) {
     return <SystemMessage message={message} />;
   }
@@ -697,6 +719,9 @@ function MessageRow({
 }
 
 export function ChatScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
@@ -2210,7 +2235,7 @@ export function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   attachmentSummary: { display: "none" },
   activeGroupCall: {
     alignItems: "center",
@@ -2297,12 +2322,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   mineCallHistoryMessage: {
-    backgroundColor: "rgba(36, 221, 228, 0.18)",
+    backgroundColor: colors.visuals.rgb_36_221_228_0_18,
     borderColor: colors.border,
     borderWidth: 1,
   },
   composer: {
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderTopColor: colors.border,
     borderTopWidth: 1,
     gap: spacing.sm,
@@ -2332,8 +2357,8 @@ const styles = StyleSheet.create({
   fileText: { flex: 1 },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(36, 221, 228, 0.16)",
-    borderBottomColor: "rgba(36, 221, 228, 0.62)",
+    backgroundColor: colors.visuals.rgb_36_221_228_0_16,
+    borderBottomColor: colors.visuals.rgb_36_221_228_0_62,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,
     borderBottomWidth: 1,
@@ -2374,7 +2399,7 @@ const styles = StyleSheet.create({
   inputRow: { alignItems: "flex-end", flexDirection: "row", gap: spacing.sm },
   hidden: { display: "none" },
   hiddenList: { opacity: 0 },
-  highlightedRow: { backgroundColor: "rgba(40, 104, 215, 0.12)" },
+  highlightedRow: { backgroundColor: colors.visuals.rgb_40_104_215_0_12 },
   loading: { flex: 1, justifyContent: "center" },
   messageImage: {
     borderColor: colors.border,
@@ -2443,7 +2468,7 @@ const styles = StyleSheet.create({
   },
   mediaTime: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(102, 112, 133, 0.32)",
+    backgroundColor: colors.visuals.rgb_102_112_133_0_32,
     borderRadius: 999,
     color: colors.white,
     marginTop: 4,
@@ -2453,7 +2478,7 @@ const styles = StyleSheet.create({
   },
   mediaSendStatus: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(102, 112, 133, 0.32)",
+    backgroundColor: colors.visuals.rgb_102_112_133_0_32,
     borderRadius: 999,
     color: colors.white,
     overflow: "hidden",
@@ -2461,8 +2486,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   mineBubble: {
-    backgroundColor: "rgba(36, 221, 228, 0.20)",
-    borderColor: "rgba(36, 221, 228, 0.66)",
+    backgroundColor: colors.messageMine,
+    borderColor: colors.visuals.rgb_36_221_228_0_66,
     borderWidth: 1,
   },
   mineActiveWaveBar: { backgroundColor: colors.primary },
@@ -2485,7 +2510,7 @@ const styles = StyleSheet.create({
   mineMessageActionMenu: { marginRight: spacing.xs },
   mineRow: { justifyContent: "flex-end" },
   mineReplyBox: {
-    backgroundColor: "rgba(0, 104, 255, 0.08)",
+    backgroundColor: colors.visuals.rgb_0_104_255_0_08,
     borderLeftColor: colors.primary,
     borderRadius: 6,
     paddingBottom: spacing.xs,
@@ -2555,7 +2580,7 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     fontWeight: "700",
   },
-  recallActionButton: { borderColor: "rgba(240, 68, 56, 0.35)" },
+  recallActionButton: { borderColor: colors.visuals.rgb_240_68_56_0_35 },
   recordingButton: {
     backgroundColor: colors.danger,
     borderColor: colors.danger,
@@ -2623,8 +2648,8 @@ const styles = StyleSheet.create({
   sendButtonDisabled: { opacity: 0.45 },
   permissionComposer: {
     alignItems: "center",
-    backgroundColor: "rgba(239, 71, 111, 0.1)",
-    borderColor: "rgba(239, 71, 111, 0.35)",
+    backgroundColor: colors.visuals.rgb_239_71_111_0_1,
+    borderColor: colors.visuals.rgb_239_71_111_0_35,
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: "center",
@@ -2662,13 +2687,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   theirBubble: {
-    backgroundColor: "rgba(152, 80, 232, 0.14)",
-    borderColor: "rgba(152, 80, 232, 0.62)",
+    backgroundColor: colors.messageOther,
+    borderColor: colors.visuals.rgb_152_80_232_0_62,
     borderWidth: 1,
   },
   theirCallHistoryMessage: {
-    backgroundColor: "rgba(152, 80, 232, 0.14)",
-    borderColor: "rgba(152, 80, 232, 0.62)",
+    backgroundColor: colors.visuals.rgb_152_80_232_0_14,
+    borderColor: colors.visuals.rgb_152_80_232_0_62,
     borderWidth: 1,
   },
   theirMessageActionMenu: { marginLeft: spacing.xs },
@@ -2707,7 +2732,7 @@ const styles = StyleSheet.create({
   toolLabel: { color: colors.text, fontSize: 11, fontWeight: "800" },
   videoPlayOverlay: {
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.35)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_35,
     borderRadius: 999,
     height: 54,
     justifyContent: "center",
@@ -2740,7 +2765,7 @@ const styles = StyleSheet.create({
     gap: 3,
     height: 22,
   },
-  mineWaveBar: { backgroundColor: "#8BC7FF" },
+  mineWaveBar: { backgroundColor: colors.visuals.hex_8BC7FF },
 });
 
 

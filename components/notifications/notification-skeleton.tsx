@@ -1,10 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 
-import { notificationColors as colors } from "@/features/notifications/notification-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function NotificationSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.notifications;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export function NotificationSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     backgroundColor: colors.border,
     borderRadius: 24,

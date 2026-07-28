@@ -3,7 +3,7 @@ import { useEvent } from "expo";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import {
   ActivityIndicator,
@@ -25,12 +25,13 @@ import {
   REEL_VIDEO_TOP_OFFSET,
   REEL_VIDEO_VERTICAL_SHIFT,
 } from "@/constants/reels";
-import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { deletePost, reportPost } from "@/services/post.service";
 import { followUser } from "@/services/user.service";
 import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 import { formatReelTime } from "@/utils/reel-time";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ReelCard({
   active,
@@ -59,6 +60,9 @@ export function ReelCard({
   safeBottomInset?: number;
   videoTopOffset?: number;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const wasActive = useRef(false);
   const detailsTranslateY = useRef(new Animated.Value(420)).current;
   const [isMuted, setIsMuted] = useState(false);
@@ -688,7 +692,7 @@ export function ReelCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   author: { color: colors.white, fontSize: 18, fontWeight: "800" },
   authorLine: {
     alignItems: "center",
@@ -729,7 +733,7 @@ const styles = StyleSheet.create({
   },
   controlsBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.34)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_34,
     justifyContent: "flex-end",
     padding: spacing.md,
     zIndex: 5,
@@ -778,7 +782,7 @@ const styles = StyleSheet.create({
   },
   detailsBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_45,
     justifyContent: "flex-end",
     zIndex: 6,
   },
@@ -830,14 +834,14 @@ const styles = StyleSheet.create({
   },
   moderationAction: {
     alignItems: "center",
-    borderTopColor: "rgba(255,255,255,0.12)",
+    borderTopColor: colors.visuals.rgb_255_255_255_0_12,
     borderTopWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     minHeight: 50,
   },
   moderationGroup: {
-    borderBottomColor: "rgba(255,255,255,0.16)",
+    borderBottomColor: colors.visuals.rgb_255_255_255_0_16,
     borderBottomWidth: 1,
     marginBottom: spacing.md,
     paddingBottom: spacing.xs,
@@ -859,7 +863,7 @@ const styles = StyleSheet.create({
   },
   rail: { alignItems: "center", gap: spacing.sm, width: 60 },
   reportBackdrop: {
-    backgroundColor: "rgba(0,0,0,0.42)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_42,
     flex: 1,
     justifyContent: "flex-end",
     zIndex: 10,
@@ -898,7 +902,7 @@ const styles = StyleSheet.create({
   safeContent: { flex: 1, zIndex: 2 },
   sheetHandle: {
     alignSelf: "center",
-    backgroundColor: "rgba(255,255,255,0.32)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_32,
     borderRadius: 2,
     height: 4,
     marginBottom: spacing.sm,
@@ -913,7 +917,7 @@ const styles = StyleSheet.create({
     top: 12,
   },
   seekRail: {
-    backgroundColor: "rgba(255,255,255,0.32)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_32,
     borderRadius: 2,
     height: 4,
     left: 0,
@@ -939,7 +943,7 @@ const styles = StyleSheet.create({
   seekTrack: { flex: 1, height: 28, justifyContent: "center" },
   speedButton: {
     alignItems: "center",
-    borderColor: "rgba(255,255,255,0.24)",
+    borderColor: colors.visuals.rgb_255_255_255_0_24,
     borderRadius: 8,
     borderWidth: 1,
     flex: 1,
@@ -962,7 +966,7 @@ const styles = StyleSheet.create({
   timeText: { color: colors.white, fontSize: 12, minWidth: 34 },
   tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(2, 12, 24, 0.12)",
+    backgroundColor: colors.visuals.rgb_2_12_24_0_12,
   },
   topMask: {
     backgroundColor: colors.reelBackground,
@@ -974,7 +978,7 @@ const styles = StyleSheet.create({
   },
   utilityButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.visuals.rgb_255_255_255_0_12,
     borderRadius: 22,
     height: 44,
     justifyContent: "center",

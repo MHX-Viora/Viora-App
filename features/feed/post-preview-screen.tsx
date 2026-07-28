@@ -14,18 +14,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { PostCard } from "@/components/feed/post-card";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { getPostById } from "@/services/feed.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
 import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const firstParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] ?? "" : value ?? "";
 
 export function PostPreviewScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{ postId?: string | string[] }>();
   const postId = useMemo(() => firstParam(params.postId).trim(), [params.postId]);
   const [post, setPost] = useState<FeedPost | null>(null);
@@ -176,7 +180,7 @@ export function PostPreviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   center: {
     alignItems: "center",
     flex: 1,
@@ -185,7 +189,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   cyanGlow: {
-    backgroundColor: "rgba(36, 221, 228, 0.09)",
+    backgroundColor: colors.visuals.rgb_36_221_228_0_09,
     borderRadius: 150,
     height: 260,
     position: "absolute",
@@ -200,8 +204,8 @@ const styles = StyleSheet.create({
   },
   errorIcon: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 84, 112, 0.12)",
-    borderColor: "rgba(255, 84, 112, 0.42)",
+    backgroundColor: colors.visuals.rgb_255_84_112_0_12,
+    borderColor: colors.visuals.rgb_255_84_112_0_42,
     borderRadius: 28,
     borderWidth: 1,
     height: 56,
@@ -216,7 +220,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(10, 24, 42, 0.76)",
+    backgroundColor: colors.visuals.rgb_10_24_42_0_76,
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: spacing.md,
@@ -278,7 +282,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   purpleGlow: {
-    backgroundColor: "rgba(152, 80, 232, 0.08)",
+    backgroundColor: colors.visuals.rgb_152_80_232_0_08,
     borderRadius: 160,
     bottom: -100,
     height: 300,

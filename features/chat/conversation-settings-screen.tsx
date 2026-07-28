@@ -36,7 +36,6 @@ import {
   subscribeRealtimeConversationMutedChanges,
   subscribeRealtimeConversationPinnedChanges,
 } from "@/features/chat/chat-events";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { getGroupShareLink } from "@/services/share-link.service";
 import {
@@ -68,6 +67,8 @@ import {
   normalizeConversationId,
   toParam,
 } from "@/utils/conversation-settings";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type LoadingKey =
   | "pin"
@@ -81,6 +82,9 @@ type LoadingKey =
   | "delete";
 
 export function ConversationSettingsScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     conversationAvatarUrl?: string | string[];
@@ -943,8 +947,8 @@ export function ConversationSettingsScreen() {
               <>
                 <View style={styles.groupQrBox}>
                   <QRCode
-                    backgroundColor={colors.white}
-                    color={colors.primaryContrast}
+                    backgroundColor={colors.qrBackground}
+                    color={colors.qrForeground}
                     size={190}
                     value={groupShareLink}
                   />
@@ -1084,7 +1088,7 @@ export function ConversationSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     borderColor: colors.border,
     borderRadius: 44,
@@ -1114,7 +1118,7 @@ const styles = StyleSheet.create({
   errorText: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -1150,8 +1154,8 @@ const styles = StyleSheet.create({
   },
   leaveButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 84, 112, 0.12)",
-    borderColor: "rgba(255, 84, 112, 0.58)",
+    backgroundColor: colors.visuals.rgb_255_84_112_0_12,
+    borderColor: colors.visuals.rgb_255_84_112_0_58,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
@@ -1162,8 +1166,8 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     alignItems: "center",
-    backgroundColor: "rgba(255, 84, 112, 0.12)",
-    borderColor: "rgba(255, 84, 112, 0.58)",
+    backgroundColor: colors.visuals.rgb_255_84_112_0_12,
+    borderColor: colors.visuals.rgb_255_84_112_0_58,
     borderRadius: 14,
     borderWidth: 1,
     flexDirection: "row",
@@ -1176,7 +1180,7 @@ const styles = StyleSheet.create({
   memberCount: { color: colors.textMuted, fontSize: 13, fontWeight: "700" },
   modalOverlay: {
     alignItems: "center",
-    backgroundColor: "rgba(15,23,42,0.42)",
+    backgroundColor: colors.visuals.rgb_15_23_42_0_42,
     flex: 1,
     justifyContent: "center",
     padding: spacing.lg,
@@ -1291,7 +1295,7 @@ const styles = StyleSheet.create({
   groupQrBox: {
     alignItems: "center",
     alignSelf: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.qrBackground,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -1338,7 +1342,7 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   shareOverlay: {
-    backgroundColor: "rgba(15, 23, 42, 0.36)",
+    backgroundColor: colors.visuals.rgb_15_23_42_0_36,
     flex: 1,
     justifyContent: "flex-end",
   },

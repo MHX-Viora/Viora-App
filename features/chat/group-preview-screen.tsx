@@ -19,13 +19,18 @@ import {
   getGroupPreview,
   joinGroup,
 } from "@/services/chat.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { ChatGroupPreview, ChatGroupPreviewMember } from "@/types/chat";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const firstParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] ?? "" : value ?? "";
 
 function PreviewMemberRow({ member }: { member: ChatGroupPreviewMember }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.memberRow}>
       {member.avatarUrl ? (
@@ -56,10 +61,16 @@ function PreviewMemberRow({ member }: { member: ChatGroupPreviewMember }) {
 }
 
 function SkeletonBlock({ style }: { style: object }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return <View style={[styles.skeleton, style]} />;
 }
 
 function GroupPreviewSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.content}>
       <SkeletonBlock style={styles.skeletonAvatar} />
@@ -82,6 +93,9 @@ function GroupPreviewSkeleton() {
 }
 
 export function GroupPreviewScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     groupId?: string | string[];
@@ -319,7 +333,7 @@ export function GroupPreviewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   actionButton: {
     alignItems: "center",
     backgroundColor: colors.primary,

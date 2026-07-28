@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState, useMemo } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import {
   Dimensions,
@@ -15,8 +15,10 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { ReelCard } from "@/components/reels/reel-card";
 import { formatReelCount } from "@/services/reel.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const ITEM_GAP = 0;
 const GRID_GAP = 2;
@@ -29,6 +31,10 @@ const InactiveReelPage = memo(function InactiveReelPage({
   height: number;
   reel: Reel;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={[styles.inactivePage, { height }]}>
       {reel.thumbnailUrl ? (
@@ -75,6 +81,9 @@ export function ReelsGridViewer({
   paused?: boolean;
   reels: Reel[];
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState(reels);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
@@ -274,7 +283,7 @@ export function ReelsGridViewer({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   backButton: {
     alignItems: "center",
     height: 40,
@@ -294,7 +303,7 @@ const styles = StyleSheet.create({
   inactivePoster: { height: "100%", width: "100%" },
   inactiveShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.18)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_18,
   },
   videoFallback: {
     alignItems: "center",
@@ -319,7 +328,7 @@ const styles = StyleSheet.create({
   videoMetricText: { color: colors.white, fontSize: 11, fontWeight: "800" },
   videoShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.12)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_12,
   },
   videoTile: {
     aspectRatio: 9 / 16,

@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,10 +16,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getConversationLinks } from "@/services/chat.service";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { ChatSharedLink } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 30;
 
@@ -55,6 +56,9 @@ const openLink = async (url: string) => {
 };
 
 export function ConversationLinksScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { conversationId: rawConversationId = "" } =
     useLocalSearchParams<{ conversationId?: string }>();
@@ -186,7 +190,7 @@ export function ConversationLinksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   backButton: {
     alignItems: "center",
     height: 40,
@@ -203,7 +207,7 @@ const styles = StyleSheet.create({
   empty: { color: colors.textMuted, padding: spacing.xl, textAlign: "center" },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -240,7 +244,7 @@ const styles = StyleSheet.create({
   row: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderColor: colors.visuals.rgb_152_80_232_0_56,
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",

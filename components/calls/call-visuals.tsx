@@ -1,9 +1,13 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useMemo } from "react";
 import { Animated, Easing, StyleSheet, View } from "react-native";
+import { type ThemeColors, useTheme } from "@/theme";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
+
 
 export function CallBackdrop() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <View style={styles.cyanGlow} />
@@ -23,6 +27,9 @@ export function CallAvatarHalo({
   children: ReactNode;
   size?: number;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const outerPulse = useRef(new Animated.Value(0)).current;
   const middlePulse = useRef(new Animated.Value(0)).current;
   const innerPulse = useRef(new Animated.Value(0)).current;
@@ -131,9 +138,9 @@ export function CallAvatarHalo({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   arcLeft: {
-    borderColor: "rgba(36, 221, 228, 0.13)",
+    borderColor: colors.visuals.rgb_36_221_228_0_13,
     borderRadius: 260,
     borderWidth: 1,
     height: 520,
@@ -143,7 +150,7 @@ const styles = StyleSheet.create({
     width: 520,
   },
   arcRight: {
-    borderColor: "rgba(152, 80, 232, 0.16)",
+    borderColor: colors.visuals.rgb_152_80_232_0_16,
     borderRadius: 230,
     borderWidth: 1,
     bottom: -170,
@@ -158,7 +165,7 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   cyanGlow: {
-    backgroundColor: "rgba(36, 221, 228, 0.12)",
+    backgroundColor: colors.visuals.rgb_36_221_228_0_12,
     borderRadius: 180,
     height: 360,
     position: "absolute",
@@ -174,19 +181,19 @@ const styles = StyleSheet.create({
     width: "58%",
   },
   middleRing: {
-    borderColor: "rgba(36, 221, 228, 0.86)",
+    borderColor: colors.visuals.rgb_36_221_228_0_86,
     height: "78%",
     shadowColor: colors.primary,
     width: "78%",
   },
   outerRing: {
-    borderColor: "rgba(36, 221, 228, 0.52)",
+    borderColor: colors.visuals.rgb_36_221_228_0_52,
     height: "98%",
     shadowColor: colors.primary,
     width: "98%",
   },
   purpleGlow: {
-    backgroundColor: "rgba(152, 80, 232, 0.12)",
+    backgroundColor: colors.visuals.rgb_152_80_232_0_12,
     borderRadius: 190,
     bottom: -140,
     height: 380,

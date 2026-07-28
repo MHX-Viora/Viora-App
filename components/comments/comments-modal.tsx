@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import * as SystemUI from "expo-system-ui";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -27,8 +27,9 @@ import {
 } from "@/components/comments/use-comments-modal";
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { MentionText } from "@/components/mentions/mention-text";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const QUICK_EMOJIS = ["❤️", "😂", "😍", "🔥", "👏", "👍"];
 
@@ -45,6 +46,9 @@ export function CommentsModal({
   postId: string | null;
   visible: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const {
@@ -70,7 +74,7 @@ export function CommentsModal({
     if (visible) {
       void SystemUI.setBackgroundColorAsync(colors.background);
     }
-  }, [visible]);
+  }, [colors.background, visible]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener(
@@ -265,6 +269,9 @@ function CommentItem({
   onToggleReplies: () => void;
   replyState?: ReplyState;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.commentGroup}>
       <CommentContent
@@ -359,6 +366,9 @@ function CommentContent({
   userId: string;
   userName: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isPending = sendStatus === "sending";
   const isError = sendStatus === "error";
   const [isLikeSubmitting, setIsLikeSubmitting] = useState(false);
@@ -456,6 +466,9 @@ function CommentContent({
 }
 
 function CommentSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.commentRow}>
       <View style={styles.skeletonAvatar} />
@@ -478,6 +491,9 @@ function EmptyComments({
   description: string;
   title: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.centerState}>
       <Ionicons color={colors.textMuted} name="chatbubble-outline" size={38} />
@@ -490,7 +506,7 @@ function EmptyComments({
 const AVATAR_SIZE = 42;
 const KEYBOARD_COMPOSER_GAP = 90;
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   author: {
     color: colors.text,
     flexShrink: 1,

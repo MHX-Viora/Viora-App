@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { Image, Modal, Pressable, StyleSheet, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { ChatAttachment } from "@/types/chat";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type ChatMediaViewerProps = {
   attachment: ChatAttachment | null;
@@ -11,6 +14,9 @@ type ChatMediaViewerProps = {
 };
 
 export function ChatMediaViewer({ attachment, onClose }: ChatMediaViewerProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const videoPlayer = useVideoPlayer(
     attachment?.type === "video" ? attachment.url : null,
     (player) => {
@@ -54,7 +60,7 @@ export function ChatMediaViewer({ attachment, onClose }: ChatMediaViewerProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   viewer: {
     alignItems: "center",
     backgroundColor: colors.reelBackground,
@@ -63,7 +69,7 @@ const styles = StyleSheet.create({
   },
   viewerClose: {
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_45,
     borderRadius: 999,
     height: 44,
     justifyContent: "center",

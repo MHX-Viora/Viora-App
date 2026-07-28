@@ -22,9 +22,10 @@ import {
   getFriends,
   rejectFriendRequest,
 } from "@/services/friend.service";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { FriendListItem, FriendStatus } from "@/types/friend";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 20;
 type FriendTab = "requests" | "friends";
@@ -54,6 +55,9 @@ const mergeFriends = (
 };
 
 export function FriendsScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{ initialTab?: string }>();
   const [activeTab, setActiveTab] = useState<FriendTab>(
     getInitialTab(params.initialTab),
@@ -335,6 +339,9 @@ const FriendRow = memo(function FriendRow({
   onOpenProfile,
   onReject,
 }: FriendRowProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isBusy = actingFriendshipId === item.friendshipId;
   const content = (
     <>
@@ -418,6 +425,9 @@ function FriendEmpty({
   onRetry: () => void;
   tab: FriendTab;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const hasError = Boolean(errorMessage);
 
   return (
@@ -448,6 +458,9 @@ function FriendEmpty({
 }
 
 function FriendSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
@@ -481,7 +494,7 @@ function FriendSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: { backgroundColor: colors.border, borderRadius: 28, height: 56, width: 56 },
   backButton: {
     alignItems: "center",
@@ -528,7 +541,7 @@ const styles = StyleSheet.create({
   friendRow: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderColor: colors.visuals.rgb_152_80_232_0_56,
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",
@@ -540,7 +553,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",
@@ -589,7 +602,7 @@ const styles = StyleSheet.create({
   },
   requestRow: {
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderColor: colors.visuals.rgb_152_80_232_0_56,
     borderRadius: 12,
     borderWidth: 1,
     marginHorizontal: spacing.md,

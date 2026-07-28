@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -21,9 +21,10 @@ import { ViewableImage } from "@/components/common/viewable-image";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { updateProfile } from "@/services/user.service";
 import { getSession, updateUser } from "@/stores/session-store";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { Gender, GenderLabel, User } from "@/types/auth";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const GENDERS: { label: GenderLabel; value: Gender }[] = [
   { label: "Nam", value: 0 },
@@ -32,6 +33,9 @@ const GENDERS: { label: GenderLabel; value: Gender }[] = [
 ];
 
 export function EditProfileScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -257,7 +261,7 @@ export function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     borderColor: colors.surface,
     borderRadius: 45,
@@ -283,7 +287,7 @@ const styles = StyleSheet.create({
   coverBox: { position: "relative" },
   coverButton: {
     alignItems: "center",
-    backgroundColor: "rgba(15,23,42,0.74)",
+    backgroundColor: colors.visuals.rgb_15_23_42_0_74,
     borderRadius: 14,
     flexDirection: "row",
     gap: spacing.xs,
@@ -315,7 +319,7 @@ const styles = StyleSheet.create({
   genderTextSelected: { color: colors.primary },
   header: {
     alignItems: "center",
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     flexDirection: "row",

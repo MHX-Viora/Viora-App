@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -9,13 +10,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { communityColors as colors } from "@/features/feed/community-colors";
-import { spacing } from "@/theme";
+import { ThemeModeSheet } from "@/components/profile/theme-mode-sheet";
+import { spacing, type AppTheme, useTheme } from "@/theme";
 
 const SETTINGS = [
   { action: "saved", icon: "bookmark-outline", label: "Đã lưu" },
   { action: "reacted", icon: "heart-outline", label: "Yêu thích" },
   { action: "support", icon: "help-circle-outline", label: "Hỗ trợ" },
+  { action: "theme", icon: "color-palette-outline", label: "Giao diện" },
   {
     action: "security-privacy",
     icon: "shield-checkmark-outline",
@@ -55,19 +57,23 @@ export function ProfileSettingsSheet({
   visible: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const [showThemeMode, setShowThemeMode] = useState(false);
+  const { mode, theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
-    <Modal
-      animationType="slide"
-      hardwareAccelerated
-      navigationBarTranslucent
-      onRequestClose={onClose}
-      presentationStyle="overFullScreen"
-      statusBarTranslucent
-      transparent
-      visible={visible}
-    >
-      <View style={styles.backdrop}>
+    <>
+      <Modal
+        animationType="slide"
+        hardwareAccelerated
+        navigationBarTranslucent
+        onRequestClose={onClose}
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        transparent
+        visible={visible}
+      >
+        <View style={styles.backdrop}>
         <Pressable
           accessibilityLabel="Đóng menu cài đặt"
           accessibilityRole="button"
@@ -87,7 +93,7 @@ export function ProfileSettingsSheet({
               hitSlop={10}
               onPress={onClose}
             >
-              <Ionicons color={colors.text} name="close" size={26} />
+              <Ionicons color={theme.colors.icon} name="close" size={26} />
             </Pressable>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -96,7 +102,9 @@ export function ProfileSettingsSheet({
                 accessibilityRole="button"
                 key={item.label}
                 onPress={
-                  item.action === "account-settings"
+                  item.action === "theme"
+                    ? () => setShowThemeMode(true)
+                    : item.action === "account-settings"
                     ? onOpenAccountSettings
                     : item.action === "saved"
                       ? onOpenSavedActivity
@@ -113,10 +121,15 @@ export function ProfileSettingsSheet({
                   pressed && styles.rowPressed,
                 ]}
               >
-                <Ionicons color={colors.text} name={item.icon} size={23} />
+                <Ionicons color={theme.colors.icon} name={item.icon} size={23} />
                 <Text style={styles.rowText}>{item.label}</Text>
+                {item.action === "theme" && (
+                  <Text style={styles.valueText}>
+                    {mode === "modern" ? "Hiện đại" : "Cổ điển"}
+                  </Text>
+                )}
                 <Ionicons
-                  color={colors.textMuted}
+                  color={theme.colors.textMuted}
                   name="chevron-forward"
                   size={19}
                 />
@@ -132,7 +145,7 @@ export function ProfileSettingsSheet({
               ]}
             >
               <Ionicons
-                color={colors.danger}
+                color={theme.colors.danger}
                 name="log-out-outline"
                 size={23}
               />
@@ -140,25 +153,30 @@ export function ProfileSettingsSheet({
             </Pressable>
           </ScrollView>
         </View>
-      </View>
-    </Modal>
+        </View>
+      </Modal>
+      <ThemeModeSheet
+        onClose={() => setShowThemeMode(false)}
+        visible={showThemeMode}
+      />
+    </>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => StyleSheet.create({
   backdrop: {
-    backgroundColor: "rgba(0,0,0,0.42)",
+    backgroundColor: theme.colors.overlay,
     flex: 1,
     justifyContent: "flex-end",
   },
   divider: {
-    backgroundColor: colors.border,
+    backgroundColor: theme.colors.divider,
     height: 8,
     marginVertical: spacing.xs,
   },
   handle: {
     alignSelf: "center",
-    backgroundColor: colors.border,
+    backgroundColor: theme.colors.divider,
     borderRadius: 2,
     height: 4,
     marginBottom: spacing.md,
@@ -172,7 +190,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   logoutText: {
-    color: colors.danger,
+    color: theme.colors.danger,
     flex: 1,
     fontSize: 15,
     fontWeight: "700",
@@ -184,16 +202,17 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: spacing.lg,
   },
-  rowPressed: { backgroundColor: colors.background },
-  rowText: { color: colors.text, flex: 1, fontSize: 15, fontWeight: "600" },
+  rowPressed: { backgroundColor: theme.colors.secondaryBackground },
+  rowText: { color: theme.colors.text, flex: 1, fontSize: 15, fontWeight: "600" },
   sheet: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.border,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderColor: theme.colors.border,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
     maxHeight: "82%",
     paddingTop: spacing.sm,
   },
-  title: { color: colors.text, fontSize: 18, fontWeight: "800" },
+  title: { color: theme.colors.text, fontSize: 18, fontWeight: "800" },
+  valueText: { color: theme.colors.textMuted, fontSize: 13 },
 });

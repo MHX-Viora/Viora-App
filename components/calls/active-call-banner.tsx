@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, usePathname } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -8,10 +8,14 @@ import {
   type ActiveVoiceCall,
   subscribeActiveVoiceCall,
 } from "@/features/calls/call-events";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ActiveCallBanner() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const [call, setCall] = useState<ActiveVoiceCall | null>(null);
@@ -51,9 +55,9 @@ export function ActiveCallBanner() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   banner: {
-    backgroundColor: "rgba(14, 28, 49, 0.94)",
+    backgroundColor: colors.visuals.rgb_14_28_49_0_94,
     borderBottomColor: colors.primary,
     borderBottomWidth: 1,
     left: 0,

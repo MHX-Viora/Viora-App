@@ -1,9 +1,12 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { SendMessageAttachment } from "@/types/chat";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type PendingAttachmentPreviewProps = {
   attachment: SendMessageAttachment;
@@ -16,6 +19,9 @@ export function PendingAttachmentPreview({
   onOpen,
   onRemove,
 }: PendingAttachmentPreviewProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const videoPlayer = useVideoPlayer(
     attachment.kind === "video" ? attachment.uri : null,
   );
@@ -76,7 +82,7 @@ export function PendingAttachmentPreview({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   attachmentIcon: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
@@ -115,7 +121,7 @@ const styles = StyleSheet.create({
   },
   attachmentThumbOverlay: {
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.38)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_38,
     borderRadius: 999,
     height: 26,
     justifyContent: "center",

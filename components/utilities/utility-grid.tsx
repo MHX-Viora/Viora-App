@@ -1,10 +1,16 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { UtilityItem } from "@/features/utilities/data";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function UtilityGrid({ items }: { items: readonly UtilityItem[] }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.section}>
       <View style={styles.header}>
@@ -29,7 +35,7 @@ export function UtilityGrid({ items }: { items: readonly UtilityItem[] }) {
             ]}
           >
             <View style={styles.iconWrap}>
-              <Ionicons color="#4773A8" name={item.icon} size={21} />
+              <Ionicons color={colors.visuals.hex_4773A8} name={item.icon} size={21} />
             </View>
             <Text numberOfLines={1} style={styles.label}>
               {item.label}
@@ -41,7 +47,7 @@ export function UtilityGrid({ items }: { items: readonly UtilityItem[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", rowGap: 20 },
   header: {
     alignItems: "center",
@@ -51,8 +57,8 @@ const styles = StyleSheet.create({
   },
   iconWrap: {
     alignItems: "center",
-    backgroundColor: "#F4F6F9",
-    borderColor: "#E8ECF1",
+    backgroundColor: colors.visuals.hex_F4F6F9,
+    borderColor: colors.visuals.hex_E8ECF1,
     borderRadius: 13,
     borderWidth: 1,
     height: 48,
@@ -62,7 +68,7 @@ const styles = StyleSheet.create({
   item: { alignItems: "center", gap: 7, width: "25%" },
   itemPressed: { opacity: 0.7, transform: [{ scale: 0.96 }] },
   label: {
-    color: "#596474",
+    color: colors.visuals.hex_596474,
     fontSize: 11,
     fontWeight: "600",
     maxWidth: 74,

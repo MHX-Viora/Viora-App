@@ -27,7 +27,6 @@ import {
   subscribeRealtimeNewMessageNotifications,
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import {
   getConversation,
   getConversations,
@@ -48,8 +47,13 @@ import {
   mergeConversations,
   sortConversations,
 } from "@/utils/conversation-list";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ConversationsScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     conversationId?: string | string[];
@@ -820,7 +824,7 @@ export function ConversationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   empty: { alignItems: "center", gap: spacing.sm, justifyContent: "center" },
   emptyContent: { flexGrow: 1, justifyContent: "center" },
   emptyText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
@@ -903,7 +907,7 @@ const styles = StyleSheet.create({
     width: 38,
   },
   menuOverlay: {
-    backgroundColor: "rgba(15, 23, 42, 0.32)",
+    backgroundColor: colors.visuals.rgb_15_23_42_0_32,
     flex: 1,
     justifyContent: "flex-end",
   },
@@ -1019,7 +1023,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   menuTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
-  reportMenuIcon: { backgroundColor: "rgba(240, 68, 56, 0.12)" },
+  reportMenuIcon: { backgroundColor: colors.visuals.rgb_240_68_56_0_12 },
   reportText: { color: colors.danger },
   rowPressed: { opacity: 0.72 },
   screen: { backgroundColor: colors.background, flex: 1 },

@@ -1,6 +1,6 @@
 ﻿import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Alert,
   Animated,
@@ -20,7 +20,6 @@ import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { FIXED_TOP_BAR_HEIGHT } from "@/components/layout/fixed-top-bar";
 import { feedPosts as initialPosts } from "@/features/feed/data";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { createPost, getPosts } from "@/services/feed.service";
 import {
@@ -31,10 +30,15 @@ import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
 import { spacing } from "@/theme";
 import type { CreatePostInput, FeedPost } from "@/types/feed";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 10;
 
 export function FeedScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -308,6 +312,9 @@ export function FeedScreen() {
 }
 
 function PostSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
@@ -346,7 +353,7 @@ function PostSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     paddingBottom: 10,
     paddingTop: FIXED_TOP_BAR_HEIGHT,
@@ -362,7 +369,7 @@ const styles = StyleSheet.create({
   emptyTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
   screen: { backgroundColor: colors.background, flex: 1 },
   shareBackdrop: {
-    backgroundColor: "rgba(15,23,42,0.45)",
+    backgroundColor: colors.visuals.rgb_15_23_42_0_45,
     flex: 1,
     justifyContent: "flex-end",
   },

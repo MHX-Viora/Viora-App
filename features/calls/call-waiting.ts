@@ -2,7 +2,7 @@ export const CALL_ANSWER_TIMEOUT_MS = 30_000;
 export const INCOMING_CALL_RINGTONE_ANDROID = "nhac_chuong";
 export const INCOMING_CALL_RINGTONE_FILE = "nhac_chuong.mp3";
 // Android channel sounds are immutable after creation.
-export const INCOMING_CALL_CHANNEL_ID = "incoming-calls-v4";
+export const INCOMING_CALL_CHANNEL_ID = "incoming-calls-v5";
 export const INCOMING_CALL_VIBRATION_PATTERN = [500, 250, 500, 250, 900, 250];
 export const OUTGOING_RINGBACK_FILE = "nhac_cho.mp3";
 export const OUTGOING_RINGBACK_VOLUME = 1;

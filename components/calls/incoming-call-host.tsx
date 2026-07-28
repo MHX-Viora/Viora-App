@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -10,7 +10,6 @@ import {
   subscribeCallLifecycle,
   subscribeIncomingCalls,
 } from "@/features/calls/call-events";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { rejectVoiceCall } from "@/services/call.service";
 import { dismissIncomingCallNotification } from "@/services/incoming-call-notification.service";
 import {
@@ -20,8 +19,13 @@ import {
 import { spacing } from "@/theme";
 import { CallType } from "@/types/call";
 import type { IncomingCallEvent } from "@/types/call";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function IncomingCallHost() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [incomingCall, setIncomingCall] = useState<IncomingCallEvent | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -172,13 +176,13 @@ export function IncomingCallHost() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   accept: {
     backgroundColor: colors.primary,
     shadowColor: colors.primary,
   },
   actionItem: { alignItems: "center", gap: spacing.sm, minWidth: 96 },
-  actionLabel: { color: colors.white, fontSize: 14, fontWeight: "800" },
+  actionLabel: { color: colors.text, fontSize: 14, fontWeight: "800" },
   actions: {
     backgroundColor: colors.surfaceElevated,
     borderColor: colors.borderSubtle,
@@ -232,7 +236,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.xl,
   },
-  name: { color: colors.white, fontSize: 28, fontWeight: "900", maxWidth: "100%" },
+  name: { color: colors.text, fontSize: 28, fontWeight: "900", maxWidth: "100%" },
   reject: {
     backgroundColor: colors.danger,
     shadowColor: colors.danger,

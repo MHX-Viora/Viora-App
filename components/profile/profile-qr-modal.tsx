@@ -1,14 +1,15 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function ProfileQrModal({
   avatar,
@@ -27,6 +28,9 @@ export function ProfileQrModal({
   qrValue: string;
   visible: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [showScanner, setShowScanner] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanMessage, setScanMessage] = useState("");
@@ -136,8 +140,8 @@ export function ProfileQrModal({
               <Text style={styles.handle}>{handle}</Text>
               <View style={styles.qrWrap}>
                 <QRCode
-                  backgroundColor={colors.white}
-                  color={colors.primaryContrast}
+                  backgroundColor={colors.qrBackground}
+                  color={colors.qrForeground}
                   size={210}
                   value={qrValue}
                 />
@@ -204,6 +208,9 @@ function Scanner({
   scanMessage: string;
   scanning: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (!permissionGranted) {
     return (
       <View style={styles.permissionState}>
@@ -260,7 +267,7 @@ function Scanner({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: {
     borderColor: colors.white,
     borderRadius: 31,
@@ -382,7 +389,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   qrWrap: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.qrBackground,
     marginTop: spacing.lg,
     padding: spacing.sm,
   },
@@ -437,7 +444,7 @@ const styles = StyleSheet.create({
   },
   scanShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(8,16,26,0.14)",
+    backgroundColor: colors.visuals.rgb_8_16_26_0_14,
   },
   scannerContent: { flex: 1, padding: spacing.lg },
   scannerHelp: {

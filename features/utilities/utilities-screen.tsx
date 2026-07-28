@@ -1,12 +1,18 @@
+import { useMemo } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { UtilityGrid } from "@/components/utilities/utility-grid";
 import { WeatherCard } from "@/components/utilities/weather-card";
 import { utilityItems } from "@/features/utilities/data";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function UtilitiesScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView
@@ -20,7 +26,7 @@ export function UtilitiesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
     gap: spacing.xl,
     padding: spacing.lg,

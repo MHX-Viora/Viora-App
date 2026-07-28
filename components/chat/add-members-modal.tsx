@@ -17,8 +17,10 @@ import {
   addGroupMembers,
   getGroupMembers,
 } from "@/services/chat.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { SelectableFriend } from "@/types/chat-group";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const MEMBER_PAGE_SIZE = 100;
 
@@ -33,6 +35,9 @@ export function AddMembersModal({
   onClose: () => void;
   visible: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedMembers, setSelectedMembers] = useState<
     Record<string, SelectableFriend>
   >({});
@@ -159,7 +164,7 @@ export function AddMembersModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   addButton: {
     alignItems: "center",
     justifyContent: "center",

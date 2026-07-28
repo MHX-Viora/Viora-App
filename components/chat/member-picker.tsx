@@ -24,8 +24,10 @@ import {
 } from "react-native";
 
 import { getSelectableFriends } from "@/services/friend.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { SelectableFriend } from "@/types/chat-group";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 20;
 const EMPTY_LOCKED_MEMBERS: SelectableFriend[] = [];
@@ -49,6 +51,9 @@ function SelectedMember({
   locked: boolean;
   onRemove: (id: string) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.selectedItem}>
       <View>
@@ -92,6 +97,10 @@ const FriendRow = memo(function FriendRow({
   isSelected: boolean;
   onToggle: (friend: SelectableFriend) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -152,6 +161,9 @@ export function MemberPicker({
   selectedMembers: SelectedMembersState;
   setSelectedMembers: Dispatch<SetStateAction<SelectedMembersState>>;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [friends, setFriends] = useState<SelectableFriend[]>([]);
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
@@ -345,7 +357,7 @@ export function MemberPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   checkbox: {
     alignItems: "center",
     borderColor: colors.border,

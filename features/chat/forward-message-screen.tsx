@@ -21,9 +21,11 @@ import {
   getConversations,
 } from "@/services/chat.service";
 import { getSelectableFriends } from "@/services/friend.service";
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
 import type { SelectableFriend } from "@/types/chat-group";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 20;
 
@@ -69,6 +71,9 @@ function ForwardTargetRow({
   isSelected: boolean;
   onToggle: (targetId: string) => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isGroup = target.kind === "group";
   const title = isGroup
     ? getTitle(target.conversation)
@@ -117,6 +122,9 @@ function ForwardTargetRow({
 }
 
 export function ForwardMessageScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ messageId?: string | string[] }>();
   const messageId = firstParam(params.messageId);
@@ -329,7 +337,7 @@ export function ForwardMessageScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   avatar: { borderRadius: 24, height: 48, width: 48 },
   avatarFallback: {
     alignItems: "center",

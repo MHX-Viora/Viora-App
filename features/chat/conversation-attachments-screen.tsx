@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,10 +19,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getConversationAttachments } from "@/services/chat.service";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
 import type { ChatSharedAttachment } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 30;
 const normalizeConversationId = (value: string) =>
@@ -74,6 +75,9 @@ function MediaViewer({
   item: ChatSharedAttachment | null;
   onClose: () => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const player = useVideoPlayer(item?.type === "video" ? item.url : null);
 
   return (
@@ -107,6 +111,9 @@ function MediaViewer({
 }
 
 function AudioRow({ item }: { item: ChatSharedAttachment }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const player = useAudioPlayer(item.url);
   const status = useAudioPlayerStatus(player);
   const durationLabel = status.duration
@@ -163,6 +170,9 @@ function AudioRow({ item }: { item: ChatSharedAttachment }) {
 }
 
 export function ConversationAttachmentsScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { conversationId: rawConversationId = "", type: initialType = "1" } =
     useLocalSearchParams<{ conversationId?: string; type?: string }>();
@@ -346,7 +356,7 @@ export function ConversationAttachmentsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   activeWaveBar: { backgroundColor: colors.danger },
   activeTab: { backgroundColor: colors.primary, borderColor: colors.primary },
   activeTabText: { color: colors.primaryContrast },
@@ -372,7 +382,7 @@ const styles = StyleSheet.create({
   fileRow: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
-    borderColor: "rgba(152, 80, 232, 0.56)",
+    borderColor: colors.visuals.rgb_152_80_232_0_56,
     borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",
@@ -382,7 +392,7 @@ const styles = StyleSheet.create({
   },
   fileText: { flex: 1 },
   header: {
-    backgroundColor: "rgba(10, 23, 41, 0.94)",
+    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
     padding: spacing.md,
@@ -403,7 +413,7 @@ const styles = StyleSheet.create({
   mediaTile: { aspectRatio: 1, flex: 1 / 3, padding: 3 },
   playBadge: {
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.48)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_48,
     borderRadius: 999,
     height: 34,
     justifyContent: "center",
@@ -445,7 +455,7 @@ const styles = StyleSheet.create({
   },
   viewerClose: {
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_45,
     borderRadius: 999,
     height: 44,
     justifyContent: "center",

@@ -7,7 +7,7 @@ import {
 } from "expo-camera";
 import { useVideoPlayer, VideoView } from "expo-video";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -23,10 +23,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { searchHashtags } from "@/services/reel.service";
 import { spacing } from "@/theme";
 import type { Hashtag } from "@/types/reel";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export type SelectedVideo = {
   duration: number | null;
@@ -129,6 +130,9 @@ function VideoSelectionStep({
   onRecordVideo: (video: SelectedVideo) => void;
   selectedVideo: SelectedVideo | null;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const cameraRef = useRef<CameraView>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -261,7 +265,7 @@ function VideoSelectionStep({
             style={styles.emptyPreview}
           >
             <Ionicons
-              color="rgba(255,255,255,0.7)"
+              color={colors.visuals.rgb_255_255_255_0_7}
               name="videocam-outline"
               size={54}
             />
@@ -372,6 +376,9 @@ function CameraTool({
   label: string;
   onPress: () => void;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityLabel={label}
@@ -395,6 +402,9 @@ function CameraTool({
 }
 
 function SelectedVideoPreview({ video }: { video: SelectedVideo }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isMuted, setIsMuted] = useState(false);
   const player = useVideoPlayer(video.uri, (instance) => {
     instance.loop = true;
@@ -457,6 +467,9 @@ function VideoDetailsStep({
   selectedHashtags: Hashtag[];
   selectedVideo: SelectedVideo | null;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [suggestions, setSuggestions] = useState<Hashtag[]>([]);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [tagError, setTagError] = useState("");
@@ -722,7 +735,7 @@ function formatDuration(duration: number | null) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   cameraScreen: { backgroundColor: colors.reelBackground, flex: 1 },
   cameraHeader: {
     alignItems: "center",
@@ -774,7 +787,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   emptyText: {
-    color: "rgba(255,255,255,0.6)",
+    color: colors.visuals.rgb_255_255_255_0_6,
     fontSize: 14,
     marginTop: spacing.xs,
   },
@@ -813,7 +826,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   durationActive: { color: colors.white, fontSize: 13, fontWeight: "800" },
-  durationMuted: { color: "rgba(255,255,255,0.48)", fontSize: 13 },
+  durationMuted: { color: colors.visuals.rgb_255_255_255_0_48, fontSize: 13 },
   captureRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -1049,7 +1062,7 @@ const styles = StyleSheet.create({
   submittingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.54)",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_54,
     justifyContent: "center",
     padding: spacing.xl,
     zIndex: 20,
@@ -1065,7 +1078,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   submittingText: {
-    color: "rgba(255,255,255,0.72)",
+    color: colors.visuals.rgb_255_255_255_0_72,
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center",

@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -21,10 +21,14 @@ import { AuthBackground } from "@/components/auth/auth-background";
 import { showAppToast } from "@/components/common/app-toast";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { register } from "@/services/auth.service";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 export function RegisterScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -183,7 +187,7 @@ export function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   checkbox: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,

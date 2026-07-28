@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -14,7 +14,6 @@ import { NotificationItem } from "@/components/notifications/notification-item";
 import { NotificationSkeleton } from "@/components/notifications/notification-skeleton";
 import { subscribeRealtimeNotifications } from "@/features/notifications/notification-events";
 import { navigateNotification } from "@/features/notifications/notification-navigation";
-import { notificationColors as colors } from "@/features/notifications/notification-colors";
 import {
     getNotifications,
     markAllNotificationsRead,
@@ -23,6 +22,8 @@ import {
 import { spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
 import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 20;
 
@@ -35,6 +36,9 @@ const mergeNotifications = (
 };
 
 export function NotificationsScreen() {
+  const { theme } = useTheme();
+  const colors = theme.notifications;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [notifications, setNotifications] = useState<NotificationItemModel[]>(
     [],
   );
@@ -269,7 +273,7 @@ export function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { paddingBottom: 112 },
   emptyContent: { flexGrow: 1 },
   footer: { padding: spacing.lg },

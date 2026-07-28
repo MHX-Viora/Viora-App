@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Animated,
   FlatList,
@@ -13,10 +13,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PostCard } from "@/components/feed/post-card";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import { getPosts } from "@/services/feed.service";
 import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 const PAGE_SIZE = 10;
 
@@ -27,6 +28,9 @@ export function FeedSearchModal({
   onClose: () => void;
   visible: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FeedPost[]>([]);
   const [page, setPage] = useState(1);
@@ -182,6 +186,9 @@ export function FeedSearchModal({
 }
 
 function SearchSkeleton() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
@@ -226,6 +233,9 @@ function EmptySearch({
   description: string;
   title: string;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.emptyState}>
       <Ionicons color={colors.textMuted} name="search-outline" size={36} />
@@ -235,7 +245,7 @@ function EmptySearch({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   emptyList: { flexGrow: 1 },
   emptyState: {
     alignItems: "center",

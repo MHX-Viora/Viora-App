@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing } from "@/theme";
+import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type ChatComposerNoticeProps = {
   message: string;
@@ -9,6 +12,9 @@ type ChatComposerNoticeProps = {
 };
 
 export function ChatComposerNotice({ message, type }: ChatComposerNoticeProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   if (type === "blocked") {
     return (
       <View style={styles.blockedComposer}>
@@ -25,11 +31,11 @@ export function ChatComposerNotice({ message, type }: ChatComposerNoticeProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   blockedComposer: {
     alignItems: "center",
-    backgroundColor: "rgba(239, 71, 111, 0.1)",
-    borderColor: "rgba(239, 71, 111, 0.35)",
+    backgroundColor: colors.visuals.rgb_239_71_111_0_1,
+    borderColor: colors.visuals.rgb_239_71_111_0_35,
     borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
@@ -46,8 +52,8 @@ const styles = StyleSheet.create({
   },
   permissionComposer: {
     alignItems: "center",
-    backgroundColor: "rgba(239, 71, 111, 0.1)",
-    borderColor: "rgba(239, 71, 111, 0.35)",
+    backgroundColor: colors.visuals.rgb_239_71_111_0_1,
+    borderColor: colors.visuals.rgb_239_71_111_0_35,
     borderRadius: 8,
     borderWidth: 1,
     justifyContent: "center",

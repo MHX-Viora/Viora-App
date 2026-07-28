@@ -10,7 +10,7 @@ import {
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,12 +25,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { AuthField, AuthPrimaryButton } from "@/components/auth/auth-controls";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
-import { communityColors as colors } from "@/features/feed/community-colors";
 import {
   getForgotPasswordStatus,
   resetForgottenPassword,
 } from "@/services/auth.service";
 import { spacing } from "@/theme";
+import { type ThemeColors, useTheme } from "@/theme";
+
 
 type Step = "identifier" | "password" | "otp" | "email-sent";
 type VerificationMethod = "email" | "phone";
@@ -61,6 +62,9 @@ const validatePassword = (password: string, confirmation: string) => {
 };
 
 export function ForgotPasswordScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const incomingUrl = Linking.useURL();
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const handledEmailLinkRef = useRef<string | null>(null);
@@ -403,7 +407,7 @@ export function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   backButton: {
     alignItems: "center",
     alignSelf: "flex-start",
