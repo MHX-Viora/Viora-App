@@ -124,6 +124,8 @@ export default function RootLayout() {
       const isAuthRoute =
         currentRoute === "login" ||
         currentRoute === "register" ||
+        currentRoute === "forgot-password" ||
+        currentRoute === "__" ||
         currentRoute === "complete-profile";
 
       // Chưa đăng nhập thì chỉ cho ở login/register.
@@ -131,7 +133,12 @@ export default function RootLayout() {
         hasHydratedAuthenticatedState.current = false;
         setNotificationNavigationReady(false);
         void stopRealtime();
-        if (currentRoute !== "login" && currentRoute !== "register") {
+        if (
+          currentRoute !== "login" &&
+          currentRoute !== "register" &&
+          currentRoute !== "forgot-password" &&
+          currentRoute !== "__"
+        ) {
           router.replace("/login");
         }
         return;
@@ -214,6 +221,8 @@ export default function RootLayout() {
         <Stack.Screen name="users/[userId]" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
+        <Stack.Screen name="forgot-password" />
+        <Stack.Screen name="__/auth/links" />
         <Stack.Screen name="complete-profile" />
       </Stack>
       <StatusBar style="light" />

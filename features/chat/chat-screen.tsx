@@ -61,6 +61,7 @@ import {
 import {
   getConversation,
   getConversationMessages,
+  getGroupMembers,
   markConversationRead,
   recallChatMessage,
   sendChatMessage,
@@ -68,6 +69,7 @@ import {
 import { createVoiceCall } from "@/services/call.service";
 import { startCallRealtime } from "@/services/call-realtime.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import { searchMentionUsers } from "@/services/mention.service";
 import { joinRealtimeGroup, leaveRealtimeGroup } from "@/services/realtime.service";
 import { getUser } from "@/stores/session-store";
 import { spacing } from "@/theme";
@@ -80,7 +82,7 @@ import type {
   Conversation,
   SendMessageAttachment,
 } from "@/types/chat";
-import type { MentionReference } from "@/types/mention";
+import type { MentionReference, MentionUser } from "@/types/mention";
 import { activeMentionIds, insertMention } from "@/utils/mention-composer";
 import { formatChatTime } from "@/utils/chat-time";
 import {
@@ -791,10 +793,36 @@ export function ChatScreen() {
     canSendMessage: boolean;
     onlyAdminCanSend: boolean;
   } | null>(null);
+  const isGroupConversation =
+    (conversationDetails?.conversationType ?? params.conversationType) === "Group";
 
   const normalizeMessage = useCallback(
     (message: ChatMessage): ChatMessage => message,
     [],
+  );
+
+  const searchChatMentionUsers = useCallback(
+    async (keyword: string): Promise<MentionUser[]> => {
+      if (!isGroupConversation) {
+        return searchMentionUsers(keyword);
+      }
+
+      const page = await getGroupMembers(conversationId, {
+        keyword,
+        page: 1,
+        pageSize: 20,
+      });
+
+      return page.items
+        .filter((member) => member.id !== currentUserId)
+        .map((member) => ({
+          avatarUrl: member.avatarUrl,
+          displayName: member.displayName,
+          id: member.id,
+          isVerified: member.isVerified,
+        }));
+    },
+    [conversationId, currentUserId, isGroupConversation],
   );
 
   const scrollToEndAfterLayout = useCallback((animated: boolean) => {
@@ -2006,6 +2034,19 @@ export function ChatScreen() {
             Đang ghi âm {Math.floor(recorderState.durationMillis / 1000)}s
           </Text>
         )}
+        <MentionSuggestions
+          onSelect={(user) => {
+            setContent((value) => insertMention(value, user));
+            setDraftMentions((current) =>
+              current.some((item) => item.userId === user.id)
+                ? current
+                : [...current, { userId: user.id, displayName: user.displayName }],
+            );
+          }}
+          searchUsers={searchChatMentionUsers}
+          showAvatar={!isGroupConversation}
+          value={content}
+        />
         <View style={styles.inputRow}>
           <Pressable
             accessibilityLabel={
@@ -2042,18 +2083,6 @@ export function ChatScreen() {
               <Ionicons color={colors.white} name="stop" size={18} />
             </Pressable>
           )}
-          <MentionSuggestions
-            onSelect={(user) => {
-              setContent((value) => insertMention(value, user));
-              setDraftMentions((current) =>
-                current.some((item) => item.userId === user.id)
-                  ? current
-                  : [...current, { userId: user.id, displayName: user.displayName }],
-              );
-            }}
-            showAvatar={conversationDetails?.conversationType !== "Group"}
-            value={content}
-          />
           <TextInput
             multiline
             onChangeText={setContent}

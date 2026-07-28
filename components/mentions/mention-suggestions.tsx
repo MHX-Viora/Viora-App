@@ -8,10 +8,12 @@ import { getMentionQuery } from "@/utils/mention-composer";
 
 export function MentionSuggestions({
   onSelect,
+  searchUsers = searchMentionUsers,
   showAvatar = true,
   value,
 }: {
   onSelect: (user: MentionUser) => void;
+  searchUsers?: (keyword: string) => Promise<MentionUser[]>;
   showAvatar?: boolean;
   value: string;
 }) {
@@ -21,12 +23,12 @@ export function MentionSuggestions({
 
   useEffect(() => {
     let active = true;
-    if (keyword === undefined || !keyword.trim()) {
+    if (keyword === undefined) {
       setUsers([]);
       return;
     }
     const timer = setTimeout(() => {
-      searchMentionUsers(keyword)
+      searchUsers(keyword)
         .then((items) => active && setUsers(items))
         .catch(() => active && setUsers([]));
     }, 250);
@@ -34,7 +36,7 @@ export function MentionSuggestions({
       active = false;
       clearTimeout(timer);
     };
-  }, [keyword]);
+  }, [keyword, searchUsers]);
 
   if (!query || users.length === 0) return null;
   return (

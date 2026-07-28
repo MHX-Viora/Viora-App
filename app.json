@@ -51,6 +51,21 @@
             "BROWSABLE",
             "DEFAULT"
           ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "com-quyentrinh-viora.firebaseapp.com",
+              "pathPrefix": "/__/auth/links"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -106,6 +121,7 @@
         }
       ],
       "@react-native-firebase/app",
+      "@react-native-firebase/auth",
       "@react-native-firebase/messaging",
       "expo-secure-store",
       "expo-audio"

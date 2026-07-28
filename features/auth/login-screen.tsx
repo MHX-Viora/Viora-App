@@ -138,6 +138,7 @@ export function LoginScreen() {
               <Pressable
                 accessibilityRole="link"
                 hitSlop={8}
+                onPress={() => router.push("/forgot-password")}
                 style={styles.forgotButton}
               >
                 <Text style={styles.forgotText}>Quên mật khẩu?</Text>

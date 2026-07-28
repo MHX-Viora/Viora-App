@@ -34,6 +34,17 @@ export type Credentials = {
   password: string;
 };
 
+export type ForgotPasswordStatus = {
+  userId: string;
+  phoneNumber: string | null;
+  hasPhoneNumber: boolean;
+};
+
+export type ForgotPasswordMessage = {
+  success: boolean;
+  message: string;
+};
+
 export type ProfileInput = {
   displayName: string;
   avatarUrl: string;

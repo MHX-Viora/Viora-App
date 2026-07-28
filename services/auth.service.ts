@@ -7,6 +7,8 @@ import {
 import type {
   AccessTokenResponse,
   Credentials,
+  ForgotPasswordMessage,
+  ForgotPasswordStatus,
   LoginResponse,
   RegisterResponse,
 } from "@/types/auth";
@@ -321,4 +323,59 @@ export const refreshToken = async (): Promise<AccessTokenResponse> => {
 
   return data;
 };
+
+const requestForgotPassword = async <T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> => {
+  if (!BASE_URL) {
+    throw new Error("Thiếu cấu hình API.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: init?.body ? JSON_HEADERS : { Accept: "application/json" },
+    });
+  } catch (error) {
+    throw getAuthRequestError(error);
+  }
+
+  const data = await parseResponseText(response);
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(data as ApiError, "Không thể xử lý yêu cầu quên mật khẩu."),
+    );
+  }
+
+  return data as T;
+};
+
+export const getForgotPasswordStatus = (
+  identifier: string,
+): Promise<ForgotPasswordStatus> =>
+  requestForgotPassword(
+    `/api/auth/forgot-password/status?identifier=${encodeURIComponent(identifier)}`,
+  );
+
+export const setForgotPasswordPhone = (payload: {
+  userId: string;
+  phoneNumber: string;
+  firebaseToken: string;
+}): Promise<ForgotPasswordMessage> =>
+  requestForgotPassword("/api/auth/phone-number", {
+    body: JSON.stringify(payload),
+    method: "PUT",
+  });
+
+export const resetForgottenPassword = (payload: {
+  firebaseToken: string;
+  identifier: string;
+  newPassword: string;
+}): Promise<ForgotPasswordMessage> =>
+  requestForgotPassword("/api/auth/reset-password", {
+    body: JSON.stringify(payload),
+    method: "POST",
+  });
 
