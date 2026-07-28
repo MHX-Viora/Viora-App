@@ -123,6 +123,7 @@
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "@react-native-firebase/messaging",
+      "@livekit/react-native-expo-plugin",
       "expo-secure-store",
       "expo-audio"
     ],

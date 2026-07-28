@@ -102,6 +102,10 @@ export const emitIncomingCall = (payload: unknown) => {
     callId,
     conversationId,
     callType: asCallType(payload.callType),
+    isGroupCall:
+      payload.isGroupCall === true ||
+      payload.isGroupCall === "true" ||
+      asString(payload.type).toLowerCase() === "groupcall",
     caller: {
       avatarUrl: caller
         ? asString(caller.avatarUrl) || null

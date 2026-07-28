@@ -13,6 +13,10 @@ import {
 import { communityColors as colors } from "@/features/feed/community-colors";
 import { rejectVoiceCall } from "@/services/call.service";
 import { dismissIncomingCallNotification } from "@/services/incoming-call-notification.service";
+import {
+  startIncomingCallRingtone,
+  stopIncomingCallRingtone,
+} from "@/services/incoming-call-ringtone.service";
 import { spacing } from "@/theme";
 import { CallType } from "@/types/call";
 import type { IncomingCallEvent } from "@/types/call";
@@ -21,15 +25,34 @@ export function IncomingCallHost() {
   const insets = useSafeAreaInsets();
   const [incomingCall, setIncomingCall] = useState<IncomingCallEvent | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const stopRingtone = useCallback(stopIncomingCallRingtone, []);
+
+  useEffect(() => {
+    if (incomingCall) {
+      void startIncomingCallRingtone().catch((error: unknown) => {
+        console.info(
+          "[Call][Audio] incoming ringtone unavailable",
+          error instanceof Error ? error.message : String(error),
+        );
+      });
+    } else {
+      stopRingtone();
+    }
+    return () => {
+      stopRingtone();
+    };
+  }, [incomingCall, stopRingtone]);
 
   const cleanup = useCallback(() => {
+    stopRingtone();
     clearIncomingCall(incomingCall?.callId);
     setIncomingCall(null);
     setIsConnecting(false);
-  }, [incomingCall?.callId]);
+  }, [incomingCall?.callId, stopRingtone]);
 
   const accept = useCallback(async () => {
     if (!incomingCall || isConnecting) return;
+    stopRingtone();
     setIsConnecting(true);
     const nextCall = incomingCall;
     await dismissIncomingCallNotification(nextCall.callId).catch(() => undefined);
@@ -37,27 +60,34 @@ export function IncomingCallHost() {
     setIncomingCall(null);
     setIsConnecting(false);
     router.push({
-      pathname: "/call/[callId]",
-      params: {
-        avatarUrl: nextCall.caller.avatarUrl ?? "",
-        callId: nextCall.callId,
-        callType: String(nextCall.callType),
-        conversationId: nextCall.conversationId,
-        displayName: nextCall.caller.displayName,
-        mode: "receiver",
-      },
+      pathname: nextCall.isGroupCall
+        ? "/group-call/[callId]"
+        : "/call/[callId]",
+      params: nextCall.isGroupCall
+        ? { callId: nextCall.callId }
+        : {
+            avatarUrl: nextCall.caller.avatarUrl ?? "",
+            callId: nextCall.callId,
+            callType: String(nextCall.callType),
+            conversationId: nextCall.conversationId,
+            displayName: nextCall.caller.displayName,
+            mode: "receiver",
+          },
     });
-  }, [incomingCall, isConnecting]);
+  }, [incomingCall, isConnecting, stopRingtone]);
 
   const reject = useCallback(async () => {
     if (!incomingCall) return;
+    stopRingtone();
     try {
-      await rejectVoiceCall(incomingCall.callId);
+      if (!incomingCall.isGroupCall) {
+        await rejectVoiceCall(incomingCall.callId);
+      }
     } finally {
       await dismissIncomingCallNotification(incomingCall.callId).catch(() => undefined);
       cleanup();
     }
-  }, [cleanup, incomingCall]);
+  }, [cleanup, incomingCall, stopRingtone]);
 
   useEffect(() => {
     const unsubscribers = [
@@ -66,6 +96,7 @@ export function IncomingCallHost() {
       }),
       subscribeCallLifecycle((event) => {
         if (event.callId === incomingCall?.callId) {
+          stopRingtone();
           void dismissIncomingCallNotification(event.callId).catch(() => undefined);
           cleanup();
         }
@@ -74,7 +105,7 @@ export function IncomingCallHost() {
     return () => {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
-  }, [cleanup, incomingCall?.callId]);
+  }, [cleanup, incomingCall?.callId, stopRingtone]);
 
   return (
     <Modal animationType="fade" presentationStyle="fullScreen" visible={incomingCall !== null}>
@@ -90,7 +121,13 @@ export function IncomingCallHost() {
         <CallBackdrop />
         <View style={styles.header}>
           <Text style={styles.headerText}>
-            {incomingCall?.callType === CallType.Video ? "Cuộc gọi video đến" : "Cuộc gọi đến"}
+            {incomingCall?.isGroupCall
+              ? incomingCall.callType === CallType.Video
+                ? "Cuộc gọi video nhóm đến"
+                : "Cuộc gọi nhóm đến"
+              : incomingCall?.callType === CallType.Video
+                ? "Cuộc gọi video đến"
+                : "Cuộc gọi đến"}
           </Text>
         </View>
         <View style={styles.identity}>
@@ -107,7 +144,13 @@ export function IncomingCallHost() {
             {incomingCall?.caller.displayName}
           </Text>
           <Text style={styles.status}>
-            {isConnecting ? "Đang kết nối..." : incomingCall?.callType === CallType.Video ? "Đang gọi video cho bạn" : "Đang gọi cho bạn"}
+            {isConnecting
+              ? "Đang kết nối..."
+              : incomingCall?.isGroupCall
+                ? "Đang mời bạn tham gia nhóm"
+                : incomingCall?.callType === CallType.Video
+                  ? "Đang gọi video cho bạn"
+                  : "Đang gọi cho bạn"}
           </Text>
         </View>
         <View style={styles.actions}>

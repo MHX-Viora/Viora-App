@@ -122,6 +122,18 @@ export const navigateNotificationData = (data: Record<string, unknown>) => {
       return true;
     }
   }
+  if (dataType?.toLowerCase() === "groupcall") {
+    const callId = firstString(data.callId, data["call.id"]);
+    if (callId) {
+      navigateWhenReady(() =>
+        router.push({
+          pathname: "/group-call/[callId]",
+          params: { callId },
+        }),
+      );
+      return true;
+    }
+  }
   if (dataType === "chat" && chatConversationId) {
     navigateWhenReady(() =>
       router.push({

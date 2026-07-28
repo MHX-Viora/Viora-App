@@ -10,13 +10,14 @@ import { AppState, Platform } from "react-native";
 import {
   CALL_ANSWER_TIMEOUT_MS,
   getIncomingCallNotificationId,
+  INCOMING_CALL_CHANNEL_ID,
   INCOMING_CALL_RINGTONE_ANDROID,
   INCOMING_CALL_RINGTONE_FILE,
   INCOMING_CALL_VIBRATION_PATTERN,
   shouldUseFullScreenCallAction,
 } from "@/features/calls/call-waiting";
 
-export const INCOMING_CALL_CHANNEL_ID = "incoming-calls-v2";
+export { INCOMING_CALL_CHANNEL_ID };
 export const INCOMING_CALL_CATEGORY_ID = "incoming_calls";
 export const INCOMING_CALL_ACCEPT_ACTION = "incoming_call_accept";
 export const INCOMING_CALL_REJECT_ACTION = "incoming_call_reject";
@@ -162,6 +163,7 @@ export const scheduleIncomingCallNotification = async ({
         lightUpScreen: true,
         loopSound: true,
         ongoing: true,
+        sound: INCOMING_CALL_RINGTONE_ANDROID,
         pressAction: {
           id: INCOMING_CALL_ACCEPT_ACTION,
           launchActivity: "default",

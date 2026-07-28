@@ -98,7 +98,7 @@ const normalizeWebRtcModule = (value: unknown): WebRtcModule => {
 
 const loadWebRtc = async (): Promise<WebRtcModule> => {
   try {
-    return normalizeWebRtcModule(require("react-native-webrtc"));
+    return normalizeWebRtcModule(require("@livekit/react-native-webrtc"));
   } catch (error) {
     throw new Error(
       "WebRTC chưa được tích hợp vào bản cài đặt. Hãy chạy lại npm run android để tạo native build mới.",

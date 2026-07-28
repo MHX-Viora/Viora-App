@@ -26,6 +26,10 @@ const handleIncomingCallEvent = async ({ detail, type }: Event) => {
       await notifee.cancelNotification(detail.notification.id);
     }
     if (!callId) return;
+    if (data.type === "GroupCall") {
+      emitCallLifecycle("GroupCallDeclined", data);
+      return;
+    }
     try {
       await rejectVoiceCall(callId);
       emitCallLifecycle("CallRejected", data);
@@ -42,6 +46,7 @@ const handleIncomingCallEvent = async ({ detail, type }: Event) => {
     if (detail.notification?.id) {
       await notifee.cancelNotification(detail.notification.id);
     }
+    emitCallLifecycle("CallAcceptedLocally", data);
     navigateNotificationData(data);
   }
 };

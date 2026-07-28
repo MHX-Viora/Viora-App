@@ -13,7 +13,9 @@ import {
   replaceDelegatedIncomingCallNotification,
 } from "@/services/incoming-call-notification.service";
 import { showRichChatNotification } from "@/services/chat-push-notification.service";
-import { isCallLifecycleNotificationType } from "@/features/calls/call-waiting";
+import {
+  isCallLifecycleNotificationType,
+} from "@/features/calls/call-waiting";
 
 const firstText = (...values: unknown[]) => {
   for (const value of values) {
@@ -21,6 +23,8 @@ const firstText = (...values: unknown[]) => {
   }
   return "";
 };
+const isIncomingCallNotification = (value: unknown) =>
+  value === "IncomingCall" || value === "GroupCall";
 
 if (Platform.OS !== "web") {
   console.info("[FCM background] handler registered", {
@@ -59,7 +63,7 @@ if (Platform.OS !== "web") {
     }
 
     if (
-      data.type === "IncomingCall" &&
+      isIncomingCallNotification(data.type) &&
       remoteMessage.notification?.android?.channelId !==
         INCOMING_CALL_CHANNEL_ID
     ) {

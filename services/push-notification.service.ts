@@ -21,6 +21,7 @@ import {
   unregisterDeviceToken,
 } from "@/services/device-token.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import { startIncomingCallRingtone } from "@/services/incoming-call-ringtone.service";
 import { navigateNotificationData } from "@/features/notifications/notification-response-navigation";
 import { mapNotification } from "@/features/notifications/notification.mapper";
 import { getActiveChatConversation } from "@/features/chat/chat-events";
@@ -37,12 +38,16 @@ import {
   INCOMING_CALL_REJECT_ACTION,
   scheduleIncomingCallNotification,
 } from "@/services/incoming-call-notification.service";
-import { isCallLifecycleNotificationType } from "@/features/calls/call-waiting";
+import {
+  isCallLifecycleNotificationType,
+} from "@/features/calls/call-waiting";
 import { rejectVoiceCall } from "@/services/call.service";
 import { requestNotificationPermission } from "@/services/notification-permission-flow";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
 
 const DEVICE_ID_KEY = "viora.device-id";
+const isIncomingCallNotification = (value: unknown) =>
+  value === "IncomingCall" || value === "GroupCall";
 const LAST_FCM_TOKEN_KEY = "viora.last-fcm-token";
 let notificationHandlerConfigured = false;
 let notificationResponseHandlingConfigured = false;
@@ -431,27 +436,21 @@ export const setupNotificationHandling = () => {
       source: "fcm",
       timestamp: new Date().toISOString(),
     });
-    if (data.type === "IncomingCall") {
+    if (isIncomingCallNotification(data.type)) {
       emitIncomingCall(data);
+      void startIncomingCallRingtone().catch(() => undefined);
       const callerName =
         typeof data.callerDisplayName === "string"
           ? data.callerDisplayName
           : typeof data.callerName === "string"
             ? data.callerName
-            : typeof data.senderName === "string"
-              ? data.senderName
-              : "";
+            : "Cuộc gọi Viora đến";
       await scheduleIncomingCallNotification({
         body:
           remoteMessage.notification?.body ||
-          (callerName
-            ? `${callerName} đang gọi cho bạn`
-            : "Bạn có một cuộc gọi Viora đến"),
+          `${callerName} đang gọi cho bạn`,
         data,
-        title:
-          callerName ||
-          remoteMessage.notification?.title ||
-          "Cuộc gọi Viora đến",
+        title: callerName,
       });
       return;
     }
@@ -484,14 +483,14 @@ export const setupNotificationHandling = () => {
     handleNotification: async (notification) => {
       const data = notification.request.content.data as Record<string, unknown>;
     logNotificationLifecycle("foreground notification received", data);
-      if (data.type === "IncomingCall") {
+      if (isIncomingCallNotification(data.type)) {
         emitIncomingCall(data);
       } else if (data.type === "MissedCall") {
         emitCallLifecycle("CallMissed", data);
       }
       const shouldSuppress = shouldSuppressForegroundNotification(data);
       const isDelegatedIncomingCall =
-        data.type === "IncomingCall" &&
+        isIncomingCallNotification(data.type) &&
         data.deliverySource !== INCOMING_CALL_LOCAL_SOURCE;
       return {
         shouldPlaySound: !shouldSuppress && !isDelegatedIncomingCall,
@@ -622,6 +621,10 @@ export const setupNotificationResponseHandling = () => {
         response.notification.request.identifier,
       );
       if (!callId) return;
+      if (data.type === "GroupCall") {
+        emitCallLifecycle("GroupCallDeclined", data);
+        return;
+      }
       try {
         await rejectVoiceCall(callId);
         emitCallLifecycle("CallRejected", data);
@@ -645,6 +648,7 @@ export const setupNotificationResponseHandling = () => {
       await Notifications.dismissNotificationAsync(
         response.notification.request.identifier,
       );
+      emitCallLifecycle("CallAcceptedLocally", data);
     }
 
     logNotificationLifecycle("notification opened", data);

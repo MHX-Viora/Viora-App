@@ -11,7 +11,7 @@ import {
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -46,6 +46,8 @@ import {
 import { communityColors as colors } from "@/features/feed/community-colors";
 import {
   getActiveVoiceCall,
+  subscribeCallLifecycle,
+  subscribeIncomingCalls,
   subscribeActiveVoiceCall,
   type ActiveVoiceCall,
 } from "@/features/calls/call-events";
@@ -67,6 +69,10 @@ import {
   sendChatMessage,
 } from "@/services/chat.service";
 import { createVoiceCall } from "@/services/call.service";
+import {
+  getActiveGroupCall,
+  startGroupCall,
+} from "@/services/group-call.service";
 import { startCallRealtime } from "@/services/call-realtime.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { searchMentionUsers } from "@/services/mention.service";
@@ -786,6 +792,7 @@ export function ChatScreen() {
     useState<ChatAttachment | null>(null);
   const [addMembersVisible, setAddMembersVisible] = useState(false);
   const [isStartingCall, setIsStartingCall] = useState(false);
+  const [activeGroupCallId, setActiveGroupCallId] = useState("");
   const [activeVoiceCall, setActiveVoiceCallState] = useState<ActiveVoiceCall | null>(
     () => getActiveVoiceCall(),
   );
@@ -795,6 +802,46 @@ export function ChatScreen() {
   } | null>(null);
   const isGroupConversation =
     (conversationDetails?.conversationType ?? params.conversationType) === "Group";
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isGroupConversation) {
+        setActiveGroupCallId("");
+        return;
+      }
+      let active = true;
+      void getActiveGroupCall(conversationId)
+        .then((call) => {
+          if (active) setActiveGroupCallId(call.id);
+        })
+        .catch(() => {
+          if (active) setActiveGroupCallId("");
+        });
+      return () => {
+        active = false;
+      };
+    }, [conversationId, isGroupConversation]),
+  );
+
+  useEffect(() => {
+    const unsubscribeIncoming = subscribeIncomingCalls((event) => {
+      if (event.isGroupCall && event.conversationId === conversationId) {
+        setActiveGroupCallId(event.callId);
+      }
+    });
+    const unsubscribeLifecycle = subscribeCallLifecycle((event) => {
+      if (
+        event.eventName === "GroupCallEnded" &&
+        event.conversationId === conversationId
+      ) {
+        setActiveGroupCallId("");
+      }
+    });
+    return () => {
+      unsubscribeIncoming();
+      unsubscribeLifecycle();
+    };
+  }, [conversationId]);
 
   const normalizeMessage = useCallback(
     (message: ChatMessage): ChatMessage => message,
@@ -1615,7 +1662,26 @@ export function ChatScreen() {
   }, [attachments, canSendInConversation, content, conversationId, draftMentions, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
 
   const startCall = useCallback(async (callType: CallType) => {
-    if (conversationDetails?.conversationType !== "Private" || isStartingCall) return;
+    if (!conversationDetails || isStartingCall) return;
+    if (conversationDetails.conversationType === "Group") {
+      try {
+        setIsStartingCall(true);
+        const join = await startGroupCall(conversationId, CallType.Video);
+        setActiveGroupCallId(join.call.id);
+        router.push({
+          pathname: "/group-call/[callId]",
+          params: { callId: join.call.id },
+        });
+      } catch (error) {
+        Alert.alert(
+          "Không thể gọi nhóm",
+          error instanceof Error ? error.message : "Vui lòng thử lại.",
+        );
+      } finally {
+        setIsStartingCall(false);
+      }
+      return;
+    }
     if (activeVoiceCall) {
       router.push({
         pathname: "/call/[callId]",
@@ -1709,7 +1775,7 @@ export function ChatScreen() {
         <Text numberOfLines={1} style={styles.headerTitle}>
           {title}
         </Text>
-        {conversationDetails?.conversationType === "Private" && !conversationDetails.isBlocked ? (
+        {conversationDetails && !conversationDetails.isBlocked ? (
           <>
             <Pressable
               accessibilityLabel="Gọi video"
@@ -1720,15 +1786,17 @@ export function ChatScreen() {
             >
               <Ionicons color={isStartingCall ? colors.textMuted : colors.primary} name="videocam" size={22} />
             </Pressable>
-            <Pressable
-              accessibilityLabel="Gọi thoại"
-              disabled={isStartingCall}
-              hitSlop={10}
-              onPress={startVoiceCall}
-              style={[styles.iconButton, isStartingCall ? styles.disabledIconButton : null]}
-            >
-              <Ionicons color={isStartingCall ? colors.textMuted : colors.primary} name="call" size={22} />
-            </Pressable>
+            {!isGroupConversation ? (
+              <Pressable
+                accessibilityLabel="Gọi thoại"
+                disabled={isStartingCall}
+                hitSlop={10}
+                onPress={startVoiceCall}
+                style={[styles.iconButton, isStartingCall ? styles.disabledIconButton : null]}
+              >
+                <Ionicons color={isStartingCall ? colors.textMuted : colors.primary} name="call" size={22} />
+              </Pressable>
+            ) : null}
           </>
         ) : null}
         {canAddMembers ? (
@@ -1760,6 +1828,31 @@ export function ChatScreen() {
         onClose={() => setAddMembersVisible(false)}
         visible={addMembersVisible}
       />
+      {isGroupConversation && activeGroupCallId ? (
+        <Pressable
+          accessibilityLabel="Tham gia cuộc gọi nhóm đang diễn ra"
+          onPress={() =>
+            router.push({
+              pathname: "/group-call/[callId]",
+              params: { callId: activeGroupCallId },
+            })
+          }
+          style={styles.activeGroupCall}
+        >
+          <View style={styles.activeGroupCallIcon}>
+            <Ionicons color={colors.white} name="videocam" size={20} />
+          </View>
+          <View style={styles.activeGroupCallText}>
+            <Text style={styles.activeGroupCallTitle}>
+              Cuộc gọi nhóm đang diễn ra
+            </Text>
+            <Text style={styles.activeGroupCallSubtitle}>
+              Chạm để tham gia
+            </Text>
+          </View>
+          <Ionicons color={colors.primary} name="chevron-forward" size={20} />
+        </Pressable>
+      ) : null}
       {isLoading ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.primary} />
@@ -2119,6 +2212,34 @@ export function ChatScreen() {
 
 const styles = StyleSheet.create({
   attachmentSummary: { display: "none" },
+  activeGroupCall: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  activeGroupCallIcon: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  activeGroupCallSubtitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+  },
+  activeGroupCallText: { flex: 1 },
+  activeGroupCallTitle: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "800",
+  },
   activeWaveBar: { backgroundColor: colors.primary },
   actionRow: {
     backgroundColor: colors.surfaceElevated,

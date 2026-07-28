@@ -3,10 +3,13 @@ import test from "node:test";
 
 import {
   CALL_ANSWER_TIMEOUT_MS,
+  INCOMING_CALL_CHANNEL_ID,
   getIncomingCallNotificationId,
   INCOMING_CALL_RINGTONE_ANDROID,
   INCOMING_CALL_RINGTONE_FILE,
   INCOMING_CALL_VIBRATION_PATTERN,
+  isCallLifecycleNotificationType,
+  isIncomingCallNotificationType,
   OUTGOING_RINGBACK_FILE,
   OUTGOING_RINGBACK_VOLUME,
   shouldNavigateAwayFromCall,
@@ -25,6 +28,7 @@ test("outgoing wait policy is used only for the caller timeout", () => {
 });
 
 test("incoming notifications use the bundled receiver ringtone", () => {
+  assert.equal(INCOMING_CALL_CHANNEL_ID, "incoming-calls-v4");
   assert.equal(INCOMING_CALL_RINGTONE_ANDROID, "nhac_chuong");
   assert.equal(INCOMING_CALL_RINGTONE_FILE, "nhac_chuong.mp3");
 });
@@ -51,6 +55,13 @@ test("outgoing ringback plays at full player volume", () => {
 test("incoming calls have a stable notification id", () => {
   assert.equal(getIncomingCallNotificationId("call-123"), "incoming-call-call-123");
   assert.equal(getIncomingCallNotificationId(""), "");
+});
+
+test("group calls use the incoming call notification experience", () => {
+  assert.equal(isIncomingCallNotificationType("IncomingCall"), true);
+  assert.equal(isIncomingCallNotificationType("GroupCall"), true);
+  assert.equal(isIncomingCallNotificationType("GroupCallEnded"), false);
+  assert.equal(isCallLifecycleNotificationType("GroupCallEnded"), true);
 });
 
 test("stale call timers cannot navigate after the screen unmounts", () => {

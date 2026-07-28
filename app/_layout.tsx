@@ -208,6 +208,7 @@ export default function RootLayout() {
         <Stack.Screen name="reel/[reelId]" />
         <Stack.Screen name="group/[inviteCode]" />
         <Stack.Screen name="call/[callId]" />
+        <Stack.Screen name="group-call/[callId]" />
         <Stack.Screen name="chat/[conversationId]" />
         <Stack.Screen name="chat/group/[groupId]" />
         <Stack.Screen name="chat/group-preview" />

@@ -23,6 +23,7 @@ import {
   REEL_PLAYBACK_RATES,
   REEL_REPORT_REASONS,
   REEL_VIDEO_TOP_OFFSET,
+  REEL_VIDEO_VERTICAL_SHIFT,
 } from "@/constants/reels";
 import { reelsColors as colors } from "@/features/reels/reels-colors";
 import { deletePost, reportPost } from "@/services/post.service";
@@ -983,6 +984,7 @@ const styles = StyleSheet.create({
   videoGestureArea: {
     ...StyleSheet.absoluteFillObject,
     top: REEL_VIDEO_TOP_OFFSET,
+    transform: [{ translateY: REEL_VIDEO_VERTICAL_SHIFT }],
     zIndex: 1,
   },
   videoLayer: {
@@ -994,6 +996,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 0,
     top: REEL_VIDEO_TOP_OFFSET,
+    transform: [{ translateY: REEL_VIDEO_VERTICAL_SHIFT }],
   },
   videoFrame: {
     backgroundColor: "transparent",

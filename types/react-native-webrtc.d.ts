@@ -1,1 +1,1 @@
-declare module "react-native-webrtc";
+declare module "@livekit/react-native-webrtc";

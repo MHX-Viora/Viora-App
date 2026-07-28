@@ -47,7 +47,7 @@ import { spacing } from "@/theme";
 import { CallStatus, CallType } from "@/types/call";
 
 type VoicePeer = Awaited<ReturnType<typeof createVoicePeer>>;
-const { RTCView } = require("react-native-webrtc") as {
+const { RTCView } = require("@livekit/react-native-webrtc") as {
   RTCView: ComponentType<{ objectFit?: "cover" | "contain"; streamURL: string; style?: unknown; zOrder?: number }>;
 };
 
@@ -352,7 +352,12 @@ export function VoiceCallScreen() {
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
     rememberCall(status === "active" ? "active" : status === "calling" ? "calling" : "connecting");
-    void startCallRealtime();
+    void startCallRealtime().catch((error: unknown) => {
+      console.info(
+        "[Call][SignalR] initial connection failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    });
     if (mode === "caller" && isVideoCall && !peerRef.current) {
       void createPeer().catch((error) => {
         Alert.alert("Không thể mở camera", error instanceof Error ? error.message : "Vui lòng thử lại.");

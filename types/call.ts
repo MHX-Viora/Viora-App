@@ -36,6 +36,7 @@ export type IncomingCallEvent = {
   conversationId: string;
   caller: CallParticipant;
   callType: CallType;
+  isGroupCall?: boolean;
 };
 
 export type CallEndedEvent = {
@@ -56,4 +57,26 @@ export type IceServer = {
   urls: string[];
   username?: string;
   credential?: string;
+};
+
+export enum GroupCallStatus {
+  Active = 0,
+  Ended = 1,
+}
+
+export type GroupCallSession = {
+  id: string;
+  conversationId: string;
+  startedBy: CallParticipant;
+  callType: CallType;
+  status: GroupCallStatus;
+  startedAt: string;
+  endedAt: string | null;
+  duration: number | null;
+};
+
+export type GroupCallJoin = {
+  call: GroupCallSession;
+  liveKitUrl: string;
+  token: string;
 };

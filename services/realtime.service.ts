@@ -4,6 +4,7 @@ import {
   HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
+import { AppState } from "react-native";
 
 import { emitRealtimeNotification } from "@/features/notifications/notification-events";
 import {
@@ -11,7 +12,10 @@ import {
   emitCallLifecycle,
   emitIncomingCall,
 } from "@/features/calls/call-events";
-import { dismissIncomingCallNotification } from "@/services/incoming-call-notification.service";
+import {
+  dismissIncomingCallNotification,
+  scheduleIncomingCallNotification,
+} from "@/services/incoming-call-notification.service";
 import {
   emitRealtimeConversationRead,
   emitRealtimeConversation,
@@ -30,6 +34,7 @@ import { showChatRealtimeNotification } from "@/services/chat-foreground-notific
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
 import { startWithRetry } from "@/services/realtime-start-retry";
+import { startIncomingCallRingtone } from "@/services/incoming-call-ringtone.service";
 import { getAccessToken } from "@/stores/session-store";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -39,6 +44,12 @@ let connection: HubConnection | null = null;
 let shouldRunRealtime = false;
 let startPromise: Promise<void> | null = null;
 const joinedGroups = new Set<string>();
+const realtimeErrorMessage = (error: unknown) =>
+  error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "type" in error
+      ? `WebSocket ${String((error as { type?: unknown }).type)}`
+      : String(error);
 
 const handleNotificationPayload = (payload: unknown, eventName: string) => {
   try {
@@ -100,7 +111,9 @@ const getRealtimeConnection = () => {
     connection.onclose((error) => {
       console.info("[Realtime] closed", error?.message);
       if (shouldRunRealtime) {
-        void startRealtime();
+        void startRealtime().catch((startError: unknown) => {
+          console.info("[Realtime] restart failed", realtimeErrorMessage(startError));
+        });
       }
     });
 
@@ -140,6 +153,33 @@ const getRealtimeConnection = () => {
     });
     connection.on("IncomingCall", (payload) => {
       emitIncomingCall(payload);
+      if (AppState.currentState === "active") {
+        void startIncomingCallRingtone().catch(() => undefined);
+      }
+    });
+    connection.on("GroupCallStarted", (payload) => {
+      const invitation =
+        typeof payload === "object" && payload !== null
+          ? { ...payload, type: "GroupCall", isGroupCall: true }
+          : null;
+      if (!invitation) return;
+      emitIncomingCall(invitation);
+      if (AppState.currentState === "active") {
+        void startIncomingCallRingtone().catch(() => undefined);
+      }
+      const data = invitation as Record<string, unknown>;
+      const callerName =
+        typeof data.callerDisplayName === "string"
+          ? data.callerDisplayName
+          : "Cuộc gọi nhóm";
+      void scheduleIncomingCallNotification({
+        body: `${callerName} đang mời bạn tham gia cuộc gọi video nhóm`,
+        data,
+        title: callerName,
+      });
+    });
+    connection.on("GroupCallEnded", (payload) => {
+      handleCallLifecyclePayload(payload, "GroupCallEnded");
     });
     connection.on("CallAccepted", (payload) => {
       emitCallAccepted(payload);
@@ -244,14 +284,18 @@ export const startRealtime = async () => {
         });
 
         if (!shouldRunRealtime) {
-          await realtimeConnection.stop();
+          await realtimeConnection.stop().catch((error: unknown) => {
+            console.info("[Realtime] late stop ignored", realtimeErrorMessage(error));
+          });
         }
       })
       .finally(() => {
         startPromise = null;
       });
 
-    await startPromise;
+    await startPromise.catch((error: unknown) => {
+      console.info("[Realtime] start stopped after socket error", realtimeErrorMessage(error));
+    });
   }
 };
 
@@ -259,7 +303,12 @@ export const stopRealtime = async () => {
   shouldRunRealtime = false;
 
   if (connection && connection.state !== HubConnectionState.Disconnected) {
-    await connection.stop();
+    await connection.stop().catch((error: unknown) => {
+      // React Native WebSocket rejects with an Event object when the socket
+      // closes concurrently. The connection is already stopping, so this is
+      // a successful terminal state rather than an app error.
+      console.info("[Realtime] stop completed after socket close", realtimeErrorMessage(error));
+    });
   }
 };
 

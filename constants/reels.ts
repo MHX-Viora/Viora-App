@@ -1,6 +1,7 @@
 export const REEL_PLAYBACK_RATES = [0.5, 1, 1.25, 1.5, 2] as const;
 
-export const REEL_VIDEO_TOP_OFFSET = 30;
+export const REEL_VIDEO_TOP_OFFSET = 16;
+export const REEL_VIDEO_VERTICAL_SHIFT = -20;
 
 export const REEL_REPORT_REASONS = [
   { description: "Nội dung spam hoặc gây hiểu nhầm", label: "Spam", value: 0 },
