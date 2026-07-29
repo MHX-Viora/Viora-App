@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,6 +16,7 @@ import { showAppToast } from "@/components/common/app-toast";
 import { useUserSettings } from "@/hooks/use-user-settings";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
+import { LegalDocumentType } from "@/types/legal";
 
 
 function SettingsSkeleton() {
@@ -159,6 +160,23 @@ export function AccountSettingsScreen() {
                   size={20}
                 />
               </Pressable>
+            </Section>
+            <Section title="Pháp lý">
+              {[
+                ["Điều khoản sử dụng", LegalDocumentType.TermsOfService],
+                ["Chính sách bảo mật", LegalDocumentType.PrivacyPolicy],
+                ["Quyền truy cập ứng dụng", LegalDocumentType.PermissionPolicy],
+              ].map(([label, type]) => (
+                <Pressable
+                  accessibilityRole="button"
+                  key={String(type)}
+                  onPress={() => router.push(`/legal/${type}` as Href)}
+                  style={({ pressed }) => [styles.row, pressed && styles.pressedRow]}
+                >
+                  <Text style={styles.rowTitle}>{label}</Text>
+                  <Ionicons color={colors.textMuted} name="chevron-forward" size={20} />
+                </Pressable>
+              ))}
             </Section>
           </ScrollView>
 
