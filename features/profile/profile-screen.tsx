@@ -410,10 +410,6 @@ export function ProfileScreen() {
             params: { kind: "saved" },
           });
         }}
-        onOpenSecurityPrivacy={() => {
-          setShowSettings(false);
-          router.push("/security-privacy");
-        }}
         onOpenSupport={() => {
           setShowSettings(false);
           router.push("/support");

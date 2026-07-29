@@ -19,11 +19,6 @@ const SETTINGS = [
   { action: "support", icon: "help-circle-outline", label: "Hỗ trợ" },
   { action: "theme", icon: "color-palette-outline", label: "Giao diện" },
   {
-    action: "security-privacy",
-    icon: "shield-checkmark-outline",
-    label: "Bảo mật & quyền",
-  },
-  {
     action: "account-settings",
     icon: "person-circle-outline",
     label: "Cài đặt tài khoản",
@@ -42,7 +37,6 @@ export function ProfileSettingsSheet({
   onOpenLikedActivity,
   onOpenPoliciesTerms,
   onOpenSavedActivity,
-  onOpenSecurityPrivacy,
   onOpenSupport,
   visible,
 }: {
@@ -52,7 +46,6 @@ export function ProfileSettingsSheet({
   onOpenLikedActivity: () => void;
   onOpenPoliciesTerms: () => void;
   onOpenSavedActivity: () => void;
-  onOpenSecurityPrivacy: () => void;
   onOpenSupport: () => void;
   visible: boolean;
 }) {
@@ -110,9 +103,7 @@ export function ProfileSettingsSheet({
                       ? onOpenSavedActivity
                       : item.action === "reacted"
                         ? onOpenLikedActivity
-                        : item.action === "security-privacy"
-                          ? onOpenSecurityPrivacy
-                          : item.action === "policies-terms"
+                        : item.action === "policies-terms"
                             ? onOpenPoliciesTerms
                             : onOpenSupport
                 }

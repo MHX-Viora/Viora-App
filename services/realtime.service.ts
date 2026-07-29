@@ -12,6 +12,7 @@ import {
   emitCallLifecycle,
   emitIncomingCall,
 } from "@/features/calls/call-events";
+import { shouldShowIncomingCallNotification } from "@/features/calls/call-waiting";
 import {
   dismissIncomingCallNotification,
   scheduleIncomingCallNotification,
@@ -34,7 +35,6 @@ import { showChatRealtimeNotification } from "@/services/chat-foreground-notific
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
 import { startWithRetry } from "@/services/realtime-start-retry";
-import { startIncomingCallRingtone } from "@/services/incoming-call-ringtone.service";
 import { getAccessToken } from "@/stores/session-store";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -153,9 +153,6 @@ const getRealtimeConnection = () => {
     });
     connection.on("IncomingCall", (payload) => {
       emitIncomingCall(payload);
-      if (AppState.currentState === "active") {
-        void startIncomingCallRingtone().catch(() => undefined);
-      }
     });
     connection.on("GroupCallStarted", (payload) => {
       const invitation =
@@ -164,9 +161,8 @@ const getRealtimeConnection = () => {
           : null;
       if (!invitation) return;
       emitIncomingCall(invitation);
-      if (AppState.currentState === "active") {
-        void startIncomingCallRingtone().catch(() => undefined);
-      }
+      if (!shouldShowIncomingCallNotification(AppState.currentState)) return;
+
       const data = invitation as Record<string, unknown>;
       const callerName =
         typeof data.callerDisplayName === "string"

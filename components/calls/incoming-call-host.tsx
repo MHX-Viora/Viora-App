@@ -13,6 +13,9 @@ import {
 import { rejectVoiceCall } from "@/services/call.service";
 import { dismissIncomingCallNotification } from "@/services/incoming-call-notification.service";
 import {
+  CALL_ANSWER_TIMEOUT_MS,
+} from "@/features/calls/call-waiting";
+import {
   startIncomingCallRingtone,
   stopIncomingCallRingtone,
 } from "@/services/incoming-call-ringtone.service";
@@ -32,22 +35,37 @@ export function IncomingCallHost() {
   const stopRingtone = useCallback(stopIncomingCallRingtone, []);
 
   useEffect(() => {
-    if (incomingCall) {
-      void startIncomingCallRingtone().catch((error: unknown) => {
+    if (!incomingCall) return;
+
+    console.info("[Call] show incoming UI", {
+      callId: incomingCall.callId,
+      isGroupCall: incomingCall.isGroupCall,
+    });
+    void startIncomingCallRingtone()
+      .then(() => {
+        console.info("[Call][Audio] play ringtone", {
+          callId: incomingCall.callId,
+        });
+      })
+      .catch((error: unknown) => {
         console.info(
           "[Call][Audio] incoming ringtone unavailable",
           error instanceof Error ? error.message : String(error),
         );
       });
-    } else {
-      stopRingtone();
-    }
-    return () => {
-      stopRingtone();
-    };
   }, [incomingCall, stopRingtone]);
 
+  useEffect(() => {
+    return () => {
+      console.info("[Call][Audio] dispose ringtone");
+      stopRingtone();
+    };
+  }, [stopRingtone]);
+
   const cleanup = useCallback(() => {
+    console.info("[Call][Audio] stop ringtone", {
+      callId: incomingCall?.callId,
+    });
     stopRingtone();
     clearIncomingCall(incomingCall?.callId);
     setIncomingCall(null);
@@ -110,6 +128,22 @@ export function IncomingCallHost() {
       unsubscribers.forEach((unsubscribe) => unsubscribe());
     };
   }, [cleanup, incomingCall?.callId, stopRingtone]);
+
+  useEffect(() => {
+    if (!incomingCall) return;
+
+    const timeout = setTimeout(() => {
+      console.info("[Call] incoming call timeout", {
+        callId: incomingCall.callId,
+      });
+      void dismissIncomingCallNotification(incomingCall.callId).catch(
+        () => undefined,
+      );
+      cleanup();
+    }, CALL_ANSWER_TIMEOUT_MS);
+
+    return () => clearTimeout(timeout);
+  }, [cleanup, incomingCall]);
 
   return (
     <Modal animationType="fade" presentationStyle="fullScreen" visible={incomingCall !== null}>

@@ -34,6 +34,9 @@ export const shouldNavigateAwayFromCall = (
 export const shouldUseFullScreenCallAction = (appState: string) =>
   appState !== "active";
 
+export const shouldShowIncomingCallNotification = (appState: string) =>
+  appState !== "active";
+
 export const isWaitingForAnswer = (
   mode: "caller" | "receiver",
   status: "calling" | "connecting" | "active" | "ending" | "ended",

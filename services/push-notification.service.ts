@@ -21,7 +21,6 @@ import {
   unregisterDeviceToken,
 } from "@/services/device-token.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
-import { startIncomingCallRingtone } from "@/services/incoming-call-ringtone.service";
 import { navigateNotificationData } from "@/features/notifications/notification-response-navigation";
 import { mapNotification } from "@/features/notifications/notification.mapper";
 import { getActiveChatConversation } from "@/features/chat/chat-events";
@@ -438,20 +437,6 @@ export const setupNotificationHandling = () => {
     });
     if (isIncomingCallNotification(data.type)) {
       emitIncomingCall(data);
-      void startIncomingCallRingtone().catch(() => undefined);
-      const callerName =
-        typeof data.callerDisplayName === "string"
-          ? data.callerDisplayName
-          : typeof data.callerName === "string"
-            ? data.callerName
-            : "Cuộc gọi Viora đến";
-      await scheduleIncomingCallNotification({
-        body:
-          remoteMessage.notification?.body ||
-          `${callerName} đang gọi cho bạn`,
-        data,
-        title: callerName,
-      });
       return;
     }
     if (isCallLifecycleNotificationType(data.type)) {

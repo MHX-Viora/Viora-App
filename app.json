@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "viora",
+    "name": "ANKT",
     "slug": "viora",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -92,22 +92,22 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Cho phép Viora dùng vị trí để hiển thị thời tiết nơi bạn đang ở."
+          "locationWhenInUsePermission": "Cho phép Mạng xã hội ANKT dùng vị trí để hiển thị thời tiết nơi bạn đang ở."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Cho phép Viora dùng camera để quay video và quét mã QR hồ sơ.",
-          "microphonePermission": "Cho phép Viora dùng micro để ghi âm khi quay video.",
+          "cameraPermission": "Cho phép Mạng xã hội ANKT dùng camera để quay video và quét mã QR hồ sơ.",
+          "microphonePermission": "Cho phép Mạng xã hội ANKT dùng micro để ghi âm khi quay video.",
           "recordAudioAndroid": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Cho phép Viora truy cập ảnh để bạn chia sẻ trong bài viết.",
-          "microphonePermission": "Cho phép Viora dùng micro để ghi âm tin nhắn."
+          "photosPermission": "Cho phép Mạng xã hội ANKT truy cập ảnh để bạn chia sẻ trong bài viết.",
+          "microphonePermission": "Cho phép Mạng xã hội ANKT dùng micro để ghi âm tin nhắn."
         }
       ],
       [

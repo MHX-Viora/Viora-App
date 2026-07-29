@@ -1,9 +1,19 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { LegalDocument } from "@/types/legal";
+import type { LegalDocument, LegalDocumentSummary } from "@/types/legal";
 import { LegalDocumentType } from "@/types/legal";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 const CACHE_PREFIX = "legal-document:";
+
+export async function listLegalDocuments(): Promise<LegalDocumentSummary[]> {
+  const response = await fetch(`${BASE_URL}/api/legal`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error("Không thể tải danh sách tài liệu. Vui lòng thử lại.");
+  }
+  return response.json() as Promise<LegalDocumentSummary[]>;
+}
 
 export async function getLegalDocument(type: LegalDocumentType): Promise<LegalDocument> {
   const key = `${CACHE_PREFIX}${type}`;
