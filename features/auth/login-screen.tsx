@@ -185,6 +185,9 @@ export function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Text style={styles.sponsorText}>
+        Phát triển và bảo trợ bởi TMI
+      </Text>
       <AuthAlert
         alert={alert}
         onAction={handleAlertAction}
@@ -235,6 +238,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   separator: { alignItems: "center", flexDirection: "row", gap: spacing.md },
   separatorLine: { backgroundColor: colors.visuals.hex_CCD3E0, flex: 1, height: 1 },
   separatorText: { color: colors.textMuted, fontSize: 12 },
+  sponsorText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    paddingBottom: spacing.sm,
+    textAlign: "center",
+  },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   title: { color: colors.text, fontSize: 26, fontWeight: "900" },
 });

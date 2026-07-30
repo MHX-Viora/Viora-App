@@ -142,6 +142,9 @@ export function ProfileSettingsSheet({
               />
               <Text style={styles.logoutText}>Đăng xuất</Text>
             </Pressable>
+            <Text style={styles.sponsorText}>
+              Phát triển và bảo trợ bởi TMI
+            </Text>
           </ScrollView>
         </View>
         </View>
@@ -203,6 +206,12 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     borderWidth: 1,
     maxHeight: "82%",
     paddingTop: spacing.sm,
+  },
+  sponsorText: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    paddingTop: spacing.lg,
+    textAlign: "center",
   },
   title: { color: theme.colors.text, fontSize: 18, fontWeight: "800" },
   valueText: { color: theme.colors.textMuted, fontSize: 13 },
