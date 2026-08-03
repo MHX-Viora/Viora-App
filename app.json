@@ -79,12 +79,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/viora_logo.png",
-          "imageWidth": 180,
+          "image": "./assets/images/ankt_launch.jpg",
+          "imageWidth": 280,
           "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF",
+          "backgroundColor": "#000000",
           "dark": {
-            "backgroundColor": "#FFFFFF"
+            "image": "./assets/images/ankt_launch.jpg",
+            "backgroundColor": "#000000"
           }
         }
       ],
