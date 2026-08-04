@@ -8,6 +8,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "node --experimental-strip-types features/calls/call-waiting.test.mjs",
+    "test:app-links": "node scripts/android-app-links.test.mjs",
     "lint": "expo lint"
   },
   "dependencies": {

@@ -43,8 +43,23 @@
           "data": [
             {
               "scheme": "https",
-              "host": "viora.app",
+              "host": "api.mxh.ankt.vn",
               "pathPrefix": "/post"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "api.mxh.ankt.vn",
+              "pathPrefix": "/reel"
             }
           ],
           "category": [
