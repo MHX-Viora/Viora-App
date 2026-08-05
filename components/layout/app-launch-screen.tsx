@@ -1,5 +1,9 @@
-import { Image } from "expo-image";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
+
+import {
+  APP_LAUNCH_ARTWORK_ASPECT_RATIO,
+  APP_LAUNCH_ARTWORK_WIDTH,
+} from "@/components/layout/app-launch-layout";
 
 export function AppLaunchScreen() {
   return (
@@ -10,8 +14,9 @@ export function AppLaunchScreen() {
     >
       <Image
         accessibilityLabel="Logo Mạng xã hội ANKT"
-        contentFit="contain"
-        source={require("../../assets/images/ankt_launch.jpg")}
+        fadeDuration={0}
+        resizeMode="contain"
+        source={require("../../assets/images/ankt_launch_safe.png")}
         style={styles.artwork}
       />
     </View>
@@ -20,12 +25,14 @@ export function AppLaunchScreen() {
 
 const styles = StyleSheet.create({
   artwork: {
-    height: "100%",
-    width: "100%",
+    aspectRatio: APP_LAUNCH_ARTWORK_ASPECT_RATIO,
+    width: APP_LAUNCH_ARTWORK_WIDTH,
   },
   screen: {
     ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
     backgroundColor: "#000000",
+    justifyContent: "center",
     zIndex: 100,
   },
 });

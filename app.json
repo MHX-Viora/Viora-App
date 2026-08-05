@@ -2,19 +2,21 @@
   "expo": {
     "name": "ANKT",
     "slug": "viora",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/viora_logo.png",
     "scheme": "viora",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "buildNumber": "2",
       "associatedDomains": [
         "applinks:viora.app"
       ],
       "supportsTablet": true
     },
     "android": {
+      "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/viora_logo.png",
@@ -35,7 +37,7 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.CAMERA"
       ],
-      "package": "com.quyentrinh.viora",
+      "package": "com.ankt.app",
       "intentFilters": [
         {
           "action": "VIEW",
@@ -91,15 +93,16 @@
     "plugins": [
       "expo-router",
       "./plugins/with-notifee-call-config",
+      "./plugins/with-release-signing",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/ankt_launch.jpg",
+          "image": "./assets/images/ankt_launch_safe.png",
           "imageWidth": 280,
           "resizeMode": "contain",
           "backgroundColor": "#000000",
           "dark": {
-            "image": "./assets/images/ankt_launch.jpg",
+            "image": "./assets/images/ankt_launch_safe.png",
             "backgroundColor": "#000000"
           }
         }

@@ -1,5 +1,19 @@
 import { refreshToken } from "@/services/auth.service";
+import { createTokenRefreshCoordinator } from "@/services/token-refresh-coordinator";
 import { getAccessToken, setAccessToken } from "@/stores/session-store";
+
+const coordinateTokenRefresh = createTokenRefreshCoordinator(
+  async () => {
+    const refreshedSession = await refreshToken();
+    await setAccessToken(refreshedSession.accessToken);
+    void import("@/services/realtime.service").then(({ restartRealtime }) =>
+      restartRealtime(),
+    );
+
+    return refreshedSession.accessToken;
+  },
+  getAccessToken,
+);
 
 export const authenticatedFetch = async (
   url: string,
@@ -25,17 +39,13 @@ export const authenticatedFetch = async (
   }
 
   // 401 Unauthorized: Token hết hạn: refresh token, lưu token mới, rồi gọi lại đúng 1 lần.
-  const refreshedSession = await refreshToken();
-  await setAccessToken(refreshedSession.accessToken);
-  void import("@/services/realtime.service").then(({ restartRealtime }) =>
-    restartRealtime(),
-  );
+  const refreshedToken = await coordinateTokenRefresh(token);
 
   response = await fetch(url, {
     ...options,
     headers: {
       ...options.headers,
-      Authorization: `Bearer ${refreshedSession.accessToken}`,
+      Authorization: `Bearer ${refreshedToken}`,
     },
     credentials: "include",
   });

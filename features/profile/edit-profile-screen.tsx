@@ -176,7 +176,7 @@ export function EditProfileScreen() {
               onPress={() => pickImage(setCoverUri)}
               style={styles.coverButton}
             >
-              <Ionicons color={colors.primaryContrast} name="camera" size={15} />
+              <Ionicons color={colors.white} name="camera" size={15} />
               <Text style={styles.imageButtonText}>Đổi ảnh bìa</Text>
             </Pressable>
           </View>
@@ -335,7 +335,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textAlign: "center",
   },
   imageButtonText: {
-    color: colors.primaryContrast,
+    color: colors.white,
     fontSize: 12,
     fontWeight: "700",
   },

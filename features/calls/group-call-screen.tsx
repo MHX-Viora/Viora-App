@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { endGroupCall, joinGroupCall } from "@/services/group-call.service";
 import { subscribeCallLifecycle } from "@/features/calls/call-events";
+import { getGroupCallColumnCount } from "@/features/calls/group-call-layout";
 import { getUser } from "@/stores/session-store";
 import { type ThemeColors, useTheme } from "@/theme";
 import { CallType, type GroupCallJoin } from "@/types/call";
@@ -125,13 +126,12 @@ function RoomContent({
         <Text style={styles.subtitle}>{tracks.length}/25 người tham gia</Text>
       </View>
       <FlatList
-        key={tracks.length <= 1 ? "single-column" : "two-columns"}
         contentContainerStyle={styles.grid}
         data={tracks}
         keyExtractor={(item) =>
           `${item.participant.identity}-${item.source}`
         }
-        numColumns={tracks.length <= 1 ? 1 : 2}
+        numColumns={getGroupCallColumnCount(tracks.length)}
         renderItem={({ item }) => (
           <View style={styles.tile}>
             {isTrackReference(item) ? (

@@ -201,7 +201,7 @@ export function ForgotPasswordScreen() {
         await sendSignInLinkToEmail(getAuth(), identifier, {
           android: {
             installApp: true,
-            packageName: "com.quyentrinh.viora",
+            packageName: "com.ankt.app",
           },
           handleCodeInApp: true,
           url: EMAIL_LINK_URL,
