@@ -254,7 +254,7 @@ export function ProfileActivityScreen() {
   const handleSharePost = useCallback(async (postId: string) => {
     const link = await getPostShareLink(postId);
     await Share.share({
-      message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+      message: `Xem bài viết này trên ANKT\n${link.shareUrl}`,
       url: link.shareUrl,
     });
   }, []);
@@ -262,7 +262,7 @@ export function ProfileActivityScreen() {
   const handleShareReel = useCallback(async (reel: Reel) => {
     const link = await getReelShareLink(reel.id);
     await Share.share({
-      message: `Xem reels này trên Viora\n${link.shareUrl}`,
+      message: `Xem reels này trên ANKT\n${link.shareUrl}`,
       url: link.shareUrl,
     });
   }, []);

@@ -21,6 +21,10 @@ const androidManifest = readFileSync(
   new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url),
   "utf8",
 );
+const backendProgram = readFileSync(
+  new URL("../../viora-BE/viora-BE/Program.cs", import.meta.url),
+  "utf8",
+);
 
 assert.equal(app.expo.android.package, "com.ankt.app");
 assert.ok(
@@ -83,10 +87,38 @@ assert.ok(
 assert.ok(
   assetLinks.some(
     (entry) =>
+      entry.target?.package_name === "com.ankt.app" &&
+      entry.target?.sha256_cert_fingerprints?.includes(
+        "FA:C6:17:45:DC:09:03:78:6F:B9:ED:E6:2A:96:2B:39:9F:73:48:F0:BB:6F:89:9B:83:32:66:75:91:03:3B:9C",
+      ),
+  ),
+  "Digital Asset Links must include the certificate used by the installed app",
+);
+assert.ok(
+  assetLinks.some(
+    (entry) =>
       entry.target?.package_name === "com.quyentrinh.viora" &&
       entry.target?.sha256_cert_fingerprints?.includes(
         "6D:B0:0C:87:DF:BB:E8:D6:FD:F0:6C:6E:E2:E2:44:AE:03:46:21:6F:99:22:E2:04:91:5A:14:98:71:DC:76:66",
       ),
   ),
   "Digital Asset Links must keep supporting the previous Android app",
+);
+
+for (const route of ["post", "reel"]) {
+  assert.match(
+    backendProgram,
+    new RegExp(`MapGet\\(\"/${route}/\\{contentId:guid\\}\"`),
+    `Backend is missing the browser fallback route for /${route}/{id}`,
+  );
+}
+assert.match(
+  backendProgram,
+  /viora:\/\/\{contentType\}\/\{contentId:D\}/,
+  "Browser fallback must retain the content route in the custom-scheme URL",
+);
+assert.match(
+  backendProgram,
+  /Mở ứng dụng ANKT/,
+  "Browser fallback must use the current ANKT brand",
 );

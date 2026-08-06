@@ -94,7 +94,7 @@ export function CreatePostModal({
         if (!permission.granted) {
           Alert.alert(
             "Cần quyền truy cập",
-            "Hãy cho phép Viora truy cập vị trí để gắn vị trí vào bài viết.",
+            "Hãy cho phép ANKT truy cập vị trí để gắn vị trí vào bài viết.",
           );
           return;
         }

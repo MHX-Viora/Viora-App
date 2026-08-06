@@ -63,8 +63,8 @@ export function ReelPreviewScreen() {
   const handleShare = useCallback(async (item: Reel) => {
     const link = await getReelShareLink(item.id);
     await Share.share({
-      title: "Viora",
-      message: `Xem reels này trên Viora\n${link.shareUrl}`,
+      title: "ANKT",
+      message: `Xem reels này trên ANKT\n${link.shareUrl}`,
       url: link.shareUrl,
     });
   }, []);

@@ -23,6 +23,8 @@ export const feedPosts: FeedPost[] = [
     comments: 46,
     shares: 12,
     visibility: 0,
+    postType: 0,
+    viewCount: 0,
   },
   {
     id: "coffee-workday",
@@ -46,6 +48,8 @@ export const feedPosts: FeedPost[] = [
     comments: 38,
     shares: 19,
     visibility: 0,
+    postType: 0,
+    viewCount: 0,
   },
   {
     id: "weekend-trip",
@@ -69,10 +73,12 @@ export const feedPosts: FeedPost[] = [
     comments: 97,
     shares: 44,
     visibility: 0,
+    postType: 0,
+    viewCount: 0,
   },
   {
     id: "creative-team",
-    author: "Viora Creative",
+    author: "ANKT Creative",
     authorId: "mock-creative-team",
     avatar: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=160",
     isAuthorVerified: true,
@@ -92,5 +98,7 @@ export const feedPosts: FeedPost[] = [
     comments: 72,
     shares: 31,
     visibility: 0,
+    postType: 0,
+    viewCount: 0,
   },
 ];

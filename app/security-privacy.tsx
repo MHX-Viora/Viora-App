@@ -13,7 +13,7 @@ export default function SecurityPrivacyRoute() {
         {
           title: "Quyền riêng tư",
           description:
-            "Kiểm soát ai có thể tương tác, xem nội dung và liên hệ với bạn trên Viora.",
+            "Kiểm soát ai có thể tương tác, xem nội dung và liên hệ với bạn trên ANKT.",
         },
       ]}
     />

@@ -67,7 +67,7 @@ export const ensureIncomingCallNotificationChannel = async () => {
   await notifee.createChannel({
     id: INCOMING_CALL_CHANNEL_ID,
     name: "Cuộc gọi đến",
-    description: "Thông báo khi có cuộc gọi Viora đến",
+    description: "Thông báo khi có cuộc gọi ANKT đến",
     importance: AndroidImportance.HIGH,
     lights: true,
     lightColor: "#24DDE4",
@@ -79,7 +79,7 @@ export const ensureIncomingCallNotificationChannel = async () => {
   await Notifications.setNotificationChannelAsync(
     INCOMING_CALL_CHANNEL_ID,
     {
-      description: "Thông báo khi có cuộc gọi Viora đến",
+      description: "Thông báo khi có cuộc gọi ANKT đến",
       enableLights: true,
       enableVibrate: true,
       importance: Notifications.AndroidImportance.MAX,
@@ -117,7 +117,7 @@ export const scheduleIncomingCallNotification = async ({
         : typeof data.callerAvatar === "string"
           ? data.callerAvatar
           : undefined;
-    const callerName = title || "Người dùng Viora";
+    const callerName = title || "Người dùng ANKT";
     const isVideoCall = String(data.callType) === "1";
     const callDescription =
       body ||
@@ -170,7 +170,7 @@ export const scheduleIncomingCallNotification = async ({
         },
         smallIcon: "notification_icon",
         style: {
-          summary: "Viora · Cuộc gọi đến",
+          summary: "ANKT · Cuộc gọi đến",
           text: callDescription,
           title: callerName,
           type: AndroidStyle.BIGTEXT,
@@ -192,8 +192,8 @@ export const scheduleIncomingCallNotification = async ({
       priority: Notifications.AndroidNotificationPriority.MAX,
       sound: INCOMING_CALL_RINGTONE_FILE,
       sticky: true,
-      subtitle: "Cuộc gọi Viora đến",
-      title: title || "Người dùng Viora",
+      subtitle: "Cuộc gọi ANKT đến",
+      title: title || "Người dùng ANKT",
       vibrate: INCOMING_CALL_VIBRATION_PATTERN,
     },
     trigger: null,

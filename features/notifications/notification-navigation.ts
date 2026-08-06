@@ -63,7 +63,7 @@ export const navigateNotification = (
         imageUrl: notification.imageUrl ?? "",
         notificationId: notification.id,
         senderName:
-          notification.sender?.displayName ?? "Hệ thống Viora",
+          notification.sender?.displayName ?? "Hệ thống ANKT",
         title: notification.title,
       },
     });

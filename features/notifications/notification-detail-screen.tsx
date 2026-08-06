@@ -28,7 +28,7 @@ export function NotificationDetailScreen() {
   }>();
   const avatarUrl = firstParam(params.avatarUrl);
   const imageUrl = firstParam(params.imageUrl);
-  const senderName = firstParam(params.senderName) || "Hệ thống Viora";
+  const senderName = firstParam(params.senderName) || "Hệ thống ANKT";
   const title = firstParam(params.title) || "Thông báo";
 
   return (

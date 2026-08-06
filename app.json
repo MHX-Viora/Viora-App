@@ -2,7 +2,7 @@
   "expo": {
     "name": "ANKT",
     "slug": "viora",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/viora_logo.png",
     "scheme": "viora",
@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/viora_logo.png",
@@ -142,6 +142,7 @@
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
       "@react-native-firebase/messaging",
+      "@react-native-google-signin/google-signin",
       "@livekit/react-native-expo-plugin",
       "expo-secure-store",
       "expo-audio"

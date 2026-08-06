@@ -29,6 +29,7 @@ import {
 } from "@/services/chat.service";
 import { getUser } from "@/stores/session-store";
 import { spacing } from "@/theme";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { ChatGroupMember } from "@/types/chat";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -85,7 +86,7 @@ const MemberRow = memo(function MemberRow({
             {member.displayName}
           </Text>
           {member.isVerified ? (
-            <Ionicons color={colors.verified} name="checkmark-circle" size={16} />
+            <VerifiedBadge />
           ) : null}
         </View>
         <Text style={styles.status}>

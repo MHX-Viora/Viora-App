@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { spacing } from "@/theme";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { NotificationItemModel } from "@/types/notification";
 import { formatNotificationTime } from "@/utils/notification-time";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -62,10 +63,8 @@ function NotificationItemComponent({
             {senderName}
           </Text>
           {notification.sender?.isVerified && (
-            <Ionicons
+            <VerifiedBadge
               accessibilityLabel="Tài khoản đã xác minh"
-              color={colors.verified}
-              name="checkmark-circle"
               size={15}
             />
           )}

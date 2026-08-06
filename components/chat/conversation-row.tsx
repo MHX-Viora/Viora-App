@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { spacing } from "@/theme";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { Conversation } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 import {
@@ -61,9 +62,7 @@ export function ConversationRow({
             {title}
           </Text>
           {showVerified ? (
-            <Ionicons
-              color={colors.verified}
-              name="checkmark-circle"
+            <VerifiedBadge
               size={16}
             />
           ) : null}

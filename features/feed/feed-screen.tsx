@@ -30,6 +30,7 @@ import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
 import { spacing } from "@/theme";
 import type { CreatePostInput, FeedPost } from "@/types/feed";
+import { canCreateArticle } from "@/types/account-style";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
@@ -46,6 +47,7 @@ export function FeedScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [myAvatar, setMyAvatar] = useState(initialPosts[0].avatar);
+  const [canPublishArticle, setCanPublishArticle] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
@@ -86,6 +88,7 @@ export function FeedScreen() {
       if (session?.user?.avatarUrl) {
         setMyAvatar(session.user.avatarUrl);
       }
+      setCanPublishArticle(canCreateArticle(session?.user?.accountStyle));
     };
 
     loadCurrentUser();
@@ -107,7 +110,7 @@ export function FeedScreen() {
       if (!permission.granted) {
         Alert.alert(
           "Cần quyền truy cập",
-          "Hãy cho phép Viora truy cập thư viện ảnh để chọn ảnh đăng bài.",
+          "Hãy cho phép ANKT truy cập thư viện ảnh để chọn ảnh đăng bài.",
         );
         return null;
       }
@@ -205,8 +208,8 @@ export function FeedScreen() {
     try {
       const link = await getPostShareLink(postId);
       await Share.share({
-        title: "Viora",
-        message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+        title: "ANKT",
+        message: `Xem bài viết này trên ANKT\n${link.shareUrl}`,
         url: link.shareUrl,
       });
     } catch (error) {
@@ -272,6 +275,7 @@ export function FeedScreen() {
               onComment={setCommentsPostId}
               onDeleted={handleDeletedPost}
               onOpenAuthor={openUserProfile}
+              onOpenArticle={(articleId) => router.push({ pathname: "/article/[id]", params: { id: articleId } })}
               onReact={handleReactPost}
               onSave={handleSavePost}
               onShare={handleSharePost}
@@ -283,6 +287,8 @@ export function FeedScreen() {
       )}
       <PostComposer
         avatar={myAvatar}
+        canCreateArticle={canPublishArticle}
+        onArticlePress={() => router.push("/article/editor")}
         onCreatePress={() => setModalVisible(true)}
         onImagePress={openWithImagePicker}
         onSearchPress={() => setSearchVisible(true)}

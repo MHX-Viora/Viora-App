@@ -12,7 +12,7 @@ import { normalizePostLink } from "@/utils/post-link";
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 const DEFAULT_AVATAR =
-  "https://ui-avatars.com/api/?name=Viora&background=2868D7&color=fff";
+  "https://ui-avatars.com/api/?name=ANKT&background=2868D7&color=fff";
 
 const FORM_HEADERS = {
   Accept: "application/json",
@@ -80,7 +80,7 @@ export const mapFeedPost = (
   author:
     post.user?.displayName?.trim() ||
     currentUser?.displayName?.trim() ||
-    "Người dùng Viora",
+    "Người dùng ANKT",
   authorId: post.user?.id ?? null,
   avatar: post.user?.avatarUrl || currentUser?.avatarUrl || DEFAULT_AVATAR,
   body: post.content || "",
@@ -89,6 +89,7 @@ export const mapFeedPost = (
     .map((media) => media.mediaUrl || media.thumbnailUrl || "")
     .filter(Boolean),
   isAuthorVerified: post.user?.isVerified ?? false,
+  authorAccountStyle: post.user?.accountStyle ?? 0,
   isMine: !!currentUser?.id && post.user?.id === currentUser.id,
   isReacted: post.isReacted ?? false,
   isSaved: post.isSaved ?? false,
@@ -101,6 +102,9 @@ export const mapFeedPost = (
   shares: post.shareCount ?? 0,
   visibility: post.visibility ?? 0,
   mentions: post.mentions ?? [],
+  postType: post.postType ?? 0,
+  viewCount: post.viewCount ?? 0,
+  article: post.article ?? null,
 });
 
 export const getPosts = async ({

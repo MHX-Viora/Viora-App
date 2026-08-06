@@ -25,6 +25,7 @@ import {
 
 import { getSelectableFriends } from "@/services/friend.service";
 import { spacing } from "@/theme";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { SelectableFriend } from "@/types/chat-group";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -126,7 +127,7 @@ const FriendRow = memo(function FriendRow({
             {friend.displayName}
           </Text>
           {friend.isVerified ? (
-            <Ionicons color={colors.verified} name="checkmark-circle" size={16} />
+            <VerifiedBadge />
           ) : null}
         </View>
         <Text style={styles.statusText}>

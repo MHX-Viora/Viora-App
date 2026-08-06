@@ -25,6 +25,7 @@ import { createGroupConversation } from "@/services/chat.service";
 import { getSelectableFriends } from "@/services/friend.service";
 import { getUser } from "@/stores/session-store";
 import { spacing } from "@/theme";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { SelectableFriend } from "@/types/chat-group";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -140,7 +141,7 @@ const FriendRow = memo(function FriendRow({
             {friend.displayName}
           </Text>
           {friend.isVerified ? (
-            <Ionicons color={colors.verified} name="checkmark-circle" size={16} />
+            <VerifiedBadge />
           ) : null}
         </View>
         <Text style={styles.statusText}>
@@ -271,7 +272,7 @@ export function CreateGroupScreen() {
       if (!permission.granted) {
         Alert.alert(
           "Cần quyền truy cập",
-          "Hãy cho phép Viora truy cập thư viện để chọn ảnh nhóm.",
+          "Hãy cho phép ANKT truy cập thư viện để chọn ảnh nhóm.",
         );
         return;
       }

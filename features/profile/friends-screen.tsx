@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import {
   acceptFriendRequest,
@@ -357,10 +358,8 @@ const FriendRow = memo(function FriendRow({
             {item.user.displayName}
           </Text>
           {item.user.isVerified && (
-            <Ionicons
+            <VerifiedBadge
               accessibilityLabel="Tài khoản đã xác minh"
-              color={colors.verified}
-              name="checkmark-circle"
               size={16}
             />
           )}

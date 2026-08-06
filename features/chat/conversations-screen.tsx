@@ -686,7 +686,7 @@ export function ConversationsScreen() {
             <View style={styles.qrPermission}>
               <Ionicons color={colors.textMuted} name="camera-outline" size={42} />
               <Text style={styles.qrPermissionText}>
-                Viora cần quyền camera để quét mã QR nhóm.
+                ANKT cần quyền camera để quét mã QR nhóm.
               </Text>
               <Pressable onPress={requestCameraPermission} style={styles.permissionButton}>
                 <Text style={styles.permissionButtonText}>Cho phép camera</Text>

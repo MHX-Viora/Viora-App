@@ -369,7 +369,7 @@ export function ConversationSettingsScreen() {
       if (!permission.granted) {
         Alert.alert(
           "Cần quyền truy cập",
-          "Hãy cho phép Viora truy cập thư viện để chọn ảnh nhóm.",
+          "Hãy cho phép ANKT truy cập thư viện để chọn ảnh nhóm.",
         );
         return;
       }
@@ -460,7 +460,7 @@ export function ConversationSettingsScreen() {
     if (!groupShareLink) return;
     try {
       await Share.share({
-        message: `Tham gia nhóm Viora: ${title}\n${groupShareLink}`,
+        message: `Tham gia nhóm ANKT: ${title}\n${groupShareLink}`,
         url: groupShareLink,
       });
     } catch (error) {

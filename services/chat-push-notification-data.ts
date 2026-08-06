@@ -87,7 +87,7 @@ export const mapChatPushNotification = (
   const messageType = firstText(input.messageType) || "0";
   const senderId = firstText(input.senderId);
   const senderName =
-    firstText(input.senderName, input.title) || "Người dùng Viora";
+    firstText(input.senderName, input.title) || "Người dùng ANKT";
   const avatarUrl = getRemoteImageUrl(input.senderAvatarUrl);
   const conversationName = firstText(input.conversationName);
   const conversationAvatarUrl = getRemoteImageUrl(

@@ -27,6 +27,7 @@ export type User = {
   role: number;
   isVerified: boolean;
   verificationStatus: number;
+  accountStyle: number;
 };
 
 export type Credentials = {

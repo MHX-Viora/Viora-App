@@ -164,7 +164,7 @@ function VideoSelectionStep({
     if (!granted) {
       Alert.alert(
         "Cần quyền camera và micro",
-        "Hãy cấp quyền để Viora có thể quay video kèm âm thanh.",
+        "Hãy cấp quyền để ANKT có thể quay video kèm âm thanh.",
       );
     }
     return granted;

@@ -21,7 +21,7 @@ export function AuthBackground({ compact = false }: { compact?: boolean }) {
           <View style={styles.logo}>
             <Ionicons color={colors.primaryContrast} name="sparkles" size={24} />
           </View>
-          <Text style={styles.brandName}>viora</Text>
+          <Text style={styles.brandName}>ANKT</Text>
         </View>
       )}
     </View>

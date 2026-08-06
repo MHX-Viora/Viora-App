@@ -8,7 +8,7 @@ import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
-export function PostComposer({ avatar, onCreatePress, onImagePress, onSearchPress }: { avatar: string; onCreatePress: () => void; onImagePress: () => void; onSearchPress: () => void }) {
+export function PostComposer({ avatar, canCreateArticle, onArticlePress, onCreatePress, onImagePress, onSearchPress }: { avatar: string; canCreateArticle: boolean; onArticlePress: () => void; onCreatePress: () => void; onImagePress: () => void; onSearchPress: () => void }) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -20,6 +20,14 @@ export function PostComposer({ avatar, onCreatePress, onImagePress, onSearchPres
           source={avatar}
           style={styles.avatar}
         />
+        {canCreateArticle ? <Pressable
+          accessibilityLabel="Tạo bài viết dài"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={onArticlePress}
+        >
+          <Ionicons color={colors.primary} name="document-text-outline" size={23} />
+        </Pressable> : null}
         <Pressable
           accessibilityLabel="Tạo bài viết mới"
           accessibilityRole="button"

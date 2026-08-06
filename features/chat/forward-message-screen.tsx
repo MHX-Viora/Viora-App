@@ -22,6 +22,7 @@ import {
 } from "@/services/chat.service";
 import { getSelectableFriends } from "@/services/friend.service";
 import { spacing } from "@/theme";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { Conversation } from "@/types/chat";
 import type { SelectableFriend } from "@/types/chat-group";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -105,7 +106,7 @@ function ForwardTargetRow({
             {title}
           </Text>
           {isVerified ? (
-            <Ionicons color={colors.verified} name="checkmark-circle" size={16} />
+            <VerifiedBadge />
           ) : null}
         </View>
         <Text numberOfLines={1} style={styles.subtitle}>

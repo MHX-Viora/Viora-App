@@ -18,6 +18,7 @@ import {
 } from "react-native";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import { ReelAction } from "@/components/reels/reel-action";
 import {
   REEL_PLAYBACK_RATES,
@@ -198,7 +199,7 @@ export function ReelCard({
 
     Alert.alert(
       "Xóa video?",
-      "Video này sẽ bị xóa khỏi Viora. Bạn có chắc muốn tiếp tục không?",
+      "Video này sẽ bị xóa khỏi ANKT. Bạn có chắc muốn tiếp tục không?",
       [
         { style: "cancel", text: "Hủy" },
         {
@@ -265,7 +266,7 @@ export function ReelCard({
       });
       setReportVisible(false);
       showAppToast({
-        message: "Cảm ơn bạn đã giúp Viora an toàn hơn.",
+        message: "Cảm ơn bạn đã giúp ANKT an toàn hơn.",
         title: "Đã gửi báo cáo",
         type: "success",
       });
@@ -377,10 +378,8 @@ export function ReelCard({
                 </Text>
               </Pressable>
               {reel.isAuthorVerified && (
-                <Ionicons
+                <VerifiedBadge
                   accessibilityLabel="Tài khoản đã xác minh"
-                  color={colors.verified}
-                  name="checkmark-circle"
                   size={16}
                 />
               )}

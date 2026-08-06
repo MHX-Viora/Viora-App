@@ -66,8 +66,8 @@ export function ProfileQrModal({
     }
     setScanMessage(
       isProfile
-        ? "Đã tìm thấy hồ sơ Viora"
-        : "Mã QR này không phải hồ sơ Viora",
+        ? "Đã tìm thấy hồ sơ ANKT"
+        : "Mã QR này không phải hồ sơ ANKT",
     );
   };
 
@@ -219,7 +219,7 @@ function Scanner({
         </View>
         <Text style={styles.permissionTitle}>Cho phép truy cập camera</Text>
         <Text style={styles.permissionText}>
-          Viora chỉ dùng camera để đọc mã QR hồ sơ
+          ANKT chỉ dùng camera để đọc mã QR hồ sơ
         </Text>
         <Pressable
           accessibilityRole="button"

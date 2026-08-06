@@ -20,6 +20,7 @@ import {
   joinGroup,
 } from "@/services/chat.service";
 import { spacing } from "@/theme";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import type { ChatGroupPreview, ChatGroupPreviewMember } from "@/types/chat";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -46,7 +47,7 @@ function PreviewMemberRow({ member }: { member: ChatGroupPreviewMember }) {
             {member.displayName}
           </Text>
           {member.isVerified ? (
-            <Ionicons color={colors.verified} name="checkmark-circle" size={15} />
+            <VerifiedBadge size={15} />
           ) : null}
         </View>
       </View>

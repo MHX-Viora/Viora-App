@@ -295,7 +295,7 @@ export function UserProfileScreen() {
   const handleSharePost = async (postId: string) => {
     const link = await getPostShareLink(postId);
     await Share.share({
-      message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+      message: `Xem bài viết này trên ANKT\n${link.shareUrl}`,
       url: link.shareUrl,
     });
   };
@@ -345,7 +345,7 @@ export function UserProfileScreen() {
   const handleShareReel = async (reel: Reel) => {
     const link = await getReelShareLink(reel.id);
     await Share.share({
-      message: `Xem reels này trên Viora\n${link.shareUrl}`,
+      message: `Xem reels này trên ANKT\n${link.shareUrl}`,
       url: link.shareUrl,
     });
   };
@@ -434,6 +434,7 @@ export function UserProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ProfileOverview
+          accountStyle={profile.accountStyle}
           avatar={profile.avatarUrl}
           cover={profile.coverUrl}
           handle={getUsername(profile.displayName)}

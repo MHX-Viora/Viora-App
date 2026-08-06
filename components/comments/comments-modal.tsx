@@ -27,6 +27,7 @@ import {
 } from "@/components/comments/use-comments-modal";
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { MentionText } from "@/components/mentions/mention-text";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -411,11 +412,7 @@ function CommentContent({
               </Text>
             </Pressable>
             {isVerified && (
-              <Ionicons
-                color={colors.verified}
-                name="checkmark-circle"
-                size={16}
-              />
+              <VerifiedBadge />
             )}
           </View>
           <Text style={styles.content}>

@@ -17,18 +17,19 @@ import {
   AuthPrimaryButton,
 } from "@/components/auth/auth-controls";
 import { AuthBackground } from "@/components/auth/auth-background";
+import { GoogleLogo } from "@/components/auth/google-logo";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
-import { login, saveAuthSession } from "@/services/auth.service";
+import { googleLogin, login, saveAuthSession } from "@/services/auth.service";
+import { getGoogleFirebaseToken } from "@/services/google-auth.service";
 import { registerPushNotifications } from "@/services/push-notification.service";
 import { startRealtime } from "@/services/realtime.service";
 import { spacing } from "@/theme";
-import { type ThemeColors, useTheme } from "@/theme";
+import { type AppTheme, useTheme } from "@/theme";
 
 
 export function LoginScreen() {
   const { theme } = useTheme();
-  const colors = theme.colors;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -81,6 +82,38 @@ export function LoginScreen() {
 
       showAlert({
         title: "Đăng nhập thất bại",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+        kind: "error",
+      });
+    } finally {
+      if (requestId === loginRequestIdRef.current) {
+        isLoginPendingRef.current = false;
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (isLoginPendingRef.current) return;
+
+    isLoginPendingRef.current = true;
+    const requestId = ++loginRequestIdRef.current;
+    setIsSubmitting(true);
+    try {
+      const firebaseToken = await getGoogleFirebaseToken();
+      if (!firebaseToken) return;
+
+      const session = await googleLogin(firebaseToken);
+      await saveAuthSession(session);
+      if (session.user !== null) {
+        void startRealtime();
+        void registerPushNotifications();
+      }
+      router.replace(session.user === null ? "/complete-profile" : "/");
+    } catch (error) {
+      if (requestId !== loginRequestIdRef.current) return;
+      showAlert({
+        title: "Đăng nhập Google thất bại",
         message: error instanceof Error ? error.message : "Vui lòng thử lại.",
         kind: "error",
       });
@@ -153,28 +186,29 @@ export function LoginScreen() {
                 onPress={handleLogin}
               />
 
-              {/* <View style={styles.separator}>
+              <View style={styles.separator}>
                 <View style={styles.separatorLine} />
                 <Text style={styles.separatorText}>Hoặc tiếp tục với</Text>
                 <View style={styles.separatorLine} />
-              </View> */}
+              </View>
 
-              {/* <Pressable
+              <Pressable
                 accessibilityRole="button"
-                onPress={() =>
-                  showAlert({
-                    title: "Chưa hỗ trợ",
-                    message: "API đăng nhập Google chưa được cung cấp.",
-                  })
-                }
+                accessibilityLabel="Đăng nhập bằng Google"
+                accessibilityState={{ disabled: isSubmitting }}
+                disabled={isSubmitting}
+                onPress={handleGoogleLogin}
                 style={({ pressed }) => [
                   styles.googleButton,
-                  pressed && styles.pressed,
+                  pressed && !isSubmitting && styles.googleButtonPressed,
+                  isSubmitting && styles.disabled,
                 ]}
               >
-                <Ionicons color={colors.visuals.hex_4285F4} name="logo-google" size={22} />
-                <Text style={styles.googleText}>Đăng nhập Google</Text>
-              </Pressable> */}
+                <View style={styles.googleIconWrap}>
+                  <GoogleLogo size={21} />
+                </View>
+                <Text style={styles.googleText}>Tiếp tục với Google</Text>
+              </Pressable>
             </View>
 
             <AuthFooterLink
@@ -197,7 +231,10 @@ export function LoginScreen() {
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
+const createStyles = (theme: AppTheme) => {
+  const { colors, effects } = theme;
+
+  return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -222,21 +259,45 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   forgotText: { color: colors.primary, fontSize: 13, fontWeight: "700" },
   googleButton: {
     alignItems: "center",
-    backgroundColor: colors.visuals.hex_E7EEFC,
-    borderColor: colors.visuals.hex_CBD6EB,
-    borderRadius: 10,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: Math.min(effects.cardRadius, 14),
     borderWidth: 1,
+    elevation: effects.shadow.elevation,
     flexDirection: "row",
-    gap: spacing.md,
+    gap: spacing.sm,
     justifyContent: "center",
-    minHeight: 50,
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    shadowColor: effects.shadow.shadowColor,
+    shadowOffset: effects.shadow.shadowOffset,
+    shadowOpacity: effects.shadow.shadowOpacity,
+    shadowRadius: effects.shadow.shadowRadius,
   },
-  googleText: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  googleButtonPressed: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
+    transform: [{ scale: 0.985 }],
+  },
+  googleIconWrap: {
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    height: 32,
+    justifyContent: "center",
+    width: 32,
+  },
+  googleText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.1,
+  },
   heading: { alignItems: "center", gap: spacing.xs },
-  pressed: { opacity: 0.8 },
+  disabled: { opacity: 0.55 },
   screen: { backgroundColor: colors.background, flex: 1 },
   separator: { alignItems: "center", flexDirection: "row", gap: spacing.md },
-  separatorLine: { backgroundColor: colors.visuals.hex_CCD3E0, flex: 1, height: 1 },
+  separatorLine: { backgroundColor: colors.divider, flex: 1, height: 1 },
   separatorText: { color: colors.textMuted, fontSize: 12 },
   sponsorText: {
     color: colors.textMuted,
@@ -246,4 +307,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   title: { color: colors.text, fontSize: 26, fontWeight: "900" },
-});
+  });
+};

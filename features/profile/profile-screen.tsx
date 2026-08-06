@@ -221,8 +221,8 @@ export function ProfileScreen() {
     try {
       const link = await getPostShareLink(postId);
       await Share.share({
-        title: "Viora",
-        message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+        title: "ANKT",
+        message: `Xem bài viết này trên ANKT\n${link.shareUrl}`,
         url: link.shareUrl,
       });
     } catch (error) {
@@ -274,8 +274,8 @@ export function ProfileScreen() {
     try {
       const link = await getReelShareLink(reel.id);
       await Share.share({
-        title: "Viora",
-        message: `Xem reels này trên Viora\n${link.shareUrl}`,
+        title: "ANKT",
+        message: `Xem reels này trên ANKT\n${link.shareUrl}`,
         url: link.shareUrl,
       });
     } catch (error) {
@@ -326,9 +326,11 @@ export function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ProfileOverview
+          accountStyle={user.accountStyle}
           avatar={profileAvatar}
           cover={profileCover}
           handle={profileHandle}
+          isVerified={user.isVerified}
           name={profileName}
           onEdit={() => router.push("/edit-profile")}
           showEditButton

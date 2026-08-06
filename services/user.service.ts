@@ -39,6 +39,7 @@ export type UserProfile = {
   coverUrl: string;
   gender: number;
   isVerified: boolean;
+  accountStyle: number;
   postCount: number;
   followerCount: number;
   followingCount: number;
@@ -284,6 +285,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile> => {
     id: data.id,
     isFollowing: data.isFollowing === true,
     isVerified: data.isVerified === true,
+    accountStyle: typeof data.accountStyle === "number" ? data.accountStyle : 0,
     postCount: toCount(data.postCount),
   };
 };

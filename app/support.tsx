@@ -8,7 +8,7 @@ export default function SupportRoute() {
         {
           title: "Trung tâm trợ giúp",
           description:
-            "Tìm hướng dẫn sử dụng, câu hỏi thường gặp và các cách xử lý sự cố khi dùng Viora.",
+            "Tìm hướng dẫn sử dụng, câu hỏi thường gặp và các cách xử lý sự cố khi dùng ANKT.",
         },
         {
           title: "Liên hệ hỗ trợ",

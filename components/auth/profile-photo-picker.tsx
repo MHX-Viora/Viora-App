@@ -32,7 +32,7 @@ export function ProfilePhotoPicker({
       if (!permission.granted) {
         Alert.alert(
           "Cần quyền truy cập",
-          "Hãy cho phép Viora truy cập thư viện để chọn ảnh hồ sơ.",
+          "Hãy cho phép ANKT truy cập thư viện để chọn ảnh hồ sơ.",
         );
         return;
       }

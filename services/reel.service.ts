@@ -13,7 +13,7 @@ import type {
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 const DEFAULT_AVATAR =
-  "https://ui-avatars.com/api/?name=Viora&background=2868D7&color=fff";
+  "https://ui-avatars.com/api/?name=ANKT&background=2868D7&color=fff";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -142,7 +142,7 @@ export const mapReel = (
   return {
     id: reel.id,
     authorId: reel.user?.id ?? null,
-    author: reel.user?.displayName?.trim() || "Người dùng Viora",
+    author: reel.user?.displayName?.trim() || "Người dùng ANKT",
     avatar: reel.user?.avatarUrl || DEFAULT_AVATAR,
     caption: reel.content || "",
     comments: formatReelCount(reel.commentCount ?? 0),

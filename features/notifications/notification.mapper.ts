@@ -62,7 +62,7 @@ const mapSender = (value: unknown): NotificationSender | null => {
 
   return {
     avatarUrl,
-    displayName: displayName || "Ban quản trị Viora",
+    displayName: displayName || "Ban quản trị ANKT",
     id,
     isVerified: value.isVerified === true,
   };
@@ -93,7 +93,7 @@ const mapFlatSender = (
 
   return {
     avatarUrl,
-    displayName: displayName || "Ban quản trị Viora",
+    displayName: displayName || "Ban quản trị ANKT",
     id,
     isVerified:
       value.senderIsVerified === true || value.adminIsVerified === true,

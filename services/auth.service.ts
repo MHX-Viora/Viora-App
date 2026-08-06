@@ -12,6 +12,7 @@ import type {
   LoginResponse,
   RegisterResponse,
 } from "@/types/auth";
+import { clearGoogleAuthSession } from "@/services/google-auth.service";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -62,6 +63,7 @@ const normalizeUser = (value: unknown): LoginResponse["user"] | undefined => {
     isVerified: asBoolean(value.isVerified),
     role: asNumber(value.role),
     verificationStatus: asNumber(value.verificationStatus),
+    accountStyle: asNumber(value.accountStyle),
   };
 };
 
@@ -202,28 +204,23 @@ export const clearAuthSession = async (): Promise<void> => {
 
 export const logout = async (): Promise<void> => {
   const token = await getAccessToken();
+  try {
+    const response = await fetch(`${BASE_URL}/api/accounts/logout`, {
+      method: "POST",
+      headers: token
+        ? { Accept: "application/json", Authorization: `Bearer ${token}` }
+        : { Accept: "application/json" },
+      credentials: "include",
+    });
 
-  const response = await fetch(`${BASE_URL}/api/accounts/logout`, {
-    method: "POST",
-    headers: token
-      ? { Accept: "application/json", Authorization: `Bearer ${token}` }
-      : { Accept: "application/json" },
-    credentials: "include",
-  });
-
-  if (!response.ok && response.status !== 204) {
-    const text = await response.text();
-    let data: unknown = null;
-
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = { message: text };
+    if (!response.ok && response.status !== 204) {
+      const data = await parseResponseText(response);
+      const message = getErrorMessage(data as ApiError, "Đăng xuất thất bại.");
+      throw new Error(message);
     }
-
-    const message = getErrorMessage(data as ApiError, "Đăng xuất thất bại.");
-
-    throw new Error(message);
+  } finally {
+    // Đăng xuất danh tính native kể cả khi API không truy cập được.
+    await clearGoogleAuthSession();
   }
 };
 
@@ -294,6 +291,39 @@ export const login = async (payload: Credentials): Promise<LoginResponse> => {
     throw new Error("Phản hồi đăng nhập không hợp lệ.");
   }
 
+  return session;
+};
+
+export const googleLogin = async (
+  firebaseToken: string,
+): Promise<LoginResponse> => {
+  if (!BASE_URL) {
+    throw new Error("Thiếu cấu hình API đăng nhập.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}/api/accounts/google-login`, {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ firebaseToken }),
+      credentials: "include",
+    });
+  } catch (error) {
+    throw getAuthRequestError(error);
+  }
+
+  const data = await parseResponseText(response);
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(data as ApiError, "Đăng nhập Google thất bại."),
+    );
+  }
+
+  const session = normalizeLoginResponse(data);
+  if (!session) {
+    throw new Error("Phản hồi đăng nhập Google không hợp lệ.");
+  }
   return session;
 };
 

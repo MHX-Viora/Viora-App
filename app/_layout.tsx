@@ -7,6 +7,7 @@ import {
 } from "@react-navigation/native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppState, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { ActiveCallBanner } from "@/components/calls/active-call-banner";
@@ -264,8 +265,10 @@ function RootLayoutContent() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <RootLayoutContent />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <RootLayoutContent />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

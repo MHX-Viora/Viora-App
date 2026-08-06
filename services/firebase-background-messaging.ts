@@ -78,13 +78,13 @@ if (Platform.OS !== "web") {
           remoteMessage.notification?.body ||
           (callerName
             ? `${callerName} đang gọi cho bạn`
-            : "Bạn có một cuộc gọi Viora đến"),
+            : "Bạn có một cuộc gọi ANKT đến"),
         callId: firstText(data.callId),
         data: notificationData,
         title:
           callerName ||
           remoteMessage.notification?.title ||
-          "Cuộc gọi Viora đến",
+          "Cuộc gọi ANKT đến",
       });
       console.info("[FCM background] incoming call notification scheduled", {
         messageId: remoteMessage.messageId,
@@ -126,7 +126,7 @@ if (Platform.OS !== "web") {
         body: body || undefined,
         data: notificationData,
         sound: "default",
-        title: title || "Viora",
+        title: title || "ANKT",
       },
       trigger: null,
     });

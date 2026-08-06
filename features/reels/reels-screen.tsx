@@ -81,7 +81,7 @@ const SORT_EMPTY_MESSAGES: Record<
   },
   popular: {
     title: "Chưa có reels đề xuất",
-    description: "Viora sẽ hiển thị video nổi bật khi có nội dung phù hợp.",
+    description: "ANKT sẽ hiển thị video nổi bật khi có nội dung phù hợp.",
   },
 };
 
@@ -197,7 +197,7 @@ export function ReelsScreen() {
       if (!permission.granted) {
         Alert.alert(
           "Cần quyền truy cập",
-          "Hãy cho phép Viora truy cập thư viện để chọn video đăng Reels.",
+          "Hãy cho phép ANKT truy cập thư viện để chọn video đăng Reels.",
         );
         return;
       }
@@ -349,8 +349,8 @@ export function ReelsScreen() {
     try {
       const link = await getReelShareLink(reel.id);
       await Share.share({
-        title: "Viora",
-        message: `Xem reels này trên Viora\n${link.shareUrl}`,
+        title: "ANKT",
+        message: `Xem reels này trên ANKT\n${link.shareUrl}`,
         url: link.shareUrl,
       });
     } catch (error) {

@@ -84,8 +84,8 @@ export function PostPreviewScreen() {
   const handleShare = useCallback(async (id: string) => {
     const link = await getPostShareLink(id);
     await Share.share({
-      title: "Viora",
-      message: `Xem bài viết này trên Viora\n${link.shareUrl}`,
+      title: "ANKT",
+      message: `Xem bài viết này trên ANKT\n${link.shareUrl}`,
       url: link.shareUrl,
     });
   }, []);
@@ -124,7 +124,7 @@ export function PostPreviewScreen() {
         </Pressable>
         <View style={styles.headerText}>
           <Text style={styles.headerTitle}>Chi tiết bài viết</Text>
-          <Text style={styles.headerSubtitle}>Cộng đồng Viora</Text>
+          <Text style={styles.headerSubtitle}>Cộng đồng ANKT</Text>
         </View>
         <View style={styles.headerBalance} />
       </View>

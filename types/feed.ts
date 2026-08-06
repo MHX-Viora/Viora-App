@@ -6,6 +6,7 @@ export type FeedPost = {
   authorId: string | null;
   avatar: string;
   isAuthorVerified: boolean;
+  authorAccountStyle?: number;
   isMine: boolean;
   link: string | null;
   location: string | null;
@@ -21,6 +22,14 @@ export type FeedPost = {
   shares: number;
   visibility: number;
   mentions?: MentionReference[];
+  postType: number;
+  viewCount: number;
+  article?: {
+    title: string;
+    thumbnailUrl: string | null;
+    preview: string | null;
+    readingTimeMinutes: number;
+  } | null;
 };
 
 export type ReactionResponse = {
@@ -47,6 +56,7 @@ export type ApiPost = {
     displayName: string;
     avatarUrl: string;
     isVerified: boolean;
+    accountStyle?: number;
     isFollowing?: boolean;
   } | null;
   media?: {
@@ -63,6 +73,12 @@ export type ApiPost = {
   reactionType: number;
   isSaved: boolean;
   mentions?: MentionReference[];
+  article?: {
+    title: string;
+    thumbnailUrl: string | null;
+    preview: string | null;
+    readingTimeMinutes: number;
+  } | null;
 };
 
 export type PostsResponse = {

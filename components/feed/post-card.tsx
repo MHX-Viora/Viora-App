@@ -14,6 +14,8 @@ import {
 } from "react-native";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { AccountStyleBadge } from "@/components/common/account-style-badge";
+import { VerifiedBadge } from "@/components/common/verified-badge";
 import { ViewableImage } from "@/components/common/viewable-image";
 import { MentionText } from "@/components/mentions/mention-text";
 import { deletePost, reportPost } from "@/services/post.service";
@@ -150,6 +152,7 @@ type Props = {
   onDeleted?: (postId: string) => void;
   onOpenAuthor?: (userId: string) => void;
   onOpenPost?: (postId: string) => void;
+  onOpenArticle?: (articleId: string) => void;
   onReact?: (postId: string, reactionType: number) => void;
   onSave?: (postId: string) => void;
   onShare?: (postId: string) => void;
@@ -161,6 +164,7 @@ export function PostCard({
   onDeleted,
   onOpenAuthor,
   onOpenPost,
+  onOpenArticle,
   onReact,
   onSave,
   onShare,
@@ -262,7 +266,7 @@ export function PostCard({
 
     Alert.alert(
       "Xóa bài viết?",
-      "Bài viết này sẽ bị xóa khỏi Viora. Bạn có chắc muốn tiếp tục không?",
+      "Bài viết này sẽ bị xóa khỏi ANKT. Bạn có chắc muốn tiếp tục không?",
       [
         { style: "cancel", text: "Hủy" },
         {
@@ -286,7 +290,7 @@ export function PostCard({
       });
       setReportVisible(false);
       showAppToast({
-        message: "Cảm ơn bạn đã giúp Viora an toàn hơn.",
+        message: "Cảm ơn bạn đã giúp ANKT an toàn hơn.",
         title: "Đã gửi báo cáo",
         type: "success",
       });
@@ -343,13 +347,12 @@ export function PostCard({
             </Text>
             </Pressable>
             {post.isAuthorVerified && (
-              <Ionicons
+              <VerifiedBadge
                 accessibilityLabel="Tài khoản đã xác minh"
-                color={colors.verified}
-                name="checkmark-circle"
                 size={16}
               />
             )}
+            <AccountStyleBadge accountStyle={post.authorAccountStyle} />
             <View style={styles.visibility}>
               <Ionicons
                 color={colors.textMuted}
@@ -379,7 +382,16 @@ export function PostCard({
         </Pressable>
       </View>
 
-      {post.body ? (
+      {post.postType === 2 && post.article ? (
+        <Pressable accessibilityLabel={`Đọc ${post.article.title}`} accessibilityRole="button" onPress={() => onOpenArticle?.(post.id)} style={styles.articleCard}>
+          {post.article.thumbnailUrl ? <Image contentFit="cover" source={{ uri: post.article.thumbnailUrl }} style={styles.articleThumbnail} transition={180} /> : null}
+          <View style={styles.articleContent}>
+            <Text numberOfLines={2} style={styles.articleTitle}>{post.article.title}</Text>
+            {post.article.preview ? <Text numberOfLines={3} style={styles.articlePreview}>{post.article.preview}</Text> : null}
+            <View style={styles.articleMetaRow}><Text style={styles.articleMeta}>{post.article.readingTimeMinutes} phút đọc · {post.viewCount} lượt xem</Text><Text style={styles.readMore}>Đọc tiếp</Text></View>
+          </View>
+        </Pressable>
+      ) : post.body ? (
         <View style={styles.bodyWrap}>
           <Text
             onTextLayout={(event) => {
@@ -432,7 +444,7 @@ export function PostCard({
         </Pressable>
       ) : null}
 
-      {post.images.length > 0 && (
+      {post.postType !== 2 && post.images.length > 0 && (
         <View style={styles.mediaGrid}>
           {post.images.map((uri, index) => (
             <ViewableImage
@@ -641,6 +653,14 @@ export function PostCard({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  articleCard: { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderRadius: 12, borderWidth: 1, marginHorizontal: spacing.md, marginBottom: spacing.sm, overflow: "hidden" },
+  articleContent: { gap: 7, padding: spacing.md },
+  articleMeta: { color: colors.textMuted, fontSize: 12 },
+  articleMetaRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  articlePreview: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
+  articleThumbnail: { aspectRatio: 16 / 9, backgroundColor: colors.secondaryBackground, width: "100%" },
+  articleTitle: { color: colors.text, fontSize: 22, fontWeight: "800", lineHeight: 28 },
+  readMore: { color: colors.primary, fontSize: 13, fontWeight: "800" },
   action: {
     alignItems: "center",
     flexDirection: "row",
