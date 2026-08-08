@@ -38,7 +38,7 @@ assert.ok(
 const filters = app.expo.android.intentFilters.filter(
   (filter) => filter.action === "VIEW" && filter.autoVerify,
 );
-for (const pathPrefix of ["/post", "/reel"]) {
+for (const pathPrefix of ["/post", "/reel", "/article"]) {
   assert.ok(
     filters.some((filter) =>
       filter.data?.some(
@@ -52,7 +52,7 @@ for (const pathPrefix of ["/post", "/reel"]) {
   );
 }
 
-for (const pathPrefix of ["/post", "/reel"]) {
+for (const pathPrefix of ["/post", "/reel", "/article"]) {
   assert.match(
     androidManifest,
     new RegExp(
@@ -105,7 +105,7 @@ assert.ok(
   "Digital Asset Links must keep supporting the previous Android app",
 );
 
-for (const route of ["post", "reel"]) {
+for (const route of ["post", "reel", "article"]) {
   assert.match(
     backendProgram,
     new RegExp(`MapGet\\(\"/${route}/\\{contentId:guid\\}\"`),

@@ -11,6 +11,7 @@ import {
   Text,
   View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { showAppToast } from "@/components/common/app-toast";
@@ -19,6 +20,10 @@ import { FeedSearchModal } from "@/components/feed/feed-search-modal";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
 import { FIXED_TOP_BAR_HEIGHT } from "@/components/layout/fixed-top-bar";
+import {
+  TAB_BAR_BOTTOM,
+  TAB_BAR_HEIGHT,
+} from "@/components/layout/tab-bar-style";
 import { feedPosts as initialPosts } from "@/features/feed/data";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { createPost, getPosts } from "@/services/feed.service";
@@ -40,6 +45,9 @@ export function FeedScreen() {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const feedBottomPadding =
+    TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.lg;
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -251,6 +259,7 @@ export function FeedScreen() {
         <FlatList
           contentContainerStyle={[
             styles.content,
+            { paddingBottom: feedBottomPadding },
             posts.length === 0 && styles.emptyContent,
           ]}
           data={posts}
@@ -361,7 +370,6 @@ function PostSkeleton() {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: {
-    paddingBottom: 10,
     paddingTop: FIXED_TOP_BAR_HEIGHT,
   },
   emptyContent: { flexGrow: 1 },

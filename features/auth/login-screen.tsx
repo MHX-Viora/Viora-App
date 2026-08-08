@@ -26,6 +26,8 @@ import { startRealtime } from "@/services/realtime.service";
 import { spacing } from "@/theme";
 import { type AppTheme, useTheme } from "@/theme";
 
+// Disabled for the Play release until its App Signing OAuth certificate is verified.
+const GOOGLE_LOGIN_ENABLED = false;
 
 export function LoginScreen() {
   const { theme } = useTheme();
@@ -186,29 +188,33 @@ export function LoginScreen() {
                 onPress={handleLogin}
               />
 
-              <View style={styles.separator}>
-                <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>Hoặc tiếp tục với</Text>
-                <View style={styles.separatorLine} />
-              </View>
+              {GOOGLE_LOGIN_ENABLED && (
+                <>
+                  <View style={styles.separator}>
+                    <View style={styles.separatorLine} />
+                    <Text style={styles.separatorText}>Hoặc tiếp tục với</Text>
+                    <View style={styles.separatorLine} />
+                  </View>
 
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Đăng nhập bằng Google"
-                accessibilityState={{ disabled: isSubmitting }}
-                disabled={isSubmitting}
-                onPress={handleGoogleLogin}
-                style={({ pressed }) => [
-                  styles.googleButton,
-                  pressed && !isSubmitting && styles.googleButtonPressed,
-                  isSubmitting && styles.disabled,
-                ]}
-              >
-                <View style={styles.googleIconWrap}>
-                  <GoogleLogo size={21} />
-                </View>
-                <Text style={styles.googleText}>Tiếp tục với Google</Text>
-              </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Đăng nhập bằng Google"
+                    accessibilityState={{ disabled: isSubmitting }}
+                    disabled={isSubmitting}
+                    onPress={handleGoogleLogin}
+                    style={({ pressed }) => [
+                      styles.googleButton,
+                      pressed && !isSubmitting && styles.googleButtonPressed,
+                      isSubmitting && styles.disabled,
+                    ]}
+                  >
+                    <View style={styles.googleIconWrap}>
+                      <GoogleLogo size={21} />
+                    </View>
+                    <Text style={styles.googleText}>Tiếp tục với Google</Text>
+                  </Pressable>
+                </>
+              )}
             </View>
 
             <AuthFooterLink

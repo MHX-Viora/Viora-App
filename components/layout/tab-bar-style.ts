@@ -1,18 +1,20 @@
 import type { AppTheme } from "@/theme";
 
-export const TAB_BAR_BOTTOM = 18;
-export const TAB_BAR_HEIGHT = 78;
+export const TAB_BAR_BOTTOM = 0;
+export const TAB_BAR_HEIGHT = 96;
 
 export const createFloatingTabBarStyle = (theme: AppTheme) => ({
   backgroundColor: theme.colors.tabBar,
   borderColor: theme.colors.tabBarBorder,
   borderRadius: theme.isDark ? 20 : theme.effects.cardRadius,
+  borderBottomLeftRadius: 0,
+  borderBottomRightRadius: 0,
   borderWidth: 1,
   bottom: TAB_BAR_BOTTOM,
   elevation: 16,
   height: TAB_BAR_HEIGHT,
   left: 14,
-  paddingBottom: 8,
+  paddingBottom: 26,
   paddingTop: 8,
   position: "absolute" as const,
   right: 14,

@@ -2,7 +2,7 @@
   "expo": {
     "name": "ANKT",
     "slug": "viora",
-    "version": "1.0.2",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/images/viora_logo.png",
     "scheme": "viora",
@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 3,
+      "versionCode": 8,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/viora_logo.png",
@@ -62,6 +62,21 @@
               "scheme": "https",
               "host": "api.mxh.ankt.vn",
               "pathPrefix": "/reel"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "api.mxh.ankt.vn",
+              "pathPrefix": "/article"
             }
           ],
           "category": [

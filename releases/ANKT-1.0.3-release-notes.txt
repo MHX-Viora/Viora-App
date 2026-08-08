@@ -1,0 +1,8 @@
+Release name: ANKT 1.0.3
+
+<vi>
+- Cải thiện bố cục thông tin bài viết: trạng thái hiển thị được đặt gọn bên dưới tên tác giả.
+- Tối ưu khoảng cuộn trên Trang chủ để bài viết cuối không còn bị thanh điều hướng che khuất.
+- Mở rộng nền thanh điều hướng xuống sát cạnh dưới màn hình, loại bỏ khoảng hở và giúp giao diện liền mạch hơn.
+- Cải thiện độ ổn định và trải nghiệm sử dụng tổng thể.
+</vi>

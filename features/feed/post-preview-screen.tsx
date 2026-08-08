@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { PostCard } from "@/components/feed/post-card";
 import { openProfileByUserId } from "@/features/profile/open-profile";
+import { getArticle } from "@/services/article.service";
 import { getPostById } from "@/services/feed.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
@@ -41,7 +42,18 @@ export function PostPreviewScreen() {
     if (!postId) return;
     setIsLoading(true);
     try {
-      setPost(await getPostById(postId));
+      const loadedPost = await getPostById(postId);
+      if (loadedPost.postType === 2 && !loadedPost.article) {
+        const article = await getArticle(loadedPost.id);
+        loadedPost.article = {
+          title: article.title,
+          thumbnailUrl: article.thumbnailUrl,
+          preview: article.preview,
+          readingTimeMinutes: article.readingTimeMinutes,
+        };
+        loadedPost.viewCount = article.viewCount;
+      }
+      setPost(loadedPost);
       setError("");
     } catch (loadError) {
       setError(
@@ -163,6 +175,12 @@ export function PostPreviewScreen() {
             onComment={setCommentsPostId}
             onDeleted={handleDeleted}
             onOpenAuthor={openUserProfile}
+            onOpenArticle={(articleId) =>
+              router.push({
+                pathname: "/article/[id]",
+                params: { id: articleId },
+              })
+            }
             onReact={handleReact}
             onSave={handleSave}
             onShare={handleShare}

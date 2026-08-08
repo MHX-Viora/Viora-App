@@ -115,7 +115,7 @@ function ForwardTargetRow({
       </View>
       <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
         {isSelected ? (
-          <Ionicons color={colors.white} name="checkmark" size={17} />
+          <Ionicons color={colors.primaryContrast} name="checkmark" size={17} />
         ) : null}
       </View>
     </Pressable>
@@ -278,7 +278,7 @@ export function ForwardMessageScreen() {
           style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
         >
           {sending ? (
-            <ActivityIndicator color={colors.white} size="small" />
+            <ActivityIndicator color={colors.primaryContrast} size="small" />
           ) : (
             <Text style={styles.sendText}>Gửi</Text>
           )}
@@ -362,7 +362,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  container: { backgroundColor: colors.white, flex: 1 },
+  container: { backgroundColor: colors.background, flex: 1 },
   emptyText: {
     color: colors.textMuted,
     fontSize: 14,
@@ -434,7 +434,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   sendButtonDisabled: { opacity: 0.45 },
-  sendText: { color: colors.white, fontSize: 14, fontWeight: "900" },
+  sendText: { color: colors.primaryContrast, fontSize: 14, fontWeight: "900" },
   subtitle: { color: colors.textMuted, fontSize: 13, fontWeight: "700" },
   title: { color: colors.text, fontSize: 16, fontWeight: "900" },
   titleLine: { alignItems: "center", flexDirection: "row", gap: spacing.xs },

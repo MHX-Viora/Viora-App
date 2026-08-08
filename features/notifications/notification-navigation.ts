@@ -80,6 +80,14 @@ export const navigateNotification = (
     return;
   }
 
+  if (reference.type === 6) {
+    appRouter.push({
+      pathname: "/post/[postId]",
+      params: { postId: reference.id },
+    });
+    return;
+  }
+
   if (reference.type === 3 || reference.type === 4) {
     appRouter.push({
       pathname: "/chat/[conversationId]",

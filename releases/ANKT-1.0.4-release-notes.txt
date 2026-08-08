@@ -1,0 +1,10 @@
+Release name: ANKT 1.0.4
+
+<vi>
+- Cải thiện trải nghiệm bài báo trong thông báo: hiển thị đầy đủ ảnh bìa, tiêu đề, mô tả, thời gian đọc và lượt xem trước khi mở nội dung chi tiết.
+- Cải thiện điều hướng bài báo và cách hiển thị thông báo tương tác.
+- Cải thiện giao diện trang chủ, khoảng cách nội dung và thanh điều hướng dưới.
+- Đồng bộ màu sắc màn hình chuyển tiếp tin nhắn theo giao diện hiện đại hoặc cổ điển.
+- Cải thiện quyền tạo bài báo cho các tài khoản phù hợp.
+- Sửa lỗi và nâng cao độ ổn định của ứng dụng.
+</vi>

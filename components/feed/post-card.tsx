@@ -353,6 +353,8 @@ export function PostCard({
               />
             )}
             <AccountStyleBadge accountStyle={post.authorAccountStyle} />
+          </View>
+          <View style={styles.postMetadata}>
             <View style={styles.visibility}>
               <Ionicons
                 color={colors.textMuted}
@@ -361,12 +363,12 @@ export function PostCard({
               />
               <Text style={styles.visibilityText}>{visibility.label}</Text>
             </View>
+            <Text style={styles.meta}>
+              {post.location
+                ? `${post.publishedAt} · ${post.location}`
+                : post.publishedAt}
+            </Text>
           </View>
-          <Text style={styles.meta}>
-            {post.location
-              ? `${post.publishedAt} · ${post.location}`
-              : post.publishedAt}
-          </Text>
         </View>
         <Pressable
           accessibilityLabel="Tùy chọn bài viết"
@@ -748,7 +750,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 2,
     width: "100%",
   },
-  meta: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
+  meta: { color: colors.textMuted, fontSize: 13 },
+  postMetadata: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: 2,
+  },
   reactionBackdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,

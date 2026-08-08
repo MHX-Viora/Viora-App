@@ -37,7 +37,7 @@ const firstNumber = (...values: unknown[]) => {
 };
 
 const isReferenceType = (value: number): value is NotificationReferenceType =>
-  Number.isInteger(value) && value >= 0 && value <= 5;
+  Number.isInteger(value) && value >= 0 && value <= 6;
 
 let navigationReady = false;
 const pendingNavigationActions: (() => void)[] = [];

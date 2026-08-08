@@ -1,0 +1,8 @@
+Release name: ANKT 1.0.5
+
+<vi>
+- Sửa lỗi đăng nhập bằng Google trên bản cài đặt từ Google Play.
+- Cập nhật cấu hình xác thực Google cho khóa ký ứng dụng chính thức.
+- Cải thiện hiển thị bản xem trước bài báo từ thông báo.
+- Sửa lỗi và nâng cao độ ổn định của ứng dụng.
+</vi>

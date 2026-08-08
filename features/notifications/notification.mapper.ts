@@ -44,7 +44,7 @@ const normalizeCreatedAt = (...values: unknown[]) => {
 };
 
 const isReferenceType = (value: number): value is NotificationReferenceType =>
-  value >= 0 && value <= 5;
+  value >= 0 && value <= 6;
 
 const mapSender = (value: unknown): NotificationSender | null => {
   if (!isRecord(value)) return null;

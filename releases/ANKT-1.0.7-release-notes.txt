@@ -1,0 +1,7 @@
+Release name: ANKT 1.0.7
+
+<vi>
+- Tạm ẩn đăng nhập bằng Google do cấu hình chữ ký Google Play chưa ổn định.
+- Giữ đăng nhập bằng email hoặc số điện thoại hoạt động bình thường.
+- Sửa lỗi và cải thiện độ ổn định của ứng dụng.
+</vi>
