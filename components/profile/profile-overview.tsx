@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { AccountStyleBadge } from "@/components/common/account-style-badge";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -12,7 +11,6 @@ import { type ThemeColors, useTheme } from "@/theme";
 
 export function ProfileOverview({
   actionSlot,
-  accountStyle,
   avatar,
   bio,
   cover,
@@ -23,7 +21,6 @@ export function ProfileOverview({
   showEditButton = false,
 }: {
   actionSlot?: ReactNode;
-  accountStyle?: number;
   avatar: string;
   bio?: string;
   cover: string;
@@ -75,7 +72,6 @@ export function ProfileOverview({
             </Pressable>
           )}
         </View>
-        <AccountStyleBadge accountStyle={accountStyle} />
         <Text style={styles.handle}>{handle}</Text>
         {!!bio?.trim() && <Text style={styles.bio}>{bio.trim()}</Text>}
         {actionSlot}

@@ -7,6 +7,7 @@ import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ViewableImage } from "@/components/common/viewable-image";
+import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -35,6 +36,7 @@ export function ProfileQrModal({
   const [permission, requestPermission] = useCameraPermissions();
   const [scanMessage, setScanMessage] = useState("");
   const [scanning, setScanning] = useState(true);
+  const [selectingImage, setSelectingImage] = useState(false);
 
   const resetScanner = () => {
     setScanMessage("");
@@ -52,8 +54,7 @@ export function ProfileQrModal({
     setShowScanner(true);
   };
 
-  const handleScanned = ({ data }: { data: string }) => {
-    if (!scanning) return;
+  const processScannedData = (data: string) => {
     setScanning(false);
     const profileId = getProfileIdFromQr(data);
     const isProfile = profileId !== null;
@@ -69,6 +70,30 @@ export function ProfileQrModal({
         ? "Đã tìm thấy hồ sơ ANKT"
         : "Mã QR này không phải hồ sơ ANKT",
     );
+  };
+
+  const handleScanned = ({ data }: { data: string }) => {
+    if (!scanning) return;
+    processScannedData(data);
+  };
+
+  const handleSelectQrImage = async () => {
+    if (selectingImage) return;
+    setSelectingImage(true);
+    try {
+      const result = await scanQrFromDeviceImage();
+      if (result.status === "found") {
+        processScannedData(result.data);
+      } else if (result.status === "not-found") {
+        setScanning(false);
+        setScanMessage("Không tìm thấy mã QR trong ảnh đã chọn");
+      }
+    } catch {
+      setScanning(false);
+      setScanMessage("Không thể đọc ảnh QR. Vui lòng chọn ảnh khác");
+    } finally {
+      setSelectingImage(false);
+    }
   };
 
   return (
@@ -118,8 +143,10 @@ export function ProfileQrModal({
               onRequestPermission={requestPermission}
               onScan={handleScanned}
               onScanAgain={resetScanner}
+              onSelectImage={handleSelectQrImage}
               scanMessage={scanMessage}
               scanning={scanning}
+              selectingImage={selectingImage}
             />
           ) : (
             <View style={styles.myQrContent}>
@@ -197,16 +224,20 @@ function Scanner({
   onRequestPermission,
   onScan,
   onScanAgain,
+  onSelectImage,
   permissionGranted,
   scanMessage,
   scanning,
+  selectingImage,
 }: {
   onRequestPermission: () => void;
   onScan: (result: { data: string }) => void;
   onScanAgain: () => void;
+  onSelectImage: () => void;
   permissionGranted: boolean;
   scanMessage: string;
   scanning: boolean;
+  selectingImage: boolean;
 }) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -228,6 +259,10 @@ function Scanner({
         >
           <Text style={styles.primaryButtonText}>Mở camera</Text>
         </Pressable>
+        <GalleryQrButton
+          onPress={onSelectImage}
+          selecting={selectingImage}
+        />
       </View>
     );
   }
@@ -263,7 +298,37 @@ function Scanner({
           </View>
         )}
       </View>
+      <GalleryQrButton
+        onPress={onSelectImage}
+        selecting={selectingImage}
+      />
     </View>
+  );
+}
+
+function GalleryQrButton({
+  onPress,
+  selecting,
+}: {
+  onPress: () => void;
+  selecting: boolean;
+}) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
+    <Pressable
+      accessibilityLabel="Chọn ảnh QR"
+      accessibilityRole="button"
+      disabled={selecting}
+      onPress={onPress}
+      style={styles.galleryButton}
+    >
+      <Ionicons color={colors.primary} name="image-outline" size={20} />
+      <Text style={styles.galleryButtonText}>
+        {selecting ? "Đang đọc ảnh..." : "Chọn ảnh QR"}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -301,6 +366,23 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     overflow: "hidden",
     position: "relative",
     width: "100%",
+  },
+  galleryButton: {
+    alignItems: "center",
+    alignSelf: "center",
+    borderColor: colors.primary,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  galleryButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "800",
   },
   handle: { color: colors.textMuted, fontSize: 13, marginTop: 2 },
   header: {

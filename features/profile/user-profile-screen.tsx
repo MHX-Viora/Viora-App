@@ -434,7 +434,6 @@ export function UserProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <ProfileOverview
-          accountStyle={profile.accountStyle}
           avatar={profile.avatarUrl}
           cover={profile.coverUrl}
           handle={getUsername(profile.displayName)}

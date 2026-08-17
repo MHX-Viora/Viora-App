@@ -8,11 +8,11 @@ const loginScreen = readFileSync(
 
 assert.match(
   loginScreen,
-  /const GOOGLE_LOGIN_ENABLED = false;/,
-  "Google login must remain disabled until the Google Play OAuth configuration is verified",
+  /const GOOGLE_LOGIN_ENABLED = true;/,
+  "Google login must be enabled after the Google Play OAuth configuration is verified",
 );
 assert.match(
   loginScreen,
   /\{GOOGLE_LOGIN_ENABLED && \([\s\S]*accessibilityLabel="Đăng nhập bằng Google"[\s\S]*\)\}/,
-  "The Google login controls must be hidden behind the release safeguard",
+  "The Google login controls must remain guarded by the release flag",
 );

@@ -26,8 +26,8 @@ import { startRealtime } from "@/services/realtime.service";
 import { spacing } from "@/theme";
 import { type AppTheme, useTheme } from "@/theme";
 
-// Disabled for the Play release until its App Signing OAuth certificate is verified.
-const GOOGLE_LOGIN_ENABLED = false;
+// Play App Signing and upload certificate fingerprints are registered for OAuth.
+const GOOGLE_LOGIN_ENABLED = true;
 
 export function LoginScreen() {
   const { theme } = useTheme();

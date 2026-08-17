@@ -2,7 +2,7 @@
   "expo": {
     "name": "ANKT",
     "slug": "viora",
-    "version": "1.0.7",
+    "version": "1.0.9",
     "orientation": "portrait",
     "icon": "./assets/images/viora_logo.png",
     "scheme": "viora",
@@ -16,7 +16,7 @@
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 8,
+      "versionCode": 10,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/viora_logo.png",

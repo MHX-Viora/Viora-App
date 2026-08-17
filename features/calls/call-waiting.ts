@@ -31,9 +31,6 @@ export const shouldNavigateAwayFromCall = (
   hasNavigated: boolean,
 ) => isScreenMounted && !hasNavigated;
 
-export const shouldUseFullScreenCallAction = (appState: string) =>
-  appState !== "active";
-
 export const shouldShowIncomingCallNotification = (appState: string) =>
   appState !== "active";
 

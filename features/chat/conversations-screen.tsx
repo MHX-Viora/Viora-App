@@ -35,6 +35,7 @@ import {
   setConversationPinned,
 } from "@/services/chat.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { getUser } from "@/stores/session-store";
 import { spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
@@ -75,6 +76,7 @@ export function ConversationsScreen() {
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
   const [qrScanMessage, setQrScanMessage] = useState("");
   const [qrScanning, setQrScanning] = useState(true);
+  const [qrImageLoading, setQrImageLoading] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [openedConversationId, setOpenedConversationId] = useState("");
   const [actionLoadingIds, setActionLoadingIds] = useState<Set<string>>(
@@ -129,9 +131,8 @@ export function ConversationsScreen() {
     setQrScanning(true);
   }, []);
 
-  const handleGroupQrScanned = useCallback(
-    ({ data }: { data: string }) => {
-      if (!qrScanning) return;
+  const processGroupQrData = useCallback(
+    (data: string) => {
       setQrScanning(false);
       const trimmed = data.trim();
       let inviteCode = "";
@@ -173,8 +174,35 @@ export function ConversationsScreen() {
         }
       }, 450);
     },
-    [closeQrScanner, qrScanning],
+    [closeQrScanner],
   );
+
+  const handleGroupQrScanned = useCallback(
+    ({ data }: { data: string }) => {
+      if (!qrScanning) return;
+      processGroupQrData(data);
+    },
+    [processGroupQrData, qrScanning],
+  );
+
+  const handleSelectGroupQrImage = useCallback(async () => {
+    if (qrImageLoading) return;
+    setQrImageLoading(true);
+    try {
+      const result = await scanQrFromDeviceImage();
+      if (result.status === "found") {
+        processGroupQrData(result.data);
+      } else if (result.status === "not-found") {
+        setQrScanning(false);
+        setQrScanMessage("Không tìm thấy mã QR trong ảnh đã chọn.");
+      }
+    } catch {
+      setQrScanning(false);
+      setQrScanMessage("Không thể đọc ảnh QR. Vui lòng chọn ảnh khác.");
+    } finally {
+      setQrImageLoading(false);
+    }
+  }, [processGroupQrData, qrImageLoading]);
 
   const load = useCallback(
     async (nextPage: number, mode: "initial" | "refresh" | "more") => {
@@ -666,6 +694,18 @@ export function ConversationsScreen() {
                 />
                 <View pointerEvents="none" style={styles.scanFrame} />
               </View>
+              <Pressable
+                accessibilityLabel="Chọn ảnh QR"
+                accessibilityRole="button"
+                disabled={qrImageLoading}
+                onPress={handleSelectGroupQrImage}
+                style={styles.qrImageButton}
+              >
+                <Ionicons color={colors.primary} name="image-outline" size={20} />
+                <Text style={styles.qrImageButtonText}>
+                  {qrImageLoading ? "Đang đọc ảnh..." : "Chọn ảnh QR"}
+                </Text>
+              </Pressable>
               {qrScanMessage ? (
                 <View style={styles.qrResult}>
                   <Text style={styles.qrResultText}>{qrScanMessage}</Text>
@@ -690,6 +730,18 @@ export function ConversationsScreen() {
               </Text>
               <Pressable onPress={requestCameraPermission} style={styles.permissionButton}>
                 <Text style={styles.permissionButtonText}>Cho phép camera</Text>
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Chọn ảnh QR"
+                accessibilityRole="button"
+                disabled={qrImageLoading}
+                onPress={handleSelectGroupQrImage}
+                style={styles.qrImageButton}
+              >
+                <Ionicons color={colors.primary} name="image-outline" size={20} />
+                <Text style={styles.qrImageButtonText}>
+                  {qrImageLoading ? "Đang đọc ảnh..." : "Chọn ảnh QR"}
+                </Text>
               </Pressable>
             </View>
           )}
@@ -949,6 +1001,22 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     textAlign: "center",
+  },
+  qrImageButton: {
+    alignItems: "center",
+    alignSelf: "center",
+    borderColor: colors.primary,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  qrImageButtonText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: "900",
   },
   qrPermission: {
     alignItems: "center",

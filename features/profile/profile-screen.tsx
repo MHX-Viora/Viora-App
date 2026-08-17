@@ -326,7 +326,6 @@ export function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ProfileOverview
-          accountStyle={user.accountStyle}
           avatar={profileAvatar}
           cover={profileCover}
           handle={profileHandle}

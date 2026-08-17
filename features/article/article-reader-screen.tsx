@@ -6,7 +6,6 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ArticleBlockView } from "@/components/article/article-renderer";
-import { AccountStyleBadge } from "@/components/common/account-style-badge";
 import { getArticle } from "@/services/article.service";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
 import type { Article } from "@/types/article";
@@ -36,7 +35,7 @@ export function ArticleReaderScreen() {
       data={article.blocks}
       initialNumToRender={5}
       keyExtractor={(item) => item.id || String(item.orderIndex)}
-      ListHeaderComponent={<View style={styles.header}><Text style={styles.title}>{article.title}</Text><View style={styles.authorRow}><Image source={{ uri: article.author.avatarUrl || undefined }} style={styles.avatar} /><View><Text style={styles.author}>{article.author.displayName}</Text><AccountStyleBadge accountStyle={article.author.accountStyle} /><Text style={styles.meta}>{article.readingTimeMinutes} phút đọc · {article.viewCount} lượt xem</Text></View></View></View>}
+      ListHeaderComponent={<View style={styles.header}><Text style={styles.title}>{article.title}</Text><View style={styles.authorRow}><Image source={{ uri: article.author.avatarUrl || undefined }} style={styles.avatar} /><View><Text style={styles.author}>{article.author.displayName}</Text><Text style={styles.meta}>{article.readingTimeMinutes} phút đọc · {article.viewCount} lượt xem</Text></View></View></View>}
       maxToRenderPerBatch={5}
       renderItem={({ item }) => <ArticleBlockView block={item} />}
       ItemSeparatorComponent={() => <View style={{ height: spacing.lg }} />}

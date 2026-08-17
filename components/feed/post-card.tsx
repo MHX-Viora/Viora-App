@@ -14,7 +14,6 @@ import {
 } from "react-native";
 
 import { showAppToast } from "@/components/common/app-toast";
-import { AccountStyleBadge } from "@/components/common/account-style-badge";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { ViewableImage } from "@/components/common/viewable-image";
 import { MentionText } from "@/components/mentions/mention-text";
@@ -352,7 +351,6 @@ export function PostCard({
                 size={16}
               />
             )}
-            <AccountStyleBadge accountStyle={post.authorAccountStyle} />
           </View>
           <View style={styles.postMetadata}>
             <View style={styles.visibility}>

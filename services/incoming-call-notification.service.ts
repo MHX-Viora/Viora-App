@@ -5,7 +5,7 @@ import notifee, {
   AndroidVisibility,
 } from "@notifee/react-native";
 import * as Notifications from "expo-notifications";
-import { AppState, Platform } from "react-native";
+import { Platform } from "react-native";
 
 import {
   CALL_ANSWER_TIMEOUT_MS,
@@ -14,7 +14,6 @@ import {
   INCOMING_CALL_RINGTONE_ANDROID,
   INCOMING_CALL_RINGTONE_FILE,
   INCOMING_CALL_VIBRATION_PATTERN,
-  shouldUseFullScreenCallAction,
 } from "@/features/calls/call-waiting";
 
 export { INCOMING_CALL_CHANNEL_ID };
@@ -152,12 +151,13 @@ export const scheduleIncomingCallNotification = async ({
         channelId: INCOMING_CALL_CHANNEL_ID,
         circularLargeIcon: true,
         color: "#24DDE4",
-        fullScreenAction: shouldUseFullScreenCallAction(AppState.currentState)
-          ? {
-              id: INCOMING_CALL_ACCEPT_ACTION,
-              launchActivity: "default",
-            }
-          : undefined,
+        // This function is called only by background/inactive delivery paths.
+        // AppState can incorrectly report `active` inside an Android headless task,
+        // which previously stripped the full-screen intent from Play builds.
+        fullScreenAction: {
+          id: INCOMING_CALL_ACCEPT_ACTION,
+          launchActivity: "default",
+        },
         importance: AndroidImportance.HIGH,
         largeIcon: callerAvatar,
         lightUpScreen: true,
