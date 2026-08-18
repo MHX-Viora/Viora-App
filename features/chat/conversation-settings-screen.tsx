@@ -439,18 +439,13 @@ export function ConversationSettingsScreen() {
     setLoading("share");
     try {
       const link = await getGroupShareLink(conversation.id);
-      const inviteCodeFromUrl = link.shareUrl.match(/\/group\/([^/?#]+)/)?.[1];
-      const inviteCode = link.inviteCode || inviteCodeFromUrl || "";
-      const nativePreviewLink = inviteCode
-        ? `viora://chat/group-preview?inviteCode=${encodeURIComponent(inviteCode)}`
-        : `viora://chat/group-preview?groupId=${encodeURIComponent(conversation.id)}`;
-      setGroupShareLink(nativePreviewLink);
+      setGroupShareLink(link.shareUrl);
       setShareGroupVisible(true);
     } catch (error) {
-      setGroupShareLink(
-        `viora://chat/group-preview?groupId=${encodeURIComponent(conversation.id)}`,
+      Alert.alert(
+        "Không thể lấy liên kết nhóm",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
-      setShareGroupVisible(true);
     } finally {
       setLoading(null);
     }
@@ -953,15 +948,8 @@ export function ConversationSettingsScreen() {
                     value={groupShareLink}
                   />
                 </View>
-                <TextInput
-                  editable={false}
-                  multiline
-                  selectTextOnFocus
-                  style={styles.shareLinkInput}
-                  value={groupShareLink}
-                />
                 <Text style={styles.shareHint}>
-                  Nhấn giữ đường dẫn để sao chép, hoặc chia sẻ cho bạn bè.
+                  Quét mã QR hoặc chia sẻ cho bạn bè.
                 </Text>
                 <Pressable
                   onPress={() => void shareGroupLink()}
@@ -1329,17 +1317,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textAlign: "center",
-  },
-  shareLinkInput: {
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "700",
-    minHeight: 58,
-    padding: spacing.sm,
   },
   shareOverlay: {
     backgroundColor: colors.visuals.rgb_15_23_42_0_36,

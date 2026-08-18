@@ -10,6 +10,7 @@ import { ViewableImage } from "@/components/common/viewable-image";
 import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
+import { parseProfileQrValue } from "@/utils/qr-code";
 
 
 export function ProfileQrModal({
@@ -56,7 +57,7 @@ export function ProfileQrModal({
 
   const processScannedData = (data: string) => {
     setScanning(false);
-    const profileId = getProfileIdFromQr(data);
+    const profileId = parseProfileQrValue(data);
     const isProfile = profileId !== null;
 
     if (profileId) {
@@ -199,26 +200,6 @@ export function ProfileQrModal({
     </Modal>
   );
 }
-
-const getProfileIdFromQr = (data: string) => {
-  const trimmed = data.trim();
-  const prefixes = [
-    "viora://profile/",
-    "https://viora.app/user/",
-    "https://viora.app/profile/",
-    "https://viora.app/users/",
-  ];
-  const prefix = prefixes.find((item) => trimmed.startsWith(item));
-
-  if (!prefix) return null;
-
-  const userId = trimmed
-    .slice(prefix.length)
-    .split(/[/?#]/)[0]
-    .trim();
-
-  return userId || null;
-};
 
 function Scanner({
   onRequestPermission,

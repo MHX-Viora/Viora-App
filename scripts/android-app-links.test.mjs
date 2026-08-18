@@ -38,7 +38,7 @@ assert.ok(
 const filters = app.expo.android.intentFilters.filter(
   (filter) => filter.action === "VIEW" && filter.autoVerify,
 );
-for (const pathPrefix of ["/post", "/reel", "/article"]) {
+for (const pathPrefix of ["/post", "/reel", "/article", "/group"]) {
   assert.ok(
     filters.some((filter) =>
       filter.data?.some(
@@ -52,7 +52,7 @@ for (const pathPrefix of ["/post", "/reel", "/article"]) {
   );
 }
 
-for (const pathPrefix of ["/post", "/reel", "/article"]) {
+for (const pathPrefix of ["/post", "/reel", "/article", "/group"]) {
   assert.match(
     androidManifest,
     new RegExp(
@@ -114,7 +114,17 @@ for (const route of ["post", "reel", "article"]) {
 }
 assert.match(
   backendProgram,
-  /viora:\/\/\{contentType\}\/\{contentId:D\}/,
+  /MapGet\("\/group\/\{inviteCode\}"/,
+  "Backend is missing the browser fallback route for /group/{inviteCode}",
+);
+assert.match(
+  backendProgram,
+  /CreateAppLinkFallback\("group",\s*inviteCode\)/,
+  "Group fallback must preserve the invite code in the custom-scheme URL",
+);
+assert.match(
+  backendProgram,
+  /viora:\/\/\{contentType\}\/\{encodedId\}/,
   "Browser fallback must retain the content route in the custom-scheme URL",
 );
 assert.match(

@@ -11,7 +11,7 @@
 ## Android App-Link Repair
 - [x] Add a failing contract test for the installed signing fingerprint and browser fallback routes.
 - [x] Add the installed signing fingerprint to `assetlinks.json` without removing existing production/legacy certificates.
-- [x] Serve safe post/reel fallback pages that preserve the canonical path and offer the custom-scheme route.
+- [x] Serve safe post/reel/group fallback pages that preserve the canonical path and offer the custom-scheme route.
 - [ ] Deploy backend assets, reset Android domain verification, and verify the production HTTPS route with ADB.
 
 ## Backend Follow-up

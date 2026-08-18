@@ -8,8 +8,8 @@ const packageJson = JSON.parse(
 const googleServices = JSON.parse(
   readFileSync(new URL("../google-services.json", import.meta.url)),
 );
-assert.equal(app.expo.version, "1.0.9");
-assert.equal(app.expo.android.versionCode, 10);
+assert.equal(app.expo.version, "1.0.10");
+assert.equal(app.expo.android.versionCode, 11);
 assert.equal(packageJson.version, app.expo.version);
 
 const androidClient = googleServices.client.find(

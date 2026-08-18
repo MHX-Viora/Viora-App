@@ -13,7 +13,8 @@
 2. Linking/signing in with Google preserves a non-empty existing display name.
 3. Play-distributed Android builds declare and request the required full-screen-call capability and display incoming calls on the call channel with sound/vibration.
 4. Profile and group scanner screens expose an accessible `Chọn ảnh QR` action, handle cancellation, invalid images, and valid QR images.
-5. Focused automated tests, TypeScript checks, and relevant backend tests pass.
+5. Selecting a QR image scans the original image immediately without opening a crop/edit step or forcing an aspect ratio.
+6. Focused automated tests, TypeScript checks, and relevant backend tests pass.
 
 ## Out of scope
 

@@ -49,6 +49,7 @@ import {
   sortConversations,
 } from "@/utils/conversation-list";
 import { type ThemeColors, useTheme } from "@/theme";
+import { parseGroupQrValue } from "@/utils/qr-code";
 
 
 export function ConversationsScreen() {
@@ -134,26 +135,8 @@ export function ConversationsScreen() {
   const processGroupQrData = useCallback(
     (data: string) => {
       setQrScanning(false);
-      const trimmed = data.trim();
-      let inviteCode = "";
-      try {
-        const parsedUrl = new URL(trimmed);
-        if (parsedUrl.protocol === "viora:" && parsedUrl.pathname === "/group-preview") {
-          inviteCode = parsedUrl.searchParams.get("inviteCode")?.trim() ?? "";
-        }
-        if (parsedUrl.protocol === "https:" && parsedUrl.host === "viora.app") {
-          inviteCode = parsedUrl.pathname.match(/^\/group\/([^/?#]+)/i)?.[1] ?? "";
-        }
-      } catch {
-        inviteCode = trimmed.match(/^https:\/\/viora\.app\/group\/([^/?#]+)/i)?.[1] ?? "";
-      }
-      const conversationId =
-        trimmed.match(/^viora:\/\/chat\/group\/([^/?#]+)/i)?.[1] ??
-        trimmed.match(/^viora:\/\/group\/([^/?#]+)/i)?.[1] ??
-        trimmed.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)?.[0] ??
-        "";
-
-      if (!inviteCode && !conversationId) {
+      const target = parseGroupQrValue(data);
+      if (!target) {
         setQrScanMessage("Mã QR nhóm không hợp lệ.");
         return;
       }
@@ -161,15 +144,15 @@ export function ConversationsScreen() {
       setQrScanMessage("Đã tìm thấy nhóm.");
       setTimeout(() => {
         closeQrScanner();
-        if (inviteCode) {
+        if ("inviteCode" in target) {
           router.push({
             pathname: "/chat/group-preview",
-            params: { inviteCode },
+            params: { inviteCode: target.inviteCode },
           });
         } else {
           router.push({
             pathname: "/chat/group/[groupId]",
-            params: { groupId: conversationId },
+            params: { groupId: target.conversationId },
           });
         }
       }, 450);

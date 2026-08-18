@@ -6,6 +6,16 @@ const helper = readFileSync(
   "utf8",
 );
 assert.match(helper, /launchImageLibraryAsync/);
+assert.match(
+  helper,
+  /allowsEditing:\s*false/,
+  "Gallery scanning must decode the selected image without opening a crop step",
+);
+assert.doesNotMatch(
+  helper,
+  /aspect\s*:/,
+  "Gallery scanning must not force the selected image to a crop aspect ratio",
+);
 assert.match(helper, /scanFromURLAsync\([^,]+,\s*\["qr"\]\)/);
 
 for (const path of [
