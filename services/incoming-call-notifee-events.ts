@@ -1,12 +1,17 @@
 import notifee, { EventType, type Event } from "@notifee/react-native";
 
 import { emitCallLifecycle } from "@/features/calls/call-events";
-import { navigateNotificationData } from "@/features/notifications/notification-response-navigation";
+import {
+  navigateIncomingCallAnswerData,
+  navigateNotificationData,
+} from "@/features/notifications/notification-response-navigation";
 import { rejectVoiceCall } from "@/services/call.service";
 import {
   INCOMING_CALL_ACCEPT_ACTION,
+  INCOMING_CALL_OPEN_ACTION,
   INCOMING_CALL_REJECT_ACTION,
 } from "@/services/incoming-call-notification.service";
+import { clearPendingIncomingCall } from "@/services/pending-incoming-call.service";
 
 let foregroundEventsConfigured = false;
 
@@ -26,6 +31,7 @@ const handleIncomingCallEvent = async ({ detail, type }: Event) => {
       await notifee.cancelNotification(detail.notification.id);
     }
     if (!callId) return;
+    await clearPendingIncomingCall(callId);
     if (data.type === "GroupCall") {
       emitCallLifecycle("GroupCallDeclined", data);
       return;
@@ -42,11 +48,18 @@ const handleIncomingCallEvent = async ({ detail, type }: Event) => {
     return;
   }
 
-  if (actionId === INCOMING_CALL_ACCEPT_ACTION || type === EventType.PRESS) {
+  if (actionId === INCOMING_CALL_ACCEPT_ACTION) {
     if (detail.notification?.id) {
       await notifee.cancelNotification(detail.notification.id);
     }
-    emitCallLifecycle("CallAcceptedLocally", data);
+    navigateIncomingCallAnswerData(data);
+    return;
+  }
+
+  if (actionId === INCOMING_CALL_OPEN_ACTION || type === EventType.PRESS) {
+    if (detail.notification?.id) {
+      await notifee.cancelNotification(detail.notification.id);
+    }
     navigateNotificationData(data);
   }
 };

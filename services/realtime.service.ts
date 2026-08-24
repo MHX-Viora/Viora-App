@@ -34,6 +34,7 @@ import {
 import { showChatRealtimeNotification } from "@/services/chat-foreground-notification.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
+import { clearPendingIncomingCall } from "@/services/pending-incoming-call.service";
 import { startWithRetry } from "@/services/realtime-start-retry";
 import { getAccessToken } from "@/stores/session-store";
 
@@ -64,6 +65,7 @@ const handleNotificationPayload = (payload: unknown, eventName: string) => {
 const handleCallLifecyclePayload = (payload: unknown, eventName: string) => {
   const event = emitCallLifecycle(eventName, payload);
   if (event) {
+    void clearPendingIncomingCall(event.callId);
     void dismissIncomingCallNotification(event.callId).catch(() => undefined);
   }
 };

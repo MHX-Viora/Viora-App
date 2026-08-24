@@ -21,7 +21,10 @@ import {
   unregisterDeviceToken,
 } from "@/services/device-token.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
-import { navigateNotificationData } from "@/features/notifications/notification-response-navigation";
+import {
+  navigateIncomingCallAnswerData,
+  navigateNotificationData,
+} from "@/features/notifications/notification-response-navigation";
 import { mapNotification } from "@/features/notifications/notification.mapper";
 import { getActiveChatConversation } from "@/features/chat/chat-events";
 import {
@@ -37,12 +40,17 @@ import {
   INCOMING_CALL_REJECT_ACTION,
   scheduleIncomingCallNotification,
 } from "@/services/incoming-call-notification.service";
+import { guideFullScreenCallPermission } from "@/services/incoming-call-settings.service";
 import {
   isCallLifecycleNotificationType,
 } from "@/features/calls/call-waiting";
 import { rejectVoiceCall } from "@/services/call.service";
 import { requestNotificationPermission } from "@/services/notification-permission-flow";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
+import {
+  clearPendingIncomingCall,
+  savePendingIncomingCall,
+} from "@/services/pending-incoming-call.service";
 
 const DEVICE_ID_KEY = "viora.device-id";
 const isIncomingCallNotification = (value: unknown) =>
@@ -324,6 +332,13 @@ const registerPushNotificationsInternal = async () => {
       return null;
     }
 
+    await guideFullScreenCallPermission().catch((error: unknown) => {
+      console.info(
+        "[Push] full-screen call permission check failed",
+        error instanceof Error ? error.message : String(error),
+      );
+    });
+
     const pushToken = await getNativePushTokenWithRetry();
     console.info("[Push] FCM token received", {
       tokenLength: pushToken.length,
@@ -436,12 +451,14 @@ export const setupNotificationHandling = () => {
       timestamp: new Date().toISOString(),
     });
     if (isIncomingCallNotification(data.type)) {
+      await savePendingIncomingCall(data);
       emitIncomingCall(data);
       return;
     }
     if (isCallLifecycleNotificationType(data.type)) {
       const event = emitCallLifecycle(String(data.type), data);
       if (event) {
+        await clearPendingIncomingCall(event.callId);
         await dismissIncomingCallNotification(event.callId).catch(
           () => undefined,
         );
@@ -611,6 +628,7 @@ export const setupNotificationResponseHandling = () => {
         return;
       }
       try {
+        await clearPendingIncomingCall(callId);
         await rejectVoiceCall(callId);
         emitCallLifecycle("CallRejected", data);
       } catch (error) {
@@ -633,7 +651,11 @@ export const setupNotificationResponseHandling = () => {
       await Notifications.dismissNotificationAsync(
         response.notification.request.identifier,
       );
-      emitCallLifecycle("CallAcceptedLocally", data);
+      const didNavigate = navigateIncomingCallAnswerData(data);
+      if (didNavigate) {
+        void Notifications.clearLastNotificationResponseAsync();
+      }
+      return;
     }
 
     logNotificationLifecycle("notification opened", data);

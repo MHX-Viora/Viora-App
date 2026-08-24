@@ -16,6 +16,11 @@ import { showRichChatNotification } from "@/services/chat-push-notification.serv
 import {
   isCallLifecycleNotificationType,
 } from "@/features/calls/call-waiting";
+import {
+  clearPendingIncomingCall,
+  savePendingIncomingCall,
+} from "@/services/pending-incoming-call.service";
+import { rejectVoiceCall } from "@/services/call.service";
 
 const firstText = (...values: unknown[]) => {
   for (const value of values) {
@@ -54,9 +59,24 @@ if (Platform.OS !== "web") {
       ttl: remoteMessage.ttl,
     });
 
+    if (data.incomingCallAction === "reject") {
+      const callId = firstText(data.callId);
+      if (!callId) return;
+      await clearPendingIncomingCall(callId);
+      if (data.type !== "GroupCall") await rejectVoiceCall(callId);
+      return;
+    }
+
+    if (data.incomingCallAction === "accept") {
+      // IncomingCallActionReceiver opens the existing route with the complete
+      // payload. Do not persist another ringing overlay after an explicit answer.
+      return;
+    }
+
     if (isCallLifecycleNotificationType(data.type)) {
       const callId = firstText(data.callId);
       if (callId) {
+        await clearPendingIncomingCall(callId);
         await dismissIncomingCallNotification(callId);
       }
       return;
@@ -73,6 +93,12 @@ if (Platform.OS !== "web") {
         data.senderName,
         data.displayName,
       );
+      await savePendingIncomingCall(notificationData);
+      if (Platform.OS === "android") {
+        // IncomingCallMessagingReceiver already rendered CallStyle synchronously.
+        // The headless task owns persistence/API work only, preventing duplicates.
+        return;
+      }
       const notificationId = await replaceDelegatedIncomingCallNotification({
         body:
           remoteMessage.notification?.body ||

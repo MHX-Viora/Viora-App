@@ -5,7 +5,7 @@ import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native
 
 import { ViewableImage } from "@/components/common/viewable-image";
 import { spacing } from "@/theme";
-import { type ThemeColors, useTheme } from "@/theme";
+import { type AppTheme, useTheme } from "@/theme";
 
 
 export function ProfilePhotoPicker({
@@ -21,7 +21,7 @@ export function ProfilePhotoPicker({
 }) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const pickImage = async (
     options: Pick<ImagePicker.ImagePickerOptions, "allowsEditing" | "aspect">,
@@ -57,7 +57,10 @@ export function ProfilePhotoPicker({
         accessibilityLabel={coverUri ? "Thay ảnh bìa" : "Chọn ảnh bìa"}
         accessibilityRole="button"
         onPress={pickCover}
-        style={styles.coverPlaceholder}
+        style={({ pressed }) => [
+          styles.coverPlaceholder,
+          pressed && styles.pressed,
+        ]}
       >
         {coverUri ? (
           <ViewableImage
@@ -67,7 +70,7 @@ export function ProfilePhotoPicker({
             style={styles.coverImage}
           />
         ) : (
-          <Ionicons color={colors.visuals.hex_7A8496} name="image-outline" size={34} />
+          <Ionicons color={colors.textMuted} name="image-outline" size={34} />
         )}
         <View style={styles.coverEditBadge}>
           <Ionicons color={colors.white} name="camera" size={15} />
@@ -77,10 +80,15 @@ export function ProfilePhotoPicker({
         </View>
       </Pressable>
       <Pressable
-        accessibilityLabel="Chọn ảnh đại diện"
+        accessibilityLabel={
+          avatarUri ? "Thay ảnh đại diện" : "Chọn ảnh đại diện"
+        }
         accessibilityRole="button"
         onPress={pickAvatar}
-        style={styles.avatarButton}
+        style={({ pressed }) => [
+          styles.avatarButton,
+          pressed && styles.pressed,
+        ]}
       >
         {avatarUri ? (
           <ViewableImage
@@ -89,13 +97,18 @@ export function ProfilePhotoPicker({
             style={styles.avatarImage}
           />
         ) : (
-          <Ionicons color={colors.visuals.hex_60758B} name="person-outline" size={56} />
+          <Ionicons color={colors.textMuted} name="person-outline" size={50} />
         )}
         <View style={styles.cameraBadge}>
-          <Ionicons color={colors.white} name="camera" size={18} />
+          <Ionicons color={colors.primaryContrast} name="camera" size={18} />
         </View>
       </Pressable>
-      <Pressable accessibilityRole="button" onPress={pickAvatar}>
+      <Pressable
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={pickAvatar}
+        style={({ pressed }) => pressed && styles.photoLabelPressed}
+      >
         <Text style={styles.addPhotoText}>
           {avatarUri ? "Thay ảnh đại diện" : "Thêm ảnh đại diện"}
         </Text>
@@ -104,27 +117,28 @@ export function ProfilePhotoPicker({
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
+const createStyles = (theme: AppTheme) => {
+  const { colors, effects } = theme;
+
+  return StyleSheet.create({
   addPhotoText: { color: colors.primary, fontSize: 13, fontWeight: "800" },
   avatarButton: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: colors.white,
-    borderRadius: 52,
-    borderWidth: 8,
-    height: 104,
+    borderColor: colors.surface,
+    borderRadius: 50,
+    borderWidth: 4,
+    height: 100,
     justifyContent: "center",
-    marginTop: -52,
-    shadowColor: colors.visuals.hex_6D7890,
-    shadowOpacity: 0.14,
-    shadowRadius: 10,
-    width: 104,
+    marginTop: -50,
+    ...effects.shadow,
+    width: 100,
   },
-  avatarImage: { borderRadius: 44, height: 88, width: 88 },
+  avatarImage: { borderRadius: 46, height: 92, width: 92 },
   cameraBadge: {
     alignItems: "center",
-    backgroundColor: colors.visuals.hex_0868D9,
-    borderColor: colors.white,
+    backgroundColor: colors.primary,
+    borderColor: colors.surface,
     borderRadius: 15,
     borderWidth: 3,
     bottom: 0,
@@ -136,8 +150,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   coverPlaceholder: {
     alignItems: "center",
-    backgroundColor: colors.visuals.hex_DCE8FF,
-    borderRadius: 10,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: Math.min(effects.cardRadius, 16),
+    borderWidth: 1,
     height: 170,
     justifyContent: "center",
     overflow: "hidden",
@@ -146,7 +162,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   coverEditBadge: {
     alignItems: "center",
-    backgroundColor: colors.visuals.rgb_15_23_42_0_72,
+    backgroundColor: colors.overlay,
     borderRadius: 14,
     flexDirection: "row",
     gap: spacing.xs,
@@ -158,5 +174,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   coverEditText: { color: colors.white, fontSize: 12, fontWeight: "700" },
   coverImage: { height: "100%", width: "100%" },
+  photoLabelPressed: { opacity: 0.72 },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
   section: { alignItems: "center", gap: spacing.md },
-});
+  });
+};

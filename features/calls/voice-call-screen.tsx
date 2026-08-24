@@ -31,6 +31,7 @@ import {
   getVoiceCall,
   rejectVoiceCall,
 } from "@/services/call.service";
+import { setCallScreenActive } from "@/services/incoming-call-settings.service";
 import {
   onCallRealtime,
   onCallRealtimeReconnected,
@@ -85,6 +86,10 @@ export function VoiceCallScreen() {
     require("../../assets/audio/nhac_cho.mp3"),
   );
   const mode = params.mode ?? "caller";
+  useEffect(() => {
+    setCallScreenActive(true);
+    return () => setCallScreenActive(false);
+  }, []);
   const peerRef = useRef<VoicePeer | null>(null);
   const peerPromiseRef = useRef<Promise<VoicePeer> | null>(null);
   const pendingIceCandidatesRef = useRef<unknown[]>([]);
@@ -371,6 +376,11 @@ export function VoiceCallScreen() {
     if (mode === "receiver") {
       void (async () => {
         try {
+          // The caller can send its offer as soon as the REST accept succeeds.
+          const callConnection = await startCallRealtime();
+          if (!callConnection) {
+            throw new Error("Không thể kết nối máy chủ cuộc gọi.");
+          }
           await acceptVoiceCall(callId);
           const peer = await createPeer();
           setStatus("connecting");

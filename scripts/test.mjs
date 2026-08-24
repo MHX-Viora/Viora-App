@@ -1,6 +1,11 @@
 await import("../features/calls/call-waiting.test.mjs");
 await import("../features/calls/incoming-call-notification-config.test.mjs");
+await import("../features/calls/incoming-call-cold-start.test.mjs");
+await import("../features/calls/incoming-call-answer.test.mjs");
+await import("../features/calls/native-incoming-call.test.mjs");
 await import("../features/auth/google-login-visibility.test.mjs");
+await import("../features/auth/complete-profile-logout.test.mjs");
+await import("../features/auth/complete-profile-theme.test.mjs");
 await import("../components/common/account-style-visibility.test.mjs");
 await import("../features/qr-image-scan.test.mjs");
 await import("../features/qr-code-parser.test.mjs");

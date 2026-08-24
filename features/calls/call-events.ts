@@ -98,6 +98,13 @@ export const emitIncomingCall = (payload: unknown) => {
     ? asString(caller.id)
     : asString(payload.callerId ?? payload["caller.id"]);
   if (!callId || !conversationId || !callerId) return null;
+  if (
+    endedCallIds.has(callId) ||
+    activeVoiceCall?.callId === callId
+  ) {
+    return null;
+  }
+  if (pendingIncomingCall?.callId === callId) return pendingIncomingCall;
   const event: IncomingCallEvent = {
     callId,
     conversationId,

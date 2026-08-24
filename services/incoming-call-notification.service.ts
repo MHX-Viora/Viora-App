@@ -18,6 +18,7 @@ import {
 
 export { INCOMING_CALL_CHANNEL_ID };
 export const INCOMING_CALL_CATEGORY_ID = "incoming_calls";
+export const INCOMING_CALL_OPEN_ACTION = "incoming_call_open";
 export const INCOMING_CALL_ACCEPT_ACTION = "incoming_call_accept";
 export const INCOMING_CALL_REJECT_ACTION = "incoming_call_reject";
 export const INCOMING_CALL_LOCAL_SOURCE = "incoming-call-local";
@@ -155,7 +156,7 @@ export const scheduleIncomingCallNotification = async ({
         // AppState can incorrectly report `active` inside an Android headless task,
         // which previously stripped the full-screen intent from Play builds.
         fullScreenAction: {
-          id: INCOMING_CALL_ACCEPT_ACTION,
+          id: INCOMING_CALL_OPEN_ACTION,
           launchActivity: "default",
         },
         importance: AndroidImportance.HIGH,
@@ -165,7 +166,7 @@ export const scheduleIncomingCallNotification = async ({
         ongoing: true,
         sound: INCOMING_CALL_RINGTONE_ANDROID,
         pressAction: {
-          id: INCOMING_CALL_ACCEPT_ACTION,
+          id: INCOMING_CALL_OPEN_ACTION,
           launchActivity: "default",
         },
         smallIcon: "notification_icon",

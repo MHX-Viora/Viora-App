@@ -3,6 +3,10 @@ import { router } from "expo-router";
 import { emitIncomingCall } from "@/features/calls/call-events";
 import { navigateNotification } from "@/features/notifications/notification-navigation";
 import { getVoiceCall } from "@/services/call.service";
+import {
+  clearPendingIncomingCall,
+  getPendingIncomingCall,
+} from "@/services/pending-incoming-call.service";
 import { CallStatus } from "@/types/call";
 import type {
   NotificationItemModel,
@@ -41,6 +45,8 @@ const isReferenceType = (value: number): value is NotificationReferenceType =>
 
 let navigationReady = false;
 const pendingNavigationActions: (() => void)[] = [];
+const incomingCallValidations = new Map<string, Promise<boolean>>();
+const restoredPendingCallIds = new Set<string>();
 
 const navigateWhenReady = (navigate: () => void) => {
   if (!navigationReady) {
@@ -57,6 +63,84 @@ export const setNotificationNavigationReady = (ready: boolean) => {
 
   const actions = pendingNavigationActions.splice(0);
   actions.forEach((navigate) => setTimeout(navigate, 0));
+};
+
+const validateIncomingCall = (
+  data: Record<string, unknown>,
+  action: "answer" | "show",
+) => {
+  const callId = firstString(data.callId, data["call.id"]);
+  if (!callId) return Promise.resolve(false);
+
+  const validationKey = `${callId}:${action}`;
+  const existingValidation = incomingCallValidations.get(validationKey);
+  if (existingValidation) return existingValidation;
+
+  const validation = getVoiceCall(callId)
+    .then(async (call) => {
+      if (call.status !== CallStatus.Calling) {
+        await clearPendingIncomingCall(callId);
+        return false;
+      }
+
+      if (action === "answer") {
+        await clearPendingIncomingCall(callId);
+        router.push({
+          pathname: "/call/[callId]",
+          params: {
+            avatarUrl: call.caller.avatarUrl ?? "",
+            callId: call.id,
+            callType: String(call.callType),
+            conversationId: call.conversationId,
+            displayName: call.caller.displayName,
+            mode: "receiver",
+          },
+        });
+        return true;
+      }
+
+      return emitIncomingCall({
+        callId: call.id,
+        caller: call.caller,
+        callType: call.callType,
+        conversationId: call.conversationId,
+        type: "IncomingCall",
+      }) !== null;
+    })
+    .catch((error) => {
+      console.info(
+        "[Push] incoming call lookup skipped",
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    })
+    .finally(() => {
+      incomingCallValidations.delete(validationKey);
+    });
+
+  incomingCallValidations.set(validationKey, validation);
+  return validation;
+};
+
+export const navigateIncomingCallAnswerData = (
+  data: Record<string, unknown>,
+) => {
+  const callId = firstString(data.callId, data["call.id"]);
+  if (!callId) return false;
+  navigateWhenReady(() => {
+    void validateIncomingCall(data, "answer");
+  });
+  return true;
+};
+
+export const restorePendingIncomingCall = async () => {
+  const pendingCall = await getPendingIncomingCall();
+  if (!pendingCall) return false;
+  if (restoredPendingCallIds.has(pendingCall.callId)) return true;
+
+  const restored = await validateIncomingCall(pendingCall, "show");
+  if (restored) restoredPendingCallIds.add(pendingCall.callId);
+  return restored;
 };
 
 const navigateContentData = (data: Record<string, unknown>) => {
@@ -106,18 +190,7 @@ export const navigateNotificationData = (data: Record<string, unknown>) => {
     const callId = firstString(data.callId, data["call.id"]);
     if (callId) {
       navigateWhenReady(() => {
-        void getVoiceCall(callId)
-          .then((call) => {
-            if (call.status !== CallStatus.Calling) return;
-            emitIncomingCall({
-              callId: call.id,
-              caller: call.caller,
-              conversationId: call.conversationId,
-            });
-          })
-          .catch((error) => {
-            console.info("[Push] incoming call lookup skipped", error instanceof Error ? error.message : String(error));
-          });
+        void validateIncomingCall(data, "show");
       });
       return true;
     }

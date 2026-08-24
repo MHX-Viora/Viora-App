@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useState, useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
@@ -14,16 +14,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthPrimaryButton } from "@/components/auth/auth-controls";
+import { AuthBackground } from "@/components/auth/auth-background";
 import { ProfilePhotoPicker } from "@/components/auth/profile-photo-picker";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
-import { getStoredAuthSession } from "@/services/auth.service";
+import { CompleteProfileLogoutDialog } from "@/features/auth/complete-profile-logout-dialog";
+import { getStoredAuthSession, logout } from "@/services/auth.service";
 import { registerPushNotifications } from "@/services/push-notification.service";
-import { startRealtime } from "@/services/realtime.service";
+import { startRealtime, stopRealtime } from "@/services/realtime.service";
 import { createProfile } from "@/services/user.service";
 import { updateUser } from "@/stores/session-store";
 import { spacing } from "@/theme";
 import type { Gender, GenderLabel } from "@/types/auth";
-import { type ThemeColors, useTheme } from "@/theme";
+import { type AppTheme, useTheme } from "@/theme";
 
 
 const GENDERS: GenderLabel[] = ["Nam", "Nữ", "Khác"];
@@ -31,13 +33,35 @@ const GENDERS: GenderLabel[] = ["Nam", "Nữ", "Khác"];
 export function CompleteProfileScreen() {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const [avatarUri, setAvatarUri] = useState<string>();
   const [coverUri, setCoverUri] = useState<string>();
   const [displayName, setDisplayName] = useState("");
   const [gender, setGender] = useState<GenderLabel>();
+  const [isLogoutDialogVisible, setIsLogoutDialogVisible] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isLoggingOutRef = useRef(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOutRef.current) return;
+
+    isLoggingOutRef.current = true;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      // Local và provider state vẫn được dọn trong finally của logout().
+    } finally {
+      await stopRealtime().catch(() => undefined);
+      setIsLogoutDialogVisible(false);
+      if (router.canDismiss()) {
+        router.dismissAll();
+      }
+      router.replace("/login");
+    }
+  };
 
   const handleCreateProfile = async () => {
     const normalizedName = displayName.trim();
@@ -88,6 +112,27 @@ export function CompleteProfileScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
+      <AuthBackground compact />
+      <View style={styles.header}>
+        <View style={styles.headerSide} />
+        <Text accessibilityRole="header" style={styles.headerTitle}>
+          Hoàn thiện hồ sơ
+        </Text>
+        <Pressable
+          accessibilityLabel="Thoát khỏi tài khoản"
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isLoggingOut || isSubmitting }}
+          disabled={isLoggingOut || isSubmitting}
+          onPress={() => setIsLogoutDialogVisible(true)}
+          style={({ pressed }) => [
+            styles.exitButton,
+            pressed && styles.exitButtonPressed,
+          ]}
+        >
+          <Ionicons color={colors.textMuted} name="log-out-outline" size={18} />
+          <Text style={styles.exitLabel}>Thoát</Text>
+        </Pressable>
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
@@ -99,9 +144,6 @@ export function CompleteProfileScreen() {
         >
           <View style={styles.container}>
             <View style={styles.heading}>
-              <Text accessibilityRole="header" style={styles.title}>
-                Hoàn thiện hồ sơ
-              </Text>
               <Text style={styles.subtitle}>
                 Hãy cho mọi người biết thêm về bạn để bắt đầu kết nối.
               </Text>
@@ -164,13 +206,13 @@ export function CompleteProfileScreen() {
                   })}
                 </View>
               </View>
-            </View>
 
-            <AuthPrimaryButton
-              isLoading={isSubmitting}
-              label="Bắt đầu ngay"
-              onPress={handleCreateProfile}
-            />
+              <AuthPrimaryButton
+                isLoading={isSubmitting}
+                label="Bắt đầu ngay"
+                onPress={handleCreateProfile}
+              />
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -179,55 +221,107 @@ export function CompleteProfileScreen() {
         onAction={handleAlertAction}
         onClose={closeAlert}
       />
+      <CompleteProfileLogoutDialog
+        isLoading={isLoggingOut}
+        onCancel={() => setIsLogoutDialogVisible(false)}
+        onConfirm={() => void handleLogout()}
+        visible={isLogoutDialogVisible}
+      />
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
+const createStyles = (theme: AppTheme) => {
+  const { colors, effects } = theme;
+
+  return StyleSheet.create({
   container: { gap: spacing.xl, maxWidth: 430, width: "100%" },
-  content: { flexGrow: 1, justifyContent: "center", padding: spacing.md },
+  content: {
+    flexGrow: 1,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
   fieldGroup: { gap: spacing.sm },
   flex: { flex: 1 },
   formCard: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
+    borderColor: colors.border,
+    borderRadius: Math.min(effects.cardRadius, 18),
+    borderWidth: 1,
     gap: spacing.xl,
     padding: spacing.xl,
-    shadowColor: colors.visuals.hex_7D8799,
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+    ...effects.shadow,
   },
   genderButton: {
     alignItems: "center",
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    borderRadius: 10,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
     borderWidth: 1,
     flex: 1,
     minHeight: 46,
     justifyContent: "center",
   },
   genderRow: { flexDirection: "row", gap: spacing.sm },
-  genderSelected: { backgroundColor: colors.visuals.hex_E0EBFF, borderColor: colors.primary },
+  genderSelected: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   genderText: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
-  genderTextSelected: { color: colors.visuals.hex_1239A6 },
+  genderTextSelected: { color: colors.primary },
+  header: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.borderSubtle,
+    borderBottomWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+  },
+  headerSide: { width: 76 },
+  headerTitle: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "800",
+    textAlign: "center",
+  },
   heading: { alignItems: "center", gap: spacing.xs },
+  exitButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "center",
+    minHeight: 40,
+    width: 76,
+  },
+  exitButtonPressed: {
+    backgroundColor: colors.dangerSoft,
+    borderColor: colors.danger,
+    transform: [{ scale: 0.98 }],
+  },
+  exitLabel: { color: colors.textMuted, fontSize: 14, fontWeight: "700" },
   input: { color: colors.text, flex: 1, fontSize: 15, paddingVertical: 12 },
   label: { color: colors.text, fontSize: 13, fontWeight: "700" },
   nameField: {
     alignItems: "center",
-    backgroundColor: colors.background,
-    borderRadius: 10,
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderSubtle,
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
     minHeight: 48,
     paddingHorizontal: spacing.md,
   },
-  screen: { backgroundColor: colors.visuals.hex_F5F7FD, flex: 1 },
+  screen: { backgroundColor: colors.background, flex: 1 },
   subtitle: {
     color: colors.textMuted,
     fontSize: 14,
     maxWidth: 300,
     textAlign: "center",
   },
-  title: { color: colors.visuals.hex_071A38, fontSize: 26, fontWeight: "900" },
-});
+  });
+};

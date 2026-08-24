@@ -22,6 +22,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { endGroupCall, joinGroupCall } from "@/services/group-call.service";
+import { setCallScreenActive } from "@/services/incoming-call-settings.service";
 import { subscribeCallLifecycle } from "@/features/calls/call-events";
 import { getGroupCallColumnCount } from "@/features/calls/group-call-layout";
 import { getUser } from "@/stores/session-store";
@@ -213,6 +214,11 @@ export function GroupCallScreen() {
   const [join, setJoin] = useState<GroupCallJoin | null>(null);
   const [userId, setUserId] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setCallScreenActive(true);
+    return () => setCallScreenActive(false);
+  }, []);
 
   useEffect(() => {
     let active = true;

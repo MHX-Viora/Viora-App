@@ -12,6 +12,7 @@ import {
 } from "@/features/calls/call-events";
 import { rejectVoiceCall } from "@/services/call.service";
 import { dismissIncomingCallNotification } from "@/services/incoming-call-notification.service";
+import { clearPendingIncomingCall } from "@/services/pending-incoming-call.service";
 import {
   CALL_ANSWER_TIMEOUT_MS,
 } from "@/features/calls/call-waiting";
@@ -68,6 +69,9 @@ export function IncomingCallHost() {
     });
     stopRingtone();
     clearIncomingCall(incomingCall?.callId);
+    if (incomingCall?.callId) {
+      void clearPendingIncomingCall(incomingCall.callId);
+    }
     setIncomingCall(null);
     setIsConnecting(false);
   }, [incomingCall?.callId, stopRingtone]);

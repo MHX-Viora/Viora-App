@@ -26,7 +26,7 @@ import {
   getUserShareLink,
 } from "@/services/share-link.service";
 import { getMyStatistics } from "@/services/user.service";
-import { clearSession, getSession } from "@/stores/session-store";
+import { getSession } from "@/stores/session-store";
 import type { User } from "@/types/auth";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
@@ -386,7 +386,6 @@ export function ProfileScreen() {
             // Dù API logout lỗi, vẫn xoá session local để người dùng thoát app.
           }
           await stopRealtime();
-          await clearSession();
           router.replace("/login");
         }}
         onOpenAccountSettings={() => {

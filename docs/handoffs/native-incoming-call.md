@@ -1,0 +1,25 @@
+# Android native incoming-call handoff
+
+1. **Original cause:** background/killed FCM waited for RN headless JS before posting UI; the full-screen intent opened a globally lock-screen-enabled `MainActivity`.
+2. **Device-proven crash:** a real high-priority FCM reached an Android 16/API 36 device, but `IncomingCallActivity` crashed during cold start because `window.insetsController` was read before `setContentView` created the `DecorView`.
+3. **Native action fixes:** attach the layout before accessing window insets; close only `IncomingCallActivity` instead of removing the whole app task; open the accepted call route before dismissing ringing UI. Regression tests enforce these contracts.
+4. **React Native:** background FCM persists only and handles native reject/accept handoff; Android 14+ full-screen access is checked and users are guided to Settings when needed.
+5. **Native:** `IncomingCallMessagingReceiver` presents `NotificationCompat.CallStyle` before React Native starts. `IncomingCallActivity` owns lock-screen UI; action receiver, payload, and settings bridge complete the handoff.
+6. **Backend:** existing commit `87666340` sends realtime plus high-priority data-only FCM with call, conversation, and caller fields, including lifecycle pushes.
+7. **Permissions:** keep `POST_NOTIFICATIONS` and `USE_FULL_SCREEN_INTENT`; `SYSTEM_ALERT_WINDOW` is absent. Android 14+ uses `canUseFullScreenIntent()` and `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`.
+8. **Lock screen:** only `IncomingCallActivity` has `showWhenLocked`/`turnScreenOn`. It does not dismiss keyguard and closes after 30 seconds.
+9. **Foreground:** SignalR remains primary. Foreground FCM is passed to RN and deduplicated by `callId`; native UI is not duplicated.
+10. **Killed/background:** the native receiver presents before forwarding to RN Firebase headless handling, so UI does not wait for the JS bundle.
+11. **Native to RN:** reject/accept creates a synthetic high-priority headless message; reject calls the authenticated API, while accept opens the existing call route.
+12. **Dedupe/lifecycle:** stable notification ID from `callId`; background JS does not post a duplicate; rejected/cancelled/ended/missed/timeout/group-ended events close native UI.
+13. **UI:** lock-screen/background UI now follows the app's dark cyan visual language, uses accessible circular reject/answer icon controls, and applies navigation-bar insets so controls remain tappable on edge-to-edge Android.
+14. **Verification:** 23/23 contract tests, TypeScript, lint, and Android API 36 debug build pass. On a physical Android 16/API 36 device, a debug payload verified rendering and touch targets; reject reached the RN headless handler/API and answer kept `MainActivity` resumed on the `/call` deep route. The final APK has the temporary exported QA entry removed and is installed. A fresh real call is still required for server-success confirmation after this exact install.
+15. **2026-08-24 regression/root cause:** Expo prebuild removed `android/app/src/main/java/com/ankt/app/calls`, while the manifest still declared `IncomingCallMessagingReceiver`. Physical-device Dropbox logs proved every incoming FCM failed with `ClassNotFoundException`, so no call UI could appear.
+16. **Durable fix:** canonical Kotlin sources now live in `plugins/android-call-sources`; `with-notifee-call-config.js` copies them, patches `MainActivity`/`MainApplication`, and fails prebuild if an Expo template anchor changes. This prevents another manifest-without-class APK.
+17. **Latest verification:** prebuild regeneration test 11/11, full suite 26/26, TypeScript, lint, and Android API 36 debug build pass. APK SHA-256 `8839EA2E6A4C317C49300F41B6F3901BCC899A3FDCECAFC194D0FCFFE6C3CE49`; installed successfully on device `ZP45UGHII7IBWSXG`, where PackageManager resolves `.calls.IncomingCallMessagingReceiver` and notification/full-screen permissions remain granted.
+18. **Lock-screen visual parity:** the native screen now mirrors `IncomingCallHost`: solid `#06101C` background, subtle cyan/purple backdrop glows, elevated glass header/action surfaces, muted/text tokens, three-ring avatar halo, cyan person fallback, and matching accept/reject controls. Verified by a physical-device screenshot; QA export was removed, final `IncomingCallActivity` is `exported=false`, full suite 27/27 plus TypeScript/lint/build pass, and the safe APK is installed.
+19. **Avatar fallback:** when the caller has no avatar (or the image is still loading/fails), the lock-screen call UI shows the uppercase first character of the trimmed caller name inside the halo; an empty name falls back to `?`. The avatar container retains the full caller name as its accessibility description.
+
+## Required live-call matrix
+
+Test voice and video in foreground, background, another app, locked screen, and process removed from recents. Do not use Android Settings **Force stop**, which intentionally blocks FCM. In each state verify answer, reject, caller cancel, 30-second timeout, SignalR/FCM dedupe, and Android 14+ full-screen-access fallback. Record OEM, Android version, battery restriction, and result.

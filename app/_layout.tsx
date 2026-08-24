@@ -15,7 +15,10 @@ import { AppToastHost } from "@/components/common/app-toast";
 import { IncomingCallHost } from "@/components/calls/incoming-call-host";
 import { AppLaunchScreen } from "@/components/layout/app-launch-screen";
 import { emitRealtimeSyncRequest } from "@/features/chat/chat-events";
-import { setNotificationNavigationReady } from "@/features/notifications/notification-response-navigation";
+import {
+  restorePendingIncomingCall,
+  setNotificationNavigationReady,
+} from "@/features/notifications/notification-response-navigation";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { getNotifications } from "@/services/notification.service";
 import { setupIncomingCallNotifeeEvents } from "@/services/incoming-call-notifee-events";
@@ -183,6 +186,7 @@ function RootLayoutContent() {
         router.replace("/");
       }
 
+      await restorePendingIncomingCall();
       setNotificationNavigationReady(true);
       if (!hasHydratedAuthenticatedState.current) {
         hasHydratedAuthenticatedState.current = true;

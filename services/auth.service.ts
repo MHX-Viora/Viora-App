@@ -203,8 +203,8 @@ export const clearAuthSession = async (): Promise<void> => {
 };
 
 export const logout = async (): Promise<void> => {
-  const token = await getAccessToken();
   try {
+    const token = await getAccessToken();
     const response = await fetch(`${BASE_URL}/api/accounts/logout`, {
       method: "POST",
       headers: token
@@ -219,8 +219,12 @@ export const logout = async (): Promise<void> => {
       throw new Error(message);
     }
   } finally {
-    // Đăng xuất danh tính native kể cả khi API không truy cập được.
-    await clearGoogleAuthSession();
+    // Luôn xoá cả danh tính provider và phiên local, kể cả khi API không truy cập được.
+    try {
+      await clearGoogleAuthSession();
+    } finally {
+      await clearSession();
+    }
   }
 };
 
