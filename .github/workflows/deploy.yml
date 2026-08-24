@@ -1,11 +1,9 @@
-```yaml
 name: Deploy Viora Frontend
 
 on:
   push:
     branches:
       - main
-
   workflow_dispatch:
 
 concurrency:
@@ -13,9 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ============================================================
-  # CI: VERIFY SOURCE
-  # ============================================================
   build:
     name: Verify frontend
     runs-on: ubuntu-latest
@@ -48,14 +43,10 @@ jobs:
       - name: Run lint
         run: npm run lint
 
-  # ============================================================
-  # CD: DEPLOY TO VPS
-  # ============================================================
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     needs:
       - build
 
@@ -99,7 +90,6 @@ jobs:
 
             if ! git diff --quiet || ! git diff --cached --quiet; then
               echo "ERROR: Repository trên VPS có thay đổi chưa commit."
-              echo
               git status --short
               exit 1
             fi
@@ -120,7 +110,6 @@ jobs:
 
             NEW_COMMIT="$(git rev-parse HEAD)"
 
-            echo
             echo "Phiên bản mới:"
             echo "$NEW_COMMIT"
 
@@ -156,7 +145,6 @@ jobs:
             fi
 
             echo "Build output hợp lệ."
-
             ls -lah "$APP_DIR/dist"
 
             echo
@@ -219,9 +207,6 @@ jobs:
             echo "========================================"
           EOF
 
-  # ============================================================
-  # TELEGRAM NOTIFICATION
-  # ============================================================
   notify:
     name: Telegram notification
     runs-on: ubuntu-latest
@@ -238,7 +223,6 @@ jobs:
 
       - name: Send Telegram notification
         continue-on-error: true
-
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -254,16 +238,11 @@ jobs:
           RUN_ID: ${{ github.run_id }}
 
           DEPLOY_START: ${{ needs.build.outputs.started_at }}
-
           BUILD_STATUS: ${{ needs.build.result }}
           DEPLOY_STATUS: ${{ needs.deploy.result }}
 
         run: |
           set -euo pipefail
-
-          # ----------------------------------------------------
-          # Validate Telegram configuration
-          # ----------------------------------------------------
 
           if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
             echo "TELEGRAM_BOT_TOKEN chưa được cấu hình."
@@ -275,30 +254,14 @@ jobs:
             exit 0
           fi
 
-          # ----------------------------------------------------
-          # Commit information
-          # ----------------------------------------------------
-
           SHORT_SHA="${COMMIT_SHA:0:7}"
-
           RUN_URL="https://github.com/${REPOSITORY}/actions/runs/${RUN_ID}"
 
           if [ -z "${COMMIT_MESSAGE:-}" ]; then
-            COMMIT_MESSAGE="$(
-              git log -1 --pretty=%s 2>/dev/null \
-              || echo "Chạy workflow thủ công"
-            )"
+            COMMIT_MESSAGE="$(git log -1 --pretty=%s 2>/dev/null || echo 'Chạy workflow thủ công')"
           fi
 
-          # Chỉ lấy dòng đầu tiên để Telegram message gọn hơn.
-          COMMIT_MESSAGE="$(
-            printf '%s\n' "$COMMIT_MESSAGE" \
-            | head -n 1
-          )"
-
-          # ----------------------------------------------------
-          # Calculate deployment duration
-          # ----------------------------------------------------
+          COMMIT_MESSAGE="$(printf '%s\n' "$COMMIT_MESSAGE" | head -n 1)"
 
           END_TIME="$(date +%s)"
 
@@ -324,111 +287,77 @@ jobs:
             DEPLOY_TIME="${SECONDS}s"
           fi
 
-          # ----------------------------------------------------
-          # Determine deployment result
-          # ----------------------------------------------------
-
-          if \
-            [ "$BUILD_STATUS" = "success" ] \
-            && [ "$DEPLOY_STATUS" = "success" ]; then
-
+          if [ "$BUILD_STATUS" = "success" ] && [ "$DEPLOY_STATUS" = "success" ]; then
             TITLE="🚀 Viora Frontend Deploy Thành Công"
             TIME_LABEL="Thời gian deploy"
 
-            RESULT_MESSAGE="$(
-              printf '%s\n' \
-                "🟢 Verify: SUCCESS" \
-                "🟢 Deploy: SUCCESS" \
-                "🟢 Expo Web Build: SUCCESS" \
-                "🟢 Nginx: SUCCESS" \
-                "🟢 Health Check: PASSED" \
-                "🌐 Website: https://mxh.ankt.vn"
-            )"
+            RESULT_MESSAGE="$(printf '%s\n' \
+              '🟢 Verify: SUCCESS' \
+              '🟢 Deploy: SUCCESS' \
+              '🟢 Expo Web Build: SUCCESS' \
+              '🟢 Nginx: SUCCESS' \
+              '🟢 Health Check: PASSED' \
+              '🌐 Website: https://mxh.ankt.vn')"
 
-          elif \
-            [ "$BUILD_STATUS" = "cancelled" ] \
-            || [ "$DEPLOY_STATUS" = "cancelled" ]; then
-
+          elif [ "$BUILD_STATUS" = "cancelled" ] || [ "$DEPLOY_STATUS" = "cancelled" ]; then
             TITLE="⚠️ Viora Frontend Deploy Đã Bị Hủy"
             TIME_LABEL="Thời gian chạy"
 
-            RESULT_MESSAGE="$(
-              printf '%s\n' \
-                "🟠 Verify: ${BUILD_STATUS}" \
-                "🟠 Deploy: ${DEPLOY_STATUS}" \
-                "ℹ️ Kiểm tra GitHub Actions để xác định trạng thái production."
-            )"
+            RESULT_MESSAGE="$(printf '%s\n' \
+              "🟠 Verify: ${BUILD_STATUS}" \
+              "🟠 Deploy: ${DEPLOY_STATUS}" \
+              'ℹ️ Kiểm tra GitHub Actions để xác định trạng thái production.')"
 
           elif [ "$BUILD_STATUS" = "failure" ]; then
-
             TITLE="❌ Viora Frontend Verify Thất Bại"
             TIME_LABEL="Thời gian chạy"
 
-            RESULT_MESSAGE="$(
-              printf '%s\n' \
-                "🔴 Verify: FAILED" \
-                "⚪ Deploy: SKIPPED" \
-                "⚪ Production: NOT UPDATED" \
-                "ℹ️ Website trên VPS vẫn giữ phiên bản trước."
-            )"
+            RESULT_MESSAGE="$(printf '%s\n' \
+              '🔴 Verify: FAILED' \
+              '⚪ Deploy: SKIPPED' \
+              '⚪ Production: NOT UPDATED' \
+              'ℹ️ Website trên VPS vẫn giữ phiên bản trước.')"
 
           elif [ "$DEPLOY_STATUS" = "failure" ]; then
-
             TITLE="❌ Viora Frontend Deploy Thất Bại"
             TIME_LABEL="Thời gian chạy"
 
-            RESULT_MESSAGE="$(
-              printf '%s\n' \
-                "🟢 Verify: SUCCESS" \
-                "🔴 Deploy hoặc Health Check: FAILED" \
-                "⚠️ Kiểm tra log GitHub Actions và trạng thái VPS." \
-                "🌐 Website: https://mxh.ankt.vn"
-            )"
+            RESULT_MESSAGE="$(printf '%s\n' \
+              '🟢 Verify: SUCCESS' \
+              '🔴 Deploy hoặc Health Check: FAILED' \
+              '⚠️ Kiểm tra log GitHub Actions và trạng thái VPS.' \
+              '🌐 Website: https://mxh.ankt.vn')"
 
           else
-
             TITLE="⚠️ Viora Frontend Workflow Có Trạng Thái Bất Thường"
             TIME_LABEL="Thời gian chạy"
 
-            RESULT_MESSAGE="$(
-              printf '%s\n' \
-                "Verify: ${BUILD_STATUS}" \
-                "Deploy: ${DEPLOY_STATUS}" \
-                "ℹ️ Kiểm tra GitHub Actions để biết chi tiết."
-            )"
-
+            RESULT_MESSAGE="$(printf '%s\n' \
+              "Verify: ${BUILD_STATUS}" \
+              "Deploy: ${DEPLOY_STATUS}" \
+              'ℹ️ Kiểm tra GitHub Actions để biết chi tiết.')"
           fi
 
-          # ----------------------------------------------------
-          # Compose Telegram message
-          # ----------------------------------------------------
-
-          MESSAGE="$(
-            printf '%s\n' \
-              "${TITLE}" \
-              "" \
-              "🌐 Môi trường: Production" \
-              "" \
-              "📦 Repository: ${REPOSITORY}" \
-              "🌿 Branch: ${BRANCH}" \
-              "" \
-              "🔖 Commit:" \
-              "${SHORT_SHA} - ${COMMIT_MESSAGE}" \
-              "" \
-              "👤 Người thực hiện: ${ACTOR}" \
-              "🚀 Workflow: ${WORKFLOW}" \
-              "🔢 Run: #${RUN_NUMBER}" \
-              "⏱️ ${TIME_LABEL}: ${DEPLOY_TIME}" \
-              "" \
-              "${RESULT_MESSAGE}" \
-              "" \
-              "🔗 Chi tiết:" \
-              "${RUN_URL}"
-          )"
-
-          # ----------------------------------------------------
-          # Send Telegram message
-          # ----------------------------------------------------
+          MESSAGE="$(printf '%s\n' \
+            "${TITLE}" \
+            "" \
+            "🌐 Môi trường: Production" \
+            "" \
+            "📦 Repository: ${REPOSITORY}" \
+            "🌿 Branch: ${BRANCH}" \
+            "" \
+            "🔖 Commit:" \
+            "${SHORT_SHA} - ${COMMIT_MESSAGE}" \
+            "" \
+            "👤 Người thực hiện: ${ACTOR}" \
+            "🚀 Workflow: ${WORKFLOW}" \
+            "🔢 Run: #${RUN_NUMBER}" \
+            "⏱️ ${TIME_LABEL}: ${DEPLOY_TIME}" \
+            "" \
+            "${RESULT_MESSAGE}" \
+            "" \
+            "🔗 Chi tiết:" \
+            "${RUN_URL}")"
 
           curl \
             --fail \
@@ -442,4 +371,3 @@ jobs:
             > /dev/null
 
           echo "Telegram notification sent."
-```
