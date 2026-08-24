@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { UserAvatar } from "@/components/common/user-avatar";
 import { showAppToast } from "@/components/common/app-toast";
 import { emitRealtimeSyncRequest } from "@/features/chat/chat-events";
 import {
@@ -34,13 +35,7 @@ function PreviewMemberRow({ member }: { member: ChatGroupPreviewMember }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.memberRow}>
-      {member.avatarUrl ? (
-        <Image source={{ uri: member.avatarUrl }} style={styles.memberAvatar} />
-      ) : (
-        <View style={styles.memberAvatarFallback}>
-          <Ionicons color={colors.primary} name="person" size={18} />
-        </View>
-      )}
+      <UserAvatar displayName={member.displayName} imageUrl={member.avatarUrl} size={46} style={styles.memberAvatar} />
       <View style={styles.memberInfo}>
         <View style={styles.nameLine}>
           <Text numberOfLines={1} style={styles.memberName}>

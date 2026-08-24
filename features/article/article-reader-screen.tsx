@@ -1,18 +1,21 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ArticleBlockView } from "@/components/article/article-renderer";
+import { UserAvatar } from "@/components/common/user-avatar";
+import { getResponsiveContentLayout } from "@/components/layout/responsive-layout";
+import { useResponsive } from "@/hooks/use-responsive";
 import { getArticle } from "@/services/article.service";
-import { spacing, type ThemeColors, useTheme } from "@/theme";
+import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 import type { Article } from "@/types/article";
 
 export function ArticleReaderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { theme } = useTheme();
+  const { isDesktopWeb } = useResponsive();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const [article, setArticle] = useState<Article | null>(null);
   const [error, setError] = useState("");
@@ -35,10 +38,15 @@ export function ArticleReaderScreen() {
       data={article.blocks}
       initialNumToRender={5}
       keyExtractor={(item) => item.id || String(item.orderIndex)}
-      ListHeaderComponent={<View style={styles.header}><Text style={styles.title}>{article.title}</Text><View style={styles.authorRow}><Image source={{ uri: article.author.avatarUrl || undefined }} style={styles.avatar} /><View><Text style={styles.author}>{article.author.displayName}</Text><Text style={styles.meta}>{article.readingTimeMinutes} phút đọc · {article.viewCount} lượt xem</Text></View></View></View>}
+      ListHeaderComponent={<View style={styles.header}><Text style={styles.title}>{article.title}</Text><View style={styles.authorRow}><UserAvatar displayName={article.author.displayName} imageUrl={article.author.avatarUrl} size={40} style={styles.avatar} /><View><Text style={styles.author}>{article.author.displayName}</Text><Text style={styles.meta}>{article.readingTimeMinutes} phút đọc · {article.viewCount} lượt xem</Text></View></View></View>}
       maxToRenderPerBatch={5}
       renderItem={({ item }) => <ArticleBlockView block={item} />}
       ItemSeparatorComponent={() => <View style={{ height: spacing.lg }} />}
+      style={getResponsiveContentLayout({
+        isDesktopWeb,
+        maxWidth: layout.articleMaxWidth,
+      })}
+      showsVerticalScrollIndicator={false}
       windowSize={5}
     />
   </SafeAreaView>;

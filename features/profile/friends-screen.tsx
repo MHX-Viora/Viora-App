@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { router, useLocalSearchParams } from "expo-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -346,10 +346,10 @@ const FriendRow = memo(function FriendRow({
   const isBusy = actingFriendshipId === item.friendshipId;
   const content = (
     <>
-      <Image
-        accessibilityLabel={`Ảnh đại diện của ${item.user.displayName}`}
-        contentFit="cover"
-        source={{ uri: item.user.avatarUrl }}
+      <UserAvatar
+        displayName={item.user.displayName}
+        imageUrl={item.user.avatarUrl}
+        size={56}
         style={styles.avatar}
       />
       <View style={styles.friendInfo}>

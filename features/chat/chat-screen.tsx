@@ -36,6 +36,7 @@ import { ChatComposerNotice } from "@/components/chat/chat-composer-notice";
 import { ChatMediaViewer } from "@/components/chat/chat-media-viewer";
 import { PendingAttachmentPreview } from "@/components/chat/pending-attachment-preview";
 import { showAppToast } from "@/components/common/app-toast";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { MentionText } from "@/components/mentions/mention-text";
 import {
@@ -436,15 +437,9 @@ function SystemMessage({ message }: { message: ChatMessage }) {
           message.isMine ? styles.mineRow : styles.theirRow,
         ]}
       >
-        {!message.isMine &&
-          (message.sender.avatarUrl ? (
-            <Image
-              source={{ uri: message.sender.avatarUrl }}
-              style={styles.smallAvatar}
-            />
-          ) : (
-            <View style={styles.avatarSpace} />
-          ))}
+        {!message.isMine ? (
+          <UserAvatar displayName={message.sender.displayName} imageUrl={message.sender.avatarUrl} size={32} style={styles.smallAvatar} />
+        ) : null}
         <View
           style={[
             styles.callHistoryMessage,
@@ -597,15 +592,11 @@ function MessageRow({
         isHighlighted && styles.highlightedRow,
       ]}
     >
-      {!message.isMine &&
-        (showAvatar && message.sender.avatarUrl ? (
-          <Image
-            source={{ uri: message.sender.avatarUrl }}
-            style={styles.smallAvatar}
-          />
-        ) : (
-          <View style={styles.avatarSpace} />
-        ))}
+      {!message.isMine && showAvatar ? (
+        <UserAvatar displayName={message.sender.displayName} imageUrl={message.sender.avatarUrl} size={32} style={styles.smallAvatar} />
+      ) : !message.isMine ? (
+        <View style={styles.avatarSpace} />
+      ) : null}
       {message.isMine && isActionsOpen ? actions : null}
       {sendStatusLabel ? (
         <Text
@@ -1958,6 +1949,7 @@ export function ChatScreen() {
             );
           }}
           scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
         />
       )}
       {hasNewMessage && (

@@ -18,6 +18,7 @@ import {
 } from "@/components/auth/auth-controls";
 import { AuthBackground } from "@/components/auth/auth-background";
 import { GoogleLogo } from "@/components/auth/google-logo";
+import { TmiSponsor } from "@/components/common/tmi-sponsor";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { googleLogin, login, saveAuthSession } from "@/services/auth.service";
 import { getGoogleFirebaseToken } from "@/services/google-auth.service";
@@ -225,9 +226,7 @@ export function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <Text style={styles.sponsorText}>
-        Phát triển và bảo trợ bởi TMI
-      </Text>
+      <TmiSponsor style={styles.sponsor} />
       <AuthAlert
         alert={alert}
         onAction={handleAlertAction}
@@ -255,6 +254,7 @@ const createStyles = (theme: AppTheme) => {
   },
   container: { gap: spacing.xl, maxWidth: 430, width: "100%" },
   content: {
+    alignItems: "center",
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
@@ -305,11 +305,8 @@ const createStyles = (theme: AppTheme) => {
   separator: { alignItems: "center", flexDirection: "row", gap: spacing.md },
   separatorLine: { backgroundColor: colors.divider, flex: 1, height: 1 },
   separatorText: { color: colors.textMuted, fontSize: 12 },
-  sponsorText: {
-    color: colors.textMuted,
-    fontSize: 12,
+  sponsor: {
     paddingBottom: spacing.sm,
-    textAlign: "center",
   },
   subtitle: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   title: { color: colors.text, fontSize: 26, fontWeight: "900" },

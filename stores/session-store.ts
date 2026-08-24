@@ -1,27 +1,7 @@
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
-
 import type { Session, User } from "@/types/auth";
+import { sessionStorage } from "@/stores/session-storage";
 
 const SESSION_KEY = "viora.session";
-
-// Trên web, expo-secure-store không hoạt động như native nên lưu tạm trong RAM.
-let webSession: string | null = null;
-
-// Native dùng SecureStore, web dùng biến tạm ở trên.
-const storage = Platform.OS === "web"
-  ? {
-      async getItemAsync() {
-        return webSession;
-      },
-      async setItemAsync(_key: string, value: string) {
-        webSession = value;
-      },
-      async deleteItemAsync() {
-        webSession = null;
-      },
-    }
-  : SecureStore;
 
 // Kiểm tra dữ liệu đọc từ storage có đúng shape session tối thiểu không.
 const isSession = (value: unknown): value is Session => {
@@ -36,7 +16,7 @@ const isSession = (value: unknown): value is Session => {
 };
 
 export const getSession = async (): Promise<Session | null> => {
-  const storedSession = await storage.getItemAsync(SESSION_KEY);
+  const storedSession = await sessionStorage.getItemAsync(SESSION_KEY);
   if (!storedSession) return null;
 
   // Storage chỉ lưu string, nên phải JSON.parse trước khi dùng.
@@ -49,11 +29,11 @@ export const getSession = async (): Promise<Session | null> => {
 };
 
 export const saveSession = async (session: Session): Promise<void> => {
-  await storage.setItemAsync(SESSION_KEY, JSON.stringify(session));
+  await sessionStorage.setItemAsync(SESSION_KEY, JSON.stringify(session));
 };
 
 export const clearSession = async (): Promise<void> => {
-  await storage.deleteItemAsync(SESSION_KEY);
+  await sessionStorage.deleteItemAsync(SESSION_KEY);
 };
 
 export const getAccessToken = async (): Promise<string | null> => {

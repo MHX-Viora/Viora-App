@@ -11,6 +11,7 @@ import {
   Animated,
   Easing,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,8 +19,16 @@ import {
 } from "react-native";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { VerifiedBadge } from "@/components/common/verified-badge";
+import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { ReelAction } from "@/components/reels/reel-action";
+import {
+  getContainedVideoSize,
+  getReelVideoContentWidth,
+  getReelVideoVerticalShift,
+  WEB_REEL_VIDEO_STYLE,
+} from "@/components/reels/reel-layout";
 import {
   REEL_PLAYBACK_RATES,
   REEL_REPORT_REASONS,
@@ -28,6 +37,7 @@ import {
 } from "@/constants/reels";
 import { deletePost, reportPost } from "@/services/post.service";
 import { followUser } from "@/services/user.service";
+import { useResponsive } from "@/hooks/use-responsive";
 import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 import { formatReelTime } from "@/utils/reel-time";
@@ -64,7 +74,13 @@ export function ReelCard({
   const { theme } = useTheme();
   const colors = theme.reels;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const reportDialogLayout = getResponsiveDialogLayout({
+    isDesktopWeb,
+    maxWidth: 640,
+  });
   const wasActive = useRef(false);
+  const videoViewRef = useRef<VideoView>(null);
   const detailsTranslateY = useRef(new Animated.Value(420)).current;
   const [isMuted, setIsMuted] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -79,6 +95,14 @@ export function ReelCard({
   const [seekWidth, setSeekWidth] = useState(0);
   const [seekingTime, setSeekingTime] = useState<number | null>(null);
   const [playbackRate, setPlaybackRate] = useState(1);
+  const [videoSourceSize, setVideoSourceSize] = useState<{
+    height: number;
+    width: number;
+  } | null>(null);
+  const [videoViewportSize, setVideoViewportSize] = useState({
+    height: 0,
+    width: 0,
+  });
   const player = useVideoPlayer(reel.videoUrl, (videoPlayer) => {
     videoPlayer.loop = true;
     videoPlayer.muted = false;
@@ -96,6 +120,47 @@ export function ReelCard({
     currentOffsetFromLive: null,
     currentTime: player.currentTime,
   });
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const videoElement = videoViewRef.current?.nativeRef.current as
+      | {
+          addEventListener: (type: string, listener: () => void) => void;
+          removeEventListener: (type: string, listener: () => void) => void;
+          style: {
+            setProperty: (property: string, value: string, priority?: string) => void;
+          };
+          videoHeight: number;
+          videoWidth: number;
+        }
+      | null;
+
+    if (!videoElement) return;
+
+    Object.entries(WEB_REEL_VIDEO_STYLE).forEach(([property, value]) => {
+      const cssProperty = property.replace(
+        /[A-Z]/g,
+        (character) => `-${character.toLowerCase()}`,
+      );
+      videoElement.style.setProperty(cssProperty, value, "important");
+    });
+
+    const syncVideoSize = () => {
+      if (videoElement.videoWidth <= 0 || videoElement.videoHeight <= 0) return;
+      setVideoSourceSize({
+        height: videoElement.videoHeight,
+        width: videoElement.videoWidth,
+      });
+    };
+
+    setVideoSourceSize(null);
+    syncVideoSize();
+    videoElement.addEventListener("loadedmetadata", syncVideoSize);
+
+    return () =>
+      videoElement.removeEventListener("loadedmetadata", syncVideoSize);
+  }, [reel.videoUrl]);
 
   useEffect(() => {
     setIsFollowingAuthor(reel.isFollowing);
@@ -144,6 +209,21 @@ export function ReelCard({
   const duration = player.duration || 0;
   const displayedTime = seekingTime ?? currentTime;
   const progress = duration > 0 ? Math.min(displayedTime / duration, 1) : 0;
+  const containedVideoSize = videoSourceSize
+    ? getContainedVideoSize({
+        containerHeight: videoViewportSize.height,
+        containerWidth: getReelVideoContentWidth({
+          containerWidth: videoViewportSize.width,
+          isDesktopWeb,
+        }),
+        videoHeight: videoSourceSize.height,
+        videoWidth: videoSourceSize.width,
+      })
+    : null;
+  const videoVerticalShift = getReelVideoVerticalShift({
+    isDesktopWeb,
+    nativeShift: REEL_VIDEO_VERTICAL_SHIFT,
+  });
 
   const getSeekTime = (event: GestureResponderEvent) => {
     if (seekWidth <= 0 || duration <= 0) return null;
@@ -304,7 +384,27 @@ export function ReelCard({
 
   return (
     <View style={[styles.background, { height }]}>
-      <View style={[styles.videoLayer, { top: videoTopOffset }]}>
+      <View
+        onLayout={(event) => {
+          if (Platform.OS !== "web") return;
+          const nextSize = {
+            height: Math.round(event.nativeEvent.layout.height),
+            width: Math.round(event.nativeEvent.layout.width),
+          };
+          setVideoViewportSize((current) =>
+            current.height === nextSize.height && current.width === nextSize.width
+              ? current
+              : nextSize,
+          );
+        }}
+        style={[
+          styles.videoLayer,
+          {
+            top: videoTopOffset,
+            transform: [{ translateY: videoVerticalShift }],
+          },
+        ]}
+      >
         {reel.thumbnailUrl ? (
           <Image
             blurRadius={28}
@@ -314,13 +414,16 @@ export function ReelCard({
             style={styles.videoBackdrop}
           />
         ) : null}
-        <View style={styles.videoFrame}>
-          <VideoView
-            contentFit="contain"
-            nativeControls={false}
-            player={player}
-            style={StyleSheet.absoluteFill}
-          />
+        <View style={styles.videoContentArea}>
+          <View style={[styles.videoFrame, containedVideoSize]}>
+            <VideoView
+              contentFit="contain"
+              nativeControls={false}
+              player={player}
+              ref={videoViewRef}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
         </View>
         <View style={styles.tint} />
       </View>
@@ -333,7 +436,13 @@ export function ReelCard({
         accessibilityLabel="Video cá»§a reel"
         delayLongPress={450}
         onLongPress={() => setShowControls(true)}
-        style={[styles.videoGestureArea, { top: videoTopOffset }]}
+        style={[
+          styles.videoGestureArea,
+          {
+            top: videoTopOffset,
+            transform: [{ translateY: videoVerticalShift }],
+          },
+        ]}
       />
 
       {status === "error" && (
@@ -407,9 +516,10 @@ export function ReelCard({
                 disabled={!reel.authorId || !onOpenAuthor}
                 onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
               >
-                <Image
-                  accessibilityLabel={`Ảnh đại diện của ${reel.author}`}
-                  source={reel.avatar}
+                <UserAvatar
+                  displayName={reel.author}
+                  imageUrl={reel.avatar}
+                  size={48}
                   style={styles.avatar}
                 />
               </Pressable>
@@ -645,18 +755,18 @@ export function ReelCard({
         </View>
       )}
       <Modal
-        animationType="slide"
+        animationType={isDesktopWeb ? "fade" : "slide"}
         onRequestClose={() => setReportVisible(false)}
         transparent
         visible={reportVisible}
       >
         <Pressable
           onPress={() => setReportVisible(false)}
-          style={styles.reportBackdrop}
+          style={[styles.reportBackdrop, reportDialogLayout.backdrop]}
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={styles.reportSheet}
+            style={[styles.reportSheet, reportDialogLayout.surface]}
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.reportSheetTitle}>Báo cáo video</Text>
@@ -1006,6 +1116,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     height: "100%",
     overflow: "hidden",
     width: "100%",
+  },
+  videoContentArea: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
   videoBackdrop: {
     ...StyleSheet.absoluteFillObject,

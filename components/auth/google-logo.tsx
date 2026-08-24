@@ -1,15 +1,23 @@
 import Svg, { Path } from "react-native-svg";
+import { Platform } from "react-native";
 
 type GoogleLogoProps = {
   size?: number;
 };
 
 export function GoogleLogo({ size = 20 }: GoogleLogoProps) {
+  const nativeAccessibilityProps =
+    Platform.OS === "web"
+      ? {}
+      : {
+          accessibilityElementsHidden: true,
+          importantForAccessibility: "no-hide-descendants" as const,
+        };
+
   return (
     <Svg
-      accessibilityElementsHidden
+      {...nativeAccessibilityProps}
       height={size}
-      importantForAccessibility="no-hide-descendants"
       viewBox="0 0 24 24"
       width={size}
     >

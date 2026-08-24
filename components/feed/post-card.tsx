@@ -14,9 +14,12 @@ import {
 } from "react-native";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { ViewableImage } from "@/components/common/viewable-image";
+import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { MentionText } from "@/components/mentions/mention-text";
+import { useResponsive } from "@/hooks/use-responsive";
 import { deletePost, reportPost } from "@/services/post.service";
 import { spacing, typography } from "@/theme";
 import type { FeedPost } from "@/types/feed";
@@ -172,6 +175,11 @@ export function PostCard({
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const dialogLayout = getResponsiveDialogLayout({
+    isDesktopWeb,
+    maxWidth: 640,
+  });
   const reactions = useMemo(() => createReactions(colors), [colors]);
   const [showReactions, setShowReactions] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
@@ -327,9 +335,10 @@ export function PostCard({
           disabled={!post.authorId || !onOpenAuthor}
           onPress={() => post.authorId && onOpenAuthor?.(post.authorId)}
         >
-        <Image
-          accessibilityLabel={`Ảnh đại diện của ${post.author}`}
-          source={{ uri: post.avatar }}
+        <UserAvatar
+          displayName={post.author}
+          imageUrl={post.avatar}
+          size={40}
           style={styles.avatar}
         />
         </Pressable>
@@ -567,18 +576,18 @@ export function PostCard({
         />
       </View>
       <Modal
-        animationType="slide"
+        animationType={isDesktopWeb ? "fade" : "slide"}
         onRequestClose={() => setOptionsVisible(false)}
         transparent
         visible={optionsVisible}
       >
         <Pressable
           onPress={() => setOptionsVisible(false)}
-          style={styles.sheetBackdrop}
+          style={[styles.sheetBackdrop, dialogLayout.backdrop]}
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={styles.sheet}
+            style={[styles.sheet, dialogLayout.surface]}
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Tùy chọn bài viết</Text>
@@ -606,18 +615,18 @@ export function PostCard({
         </Pressable>
       </Modal>
       <Modal
-        animationType="slide"
+        animationType={isDesktopWeb ? "fade" : "slide"}
         onRequestClose={() => setReportVisible(false)}
         transparent
         visible={reportVisible}
       >
         <Pressable
           onPress={() => setReportVisible(false)}
-          style={styles.sheetBackdrop}
+          style={[styles.sheetBackdrop, dialogLayout.backdrop]}
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
-            style={styles.sheet}
+            style={[styles.sheet, dialogLayout.surface]}
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Báo cáo bài viết</Text>

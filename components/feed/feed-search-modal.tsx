@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PostCard } from "@/components/feed/post-card";
+import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
+import { useResponsive } from "@/hooks/use-responsive";
 import { getPosts } from "@/services/feed.service";
 import { spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
@@ -31,6 +33,11 @@ export function FeedSearchModal({
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const dialogLayout = getResponsiveDialogLayout({
+    isDesktopWeb,
+    maxWidth: 960,
+  });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FeedPost[]>([]);
   const [page, setPage] = useState(1);
@@ -108,8 +115,27 @@ export function FeedSearchModal({
   };
 
   return (
-    <Modal animationType="slide" onRequestClose={close} visible={visible}>
-      <SafeAreaView edges={["top"]} style={styles.screen}>
+    <Modal
+      animationType={isDesktopWeb ? "fade" : "slide"}
+      onRequestClose={close}
+      transparent={isDesktopWeb}
+      visible={visible}
+    >
+      <View
+        style={[
+          styles.modalRoot,
+          isDesktopWeb && styles.desktopModalRoot,
+          dialogLayout.backdrop,
+        ]}
+      >
+      <SafeAreaView
+        edges={["top"]}
+        style={[
+          styles.screen,
+          dialogLayout.surface,
+          isDesktopWeb && styles.desktopScreen,
+        ]}
+      >
         <View style={styles.header}>
           <Pressable
             accessibilityLabel="Đóng tìm kiếm"
@@ -181,6 +207,7 @@ export function FeedSearchModal({
           />
         )}
       </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -246,6 +273,13 @@ function EmptySearch({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  desktopModalRoot: { backgroundColor: colors.visuals.rgb_0_0_0_0_42 },
+  desktopScreen: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    height: "84%",
+    overflow: "hidden",
+  },
   emptyList: { flexGrow: 1 },
   emptyState: {
     alignItems: "center",
@@ -291,6 +325,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     minHeight: 40,
     paddingVertical: 0,
   },
+  modalRoot: { backgroundColor: colors.background, flex: 1 },
   screen: { backgroundColor: colors.background, flex: 1 },
   searchBox: {
     alignItems: "center",

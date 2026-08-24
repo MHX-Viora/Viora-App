@@ -2,13 +2,14 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { router, useLocalSearchParams } from "expo-router";
 import { type ComponentType, useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   CallAvatarHalo,
   CallBackdrop,
 } from "@/components/calls/call-visuals";
+import { UserAvatar } from "@/components/common/user-avatar";
 import {
   clearActiveVoiceCall,
   clearIncomingCall,
@@ -650,13 +651,12 @@ export function VoiceCallScreen() {
               (status === "calling" || status === "connecting")
             }
           >
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Ionicons color={colors.primary} name="person" size={48} />
-              </View>
-            )}
+            <UserAvatar
+              displayName={displayName}
+              imageUrl={avatarUrl}
+              size={112}
+              style={styles.avatar}
+            />
           </CallAvatarHalo>
         ) : null}
       </View>

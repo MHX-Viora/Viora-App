@@ -14,12 +14,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { PostCard } from "@/components/feed/post-card";
+import { ResponsiveContent } from "@/components/layout/responsive-content";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { getArticle } from "@/services/article.service";
 import { getPostById } from "@/services/feed.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
-import { spacing } from "@/theme";
+import { layout, spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -142,52 +143,54 @@ export function PostPreviewScreen() {
       </View>
       <View style={styles.headerGlow} />
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <View style={styles.loadingFrame}>
-            <ActivityIndicator color={colors.primary} size="large" />
+      <ResponsiveContent maxWidth={layout.postDetailMaxWidth}>
+        {isLoading ? (
+          <View style={styles.center}>
+            <View style={styles.loadingFrame}>
+              <ActivityIndicator color={colors.primary} size="large" />
+            </View>
+            <Text style={styles.loadingText}>Đang tải bài viết...</Text>
           </View>
-          <Text style={styles.loadingText}>Đang tải bài viết...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.center}>
-          <View style={styles.errorIcon}>
-            <Ionicons color={colors.danger} name="cloud-offline-outline" size={30} />
+        ) : error ? (
+          <View style={styles.center}>
+            <View style={styles.errorIcon}>
+              <Ionicons color={colors.danger} name="cloud-offline-outline" size={30} />
+            </View>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void load()}
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryButtonPressed,
+              ]}
+            >
+              <Text style={styles.retryText}>Thử lại</Text>
+            </Pressable>
           </View>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void load()}
-            style={({ pressed }) => [
-              styles.retryButton,
-              pressed && styles.retryButtonPressed,
-            ]}
+        ) : post ? (
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.retryText}>Thử lại</Text>
-          </Pressable>
-        </View>
-      ) : post ? (
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          <PostCard
-            onComment={setCommentsPostId}
-            onDeleted={handleDeleted}
-            onOpenAuthor={openUserProfile}
-            onOpenArticle={(articleId) =>
-              router.push({
-                pathname: "/article/[id]",
-                params: { id: articleId },
-              })
-            }
-            onReact={handleReact}
-            onSave={handleSave}
-            onShare={handleShare}
-            post={post}
-          />
-        </ScrollView>
-      ) : null}
+            <PostCard
+              onComment={setCommentsPostId}
+              onDeleted={handleDeleted}
+              onOpenAuthor={openUserProfile}
+              onOpenArticle={(articleId) =>
+                router.push({
+                  pathname: "/article/[id]",
+                  params: { id: articleId },
+                })
+              }
+              onReact={handleReact}
+              onSave={handleSave}
+              onShare={handleShare}
+              post={post}
+            />
+          </ScrollView>
+        ) : null}
+      </ResponsiveContent>
       <CommentsModal
         onClose={() => setCommentsPostId(null)}
         onCommentCreated={handleCommentCreated}

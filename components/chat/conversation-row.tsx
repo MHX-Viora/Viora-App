@@ -1,10 +1,17 @@
 import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  type GestureResponderEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { spacing } from "@/theme";
 import { VerifiedBadge } from "@/components/common/verified-badge";
+import { UserAvatar } from "@/components/common/user-avatar";
 import type { Conversation } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
 import {
@@ -19,7 +26,7 @@ type ConversationRowProps = {
   conversation: Conversation;
   isPinLoading: boolean;
   onOpen: (conversation: Conversation) => void;
-  onOpenMenu: (conversation: Conversation) => void;
+  onOpenMenu: (conversation: Conversation, anchorY: number) => void;
 };
 
 export function ConversationRow({
@@ -41,21 +48,13 @@ export function ConversationRow({
   return (
     <Pressable
       accessibilityRole="button"
-      onLongPress={() => onOpenMenu(conversation)}
+      onLongPress={(event: GestureResponderEvent) =>
+        onOpenMenu(conversation, event.nativeEvent.pageY)
+      }
       onPress={() => onOpen(conversation)}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      {avatar ? (
-        <Image source={{ uri: avatar }} style={styles.avatar} />
-      ) : (
-        <View style={styles.avatarFallback}>
-          <Ionicons
-            color={colors.primary}
-            name="chatbubble-ellipses"
-            size={22}
-          />
-        </View>
-      )}
+      <UserAvatar displayName={title} imageUrl={avatar} size={48} style={styles.avatar} />
       <View style={styles.rowBody}>
         <View style={styles.titleLine}>
           <Text numberOfLines={1} style={styles.title}>

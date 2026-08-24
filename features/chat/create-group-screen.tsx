@@ -20,6 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { MemberPicker } from "@/components/chat/member-picker";
 import { showAppToast } from "@/components/common/app-toast";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { emitRealtimeConversation } from "@/features/chat/chat-events";
 import { createGroupConversation } from "@/services/chat.service";
 import { getSelectableFriends } from "@/services/friend.service";
@@ -80,13 +81,7 @@ function SelectedMember({
   return (
     <View style={styles.selectedItem}>
       <View>
-        {friend.avatarUrl ? (
-          <Image source={{ uri: friend.avatarUrl }} style={styles.selectedAvatar} />
-        ) : (
-          <View style={styles.selectedAvatarFallback}>
-            <Ionicons color={colors.primary} name="person" size={18} />
-          </View>
-        )}
+        <UserAvatar displayName={friend.displayName} imageUrl={friend.avatarUrl} size={48} style={styles.selectedAvatar} />
         {!locked ? (
           <Pressable
             accessibilityLabel={`Bỏ chọn ${friend.displayName}`}
@@ -128,13 +123,7 @@ const FriendRow = memo(function FriendRow({
       onPress={() => onToggle(friend)}
       style={({ pressed }) => [styles.friendRow, pressed && styles.pressed]}
     >
-      {friend.avatarUrl ? (
-        <Image source={{ uri: friend.avatarUrl }} style={styles.friendAvatar} />
-      ) : (
-        <View style={styles.friendAvatarFallback}>
-          <Ionicons color={colors.primary} name="person" size={22} />
-        </View>
-      )}
+      <UserAvatar displayName={friend.displayName} imageUrl={friend.avatarUrl} size={52} style={styles.friendAvatar} />
       <View style={styles.friendInfo}>
         <View style={styles.nameLine}>
           <Text numberOfLines={1} style={styles.friendName}>

@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthPrimaryButton } from "@/components/auth/auth-controls";
 import { showAppToast } from "@/components/common/app-toast";
 import { ViewableImage } from "@/components/common/viewable-image";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { updateProfile } from "@/services/user.service";
 import { getSession, updateUser } from "@/stores/session-store";
@@ -182,10 +183,10 @@ export function EditProfileScreen() {
           </View>
 
           <View style={styles.avatarRow}>
-            <ViewableImage
-              accessibilityLabel="Ảnh đại diện hồ sơ"
-              contentFit="cover"
-              source={previewAvatar}
+            <UserAvatar
+              displayName={displayName || user.displayName}
+              imageUrl={previewAvatar}
+              size={90}
               style={styles.avatar}
             />
             <Pressable

@@ -1,23 +1,24 @@
 import { type PropsWithChildren, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { getFixedTopBarLayout } from "@/components/layout/responsive-layout";
+import { useResponsive } from "@/hooks/use-responsive";
 import { type AppTheme, useTheme } from "@/theme";
-
-export const FIXED_TOP_BAR_HEIGHT = 100;
 
 export function FixedTopBar({ children }: PropsWithChildren) {
   const { theme } = useTheme();
+  const { isDesktopWeb } = useResponsive();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  return <View style={styles.container}>{children}</View>;
+  const barLayout = getFixedTopBarLayout({ isDesktopWeb });
+
+  return <View style={[styles.container, barLayout]}>{children}</View>;
 }
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     backgroundColor: theme.colors.surface,
-    height: FIXED_TOP_BAR_HEIGHT,
     justifyContent: "flex-end",
     left: 0,
-    paddingTop: 60,
     position: "absolute",
     right: 0,
     top: 0,

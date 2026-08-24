@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import {
   memo,
   useCallback,
@@ -26,6 +25,7 @@ import {
 import { getSelectableFriends } from "@/services/friend.service";
 import { spacing } from "@/theme";
 import { VerifiedBadge } from "@/components/common/verified-badge";
+import { UserAvatar } from "@/components/common/user-avatar";
 import type { SelectableFriend } from "@/types/chat-group";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -58,13 +58,7 @@ function SelectedMember({
   return (
     <View style={styles.selectedItem}>
       <View>
-        {friend.avatarUrl ? (
-          <Image source={{ uri: friend.avatarUrl }} style={styles.selectedAvatar} />
-        ) : (
-          <View style={styles.selectedAvatarFallback}>
-            <Ionicons color={colors.primary} name="person" size={18} />
-          </View>
-        )}
+        <UserAvatar displayName={friend.displayName} imageUrl={friend.avatarUrl} size={48} style={styles.selectedAvatar} />
         {!locked ? (
           <Pressable
             accessibilityLabel={`Bo chon ${friend.displayName}`}
@@ -114,13 +108,7 @@ const FriendRow = memo(function FriendRow({
         pressed && styles.pressed,
       ]}
     >
-      {friend.avatarUrl ? (
-        <Image source={{ uri: friend.avatarUrl }} style={styles.friendAvatar} />
-      ) : (
-        <View style={styles.friendAvatarFallback}>
-          <Ionicons color={colors.primary} name="person" size={22} />
-        </View>
-      )}
+      <UserAvatar displayName={friend.displayName} imageUrl={friend.avatarUrl} size={52} style={styles.friendAvatar} />
       <View style={styles.friendInfo}>
         <View style={styles.nameLine}>
           <Text numberOfLines={1} style={styles.friendName}>

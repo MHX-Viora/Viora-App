@@ -28,6 +28,11 @@ import {
   subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
 import {
+  getDesktopConversationMenuTop,
+  shouldAutoOpenConversationRoute,
+} from "@/features/chat/responsive-chat-layout";
+import { useResponsive } from "@/hooks/use-responsive";
+import {
   getConversation,
   getConversations,
   markConversationRead,
@@ -37,7 +42,7 @@ import {
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { getUser } from "@/stores/session-store";
-import { spacing } from "@/theme";
+import { layout, spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
 import {
   firstParam,
@@ -52,11 +57,16 @@ import { type ThemeColors, useTheme } from "@/theme";
 import { parseGroupQrValue } from "@/utils/qr-code";
 
 
-export function ConversationsScreen() {
+export function ConversationsScreen({
+  autoOpenRequestedConversation = true,
+}: {
+  autoOpenRequestedConversation?: boolean;
+} = {}) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
+  const { height: viewportHeight, isDesktopWeb } = useResponsive();
   const params = useLocalSearchParams<{
     conversationId?: string | string[];
     scrollToMessageId?: string | string[];
@@ -73,6 +83,7 @@ export function ConversationsScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
+  const [conversationMenuAnchorY, setConversationMenuAnchorY] = useState(0);
   const [quickMenuVisible, setQuickMenuVisible] = useState(false);
   const [qrScannerVisible, setQrScannerVisible] = useState(false);
   const [qrScanMessage, setQrScanMessage] = useState("");
@@ -239,10 +250,11 @@ export function ConversationsScreen() {
   );
 
   useEffect(() => {
-    if (
-      !requestedConversationId ||
-      openedConversationId === requestedConversationId
-    ) {
+    if (!shouldAutoOpenConversationRoute({
+      allowRequestedAutoOpen: autoOpenRequestedConversation,
+      openedConversationId,
+      requestedConversationId,
+    })) {
       return;
     }
 
@@ -273,7 +285,13 @@ export function ConversationsScreen() {
     return () => {
       isMounted = false;
     };
-  }, [items, openConversation, openedConversationId, requestedConversationId]);
+  }, [
+    autoOpenRequestedConversation,
+    items,
+    openConversation,
+    openedConversationId,
+    requestedConversationId,
+  ]);
 
   useEffect(
     () =>
@@ -504,9 +522,13 @@ export function ConversationsScreen() {
     ],
   );
 
-  const openConversationMenu = useCallback((conversation: Conversation) => {
-    setSelectedConversation(conversation);
-  }, []);
+  const openConversationMenu = useCallback(
+    (conversation: Conversation, anchorY: number) => {
+      setConversationMenuAnchorY(anchorY);
+      setSelectedConversation(conversation);
+    },
+    [],
+  );
 
   const runConversationAction = useCallback(
     (action: (conversation: Conversation) => void) => {
@@ -738,20 +760,37 @@ export function ConversationsScreen() {
       >
         <Pressable
           onPress={() => setSelectedConversation(null)}
-          style={styles.menuOverlay}
+          style={[
+            styles.menuOverlay,
+            isDesktopWeb && styles.desktopMenuOverlay,
+          ]}
         >
           <Pressable
             onPress={(event) => event.stopPropagation()}
             style={[
               styles.menuSheet,
-              {
-                paddingBottom: Math.max(spacing.lg, insets.bottom + spacing.md),
-              },
+              isDesktopWeb
+                ? [
+                    styles.desktopMenuSheet,
+                    {
+                      left: layout.chatSidebarWidth + spacing.md,
+                      top: getDesktopConversationMenuTop({
+                        anchorY: conversationMenuAnchorY,
+                        viewportHeight,
+                      }),
+                    },
+                  ]
+                : {
+                    paddingBottom: Math.max(
+                      spacing.lg,
+                      insets.bottom + spacing.md,
+                    ),
+                  },
             ]}
           >
             {selectedConversation ? (
               <>
-                <View style={styles.menuHandle} />
+                {!isDesktopWeb ? <View style={styles.menuHandle} /> : null}
                 <Text numberOfLines={1} style={styles.menuTitle}>
                   {getConversationTitle(selectedConversation)}
                 </Text>
@@ -945,6 +984,18 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.visuals.rgb_15_23_42_0_32,
     flex: 1,
     justifyContent: "flex-end",
+  },
+  desktopMenuOverlay: {
+    backgroundColor: "transparent",
+    justifyContent: "flex-start",
+  },
+  desktopMenuSheet: {
+    borderColor: colors.border,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingBottom: spacing.md,
+    position: "absolute",
+    width: 320,
   },
   menuSheet: {
     backgroundColor: colors.surface,

@@ -4,9 +4,8 @@ import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { spacing } from "@/theme";
-import { type ThemeColors, useTheme } from "@/theme";
-
+import { ResponsiveContent } from "@/components/layout/responsive-content";
+import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 
 export default function ConversationReportRoute() {
   const { theme } = useTheme();
@@ -15,29 +14,31 @@ export default function ConversationReportRoute() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={styles.screen}>
-      <View
-        style={[
-          styles.header,
-          { paddingTop: Math.max(spacing.xl, insets.top + spacing.md) },
-        ]}
-      >
-        <Pressable
-          accessibilityLabel="Quay lại"
-          hitSlop={10}
-          onPress={() => router.back()}
-          style={styles.iconButton}
+    <ResponsiveContent maxWidth={layout.chatSettingsSubpageMaxWidth}>
+      <View style={styles.screen}>
+        <View
+          style={[
+            styles.header,
+            { paddingTop: Math.max(spacing.xl, insets.top + spacing.md) },
+          ]}
         >
-          <Ionicons color={colors.text} name="chevron-back" size={24} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Báo cáo người dùng</Text>
-        <View style={styles.iconButton} />
+          <Pressable
+            accessibilityLabel="Quay lại"
+            hitSlop={10}
+            onPress={() => router.back()}
+            style={styles.iconButton}
+          >
+            <Ionicons color={colors.text} name="chevron-back" size={24} />
+          </Pressable>
+          <Text style={styles.headerTitle}>Báo cáo người dùng</Text>
+          <View style={styles.iconButton} />
+        </View>
+        <View style={styles.center}>
+          <Ionicons color={colors.danger} name="flag-outline" size={34} />
+          <Text style={styles.title}>Chưa có API báo cáo người dùng.</Text>
+        </View>
       </View>
-      <View style={styles.center}>
-        <Ionicons color={colors.danger} name="flag-outline" size={34} />
-        <Text style={styles.title}>Chưa có API báo cáo người dùng.</Text>
-      </View>
-    </View>
+    </ResponsiveContent>
   );
 }
 

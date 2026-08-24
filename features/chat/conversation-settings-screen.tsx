@@ -26,6 +26,7 @@ import { SettingsRow as SettingRow } from "@/components/chat/settings-row";
 import { SettingsSection as Section } from "@/components/chat/settings-section";
 import { SettingsSkeleton } from "@/components/chat/settings-skeleton";
 import { showAppToast } from "@/components/common/app-toast";
+import { UserAvatar } from "@/components/common/user-avatar";
 import {
   emitRealtimeConversation,
   emitRealtimeConversationBlockedChanged,
@@ -714,17 +715,7 @@ export function ConversationSettingsScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.info}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Ionicons
-                  color={colors.primary}
-                  name={isGroupConversation(conversation) ? "people" : "person"}
-                  size={36}
-                />
-              </View>
-            )}
+            <UserAvatar displayName={title} imageUrl={avatarUrl} size={88} style={styles.avatar} />
             <Text numberOfLines={2} style={styles.name}>
               {title}
             </Text>
@@ -1007,13 +998,7 @@ export function ConversationSettingsScreen() {
                   onPress={() => void transferOwnerAndLeave(item)}
                   style={styles.ownerCandidateRow}
                 >
-                  {item.avatarUrl ? (
-                    <Image source={{ uri: item.avatarUrl }} style={styles.ownerAvatar} />
-                  ) : (
-                    <View style={styles.ownerAvatarFallback}>
-                      <Ionicons color={colors.primary} name="person" size={22} />
-                    </View>
-                  )}
+                  <UserAvatar displayName={item.displayName} imageUrl={item.avatarUrl} size={48} style={styles.ownerAvatar} />
                   <Text numberOfLines={1} style={styles.ownerName}>
                     {item.displayName}
                   </Text>

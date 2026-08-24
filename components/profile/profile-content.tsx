@@ -9,8 +9,10 @@ import {
 } from "react-native";
 
 import { PostCard } from "@/components/feed/post-card";
+import { getResponsiveContentLayout } from "@/components/layout/responsive-layout";
 import { ReelsGridViewer } from "@/components/reels/reels-grid-viewer";
-import { spacing } from "@/theme";
+import { useResponsive } from "@/hooks/use-responsive";
+import { layout, spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -56,11 +58,16 @@ export function ProfileContent({
   stats: readonly { label: string; value: string }[];
 }) {
   const { theme } = useTheme();
+  const { isDesktopWeb } = useResponsive();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
   const [, startTabTransition] = useTransition();
   const isPostsTab = activeTab === "posts";
+  const postColumnLayout = getResponsiveContentLayout({
+    isDesktopWeb,
+    maxWidth: layout.profilePostMaxWidth,
+  });
   const changeTab = useCallback(
     (tab: ProfileTab) => {
       if (tab === activeTab) return;
@@ -100,7 +107,7 @@ export function ProfileContent({
       {isLoading ? (
         <ProfileContentSkeleton activeTab={activeTab} />
       ) : isPostsTab && posts.length > 0 ? (
-        <View style={styles.postsList}>
+        <View style={[styles.postsList, postColumnLayout]}>
           {posts.map((post) => (
             <PostCard
               key={post.id}

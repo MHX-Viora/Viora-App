@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { memo, useCallback, useEffect, useState, useMemo } from "react";
 import {
@@ -18,6 +17,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddMembersModal } from "@/components/chat/add-members-modal";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import {
   demoteGroupAdmin,
@@ -73,13 +73,7 @@ const MemberRow = memo(function MemberRow({
       onPress={() => onOpenProfile(member)}
       style={styles.row}
     >
-      {member.avatarUrl ? (
-        <Image source={{ uri: member.avatarUrl }} style={styles.avatar} />
-      ) : (
-        <View style={styles.avatarFallback}>
-          <Ionicons color={colors.primary} name="person" size={22} />
-        </View>
-      )}
+      <UserAvatar displayName={member.displayName} imageUrl={member.avatarUrl} size={52} style={styles.avatar} />
       <View style={styles.memberInfo}>
         <View style={styles.nameLine}>
           <Text numberOfLines={1} style={styles.name}>

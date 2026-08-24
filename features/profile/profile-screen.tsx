@@ -4,11 +4,14 @@ import { Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
+import { ResponsiveContent } from "@/components/layout/responsive-content";
+import { getResponsiveBottomPadding } from "@/components/layout/responsive-layout";
 import {
   TAB_BAR_BOTTOM,
   TAB_BAR_HEIGHT,
 } from "@/components/layout/tab-bar-style";
 import { ProfileContent } from "@/components/profile/profile-content";
+import { ProfileDesktopSidebar } from "@/components/profile/profile-desktop-sidebar";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { ProfileQrModal } from "@/components/profile/profile-qr-modal";
@@ -27,10 +30,11 @@ import {
 } from "@/services/share-link.service";
 import { getMyStatistics } from "@/services/user.service";
 import { getSession } from "@/stores/session-store";
+import { useResponsive } from "@/hooks/use-responsive";
 import type { User } from "@/types/auth";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
-import { spacing, type ThemeColors, useTheme } from "@/theme";
+import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 
 
 const PROFILE_PAGE_SIZE = 30;
@@ -46,8 +50,13 @@ export function ProfileScreen() {
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const profileBottomPadding =
-    TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.xl;
+  const { isDesktopWeb, isLargeDesktop } = useResponsive();
+  const showDesktopRails = isDesktopWeb && isLargeDesktop;
+  const profileBottomPadding = getResponsiveBottomPadding({
+    desktopPadding: spacing.xl,
+    isDesktopWeb,
+    mobilePadding: TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.xl,
+  });
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileContentLoading, setIsProfileContentLoading] = useState(true);
@@ -311,49 +320,112 @@ export function ProfileScreen() {
     );
   };
 
+  const profileScroll = (
+    <ScrollView
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: profileBottomPadding },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      <ProfileOverview
+        avatar={profileAvatar}
+        cover={profileCover}
+        handle={profileHandle}
+        isVerified={user.isVerified}
+        name={profileName}
+        onEdit={() => router.push("/edit-profile")}
+        showEditButton
+      />
+      <ProfileContent
+        isLoading={isProfileContentLoading}
+        onCommentPost={openPostComments}
+        onCommentReel={openReelComments}
+        onDeletePost={handleDeletedPost}
+        onDeleteReel={handleDeletedReel}
+        onOpenAuthor={openUserProfile}
+        onReactPost={handleReactPost}
+        onReactReel={handleReactReel}
+        onSavePost={handleSavePost}
+        onSaveReel={handleSaveReel}
+        onSharePost={handleSharePost}
+        onShareReel={handleShareReel}
+        posts={profilePosts}
+        reelCommentEvent={reelCommentEvent}
+        reels={profileReels}
+        reelsPaused={commentsPostId !== null}
+        stats={profileStats}
+      />
+    </ScrollView>
+  );
+
+  const settings = (
+    <ProfileSettingsSheet
+      inline={showDesktopRails}
+      onClose={() => setShowSettings(false)}
+      onLogout={async () => {
+        setShowSettings(false);
+        await unregisterCurrentDevicePushToken();
+        try {
+          await logout();
+        } catch {
+          // Dù API logout lỗi, vẫn xoá session local để người dùng thoát app.
+        }
+        await stopRealtime();
+        router.replace("/login");
+      }}
+      onOpenAccountSettings={() => {
+        setShowSettings(false);
+        router.push("/account-settings");
+      }}
+      onOpenLikedActivity={() => {
+        setShowSettings(false);
+        router.push({
+          pathname: "/profile-activity",
+          params: { kind: "reacted" },
+        });
+      }}
+      onOpenPoliciesTerms={() => {
+        setShowSettings(false);
+        router.push("/policies-terms");
+      }}
+      onOpenSavedActivity={() => {
+        setShowSettings(false);
+        router.push({
+          pathname: "/profile-activity",
+          params: { kind: "saved" },
+        });
+      }}
+      onOpenSupport={() => {
+        setShowSettings(false);
+        router.push("/support");
+      }}
+      visible={showDesktopRails || showSettings}
+    />
+  );
+
   return (
     <View style={styles.screen}>
-      <ProfileHeader
-        onOpenFriends={() => router.push("/friends")}
-        onOpenQr={() => setShowQr(true)}
-        onOpenSettings={() => setShowSettings(true)}
-      />
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: profileBottomPadding },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <ProfileOverview
-          avatar={profileAvatar}
-          cover={profileCover}
-          handle={profileHandle}
-          isVerified={user.isVerified}
-          name={profileName}
-          onEdit={() => router.push("/edit-profile")}
-          showEditButton
-        />
-        <ProfileContent
-          isLoading={isProfileContentLoading}
-          onCommentPost={openPostComments}
-          onCommentReel={openReelComments}
-          onDeletePost={handleDeletedPost}
-          onDeleteReel={handleDeletedReel}
-          onOpenAuthor={openUserProfile}
-          onReactPost={handleReactPost}
-          onReactReel={handleReactReel}
-          onSavePost={handleSavePost}
-          onSaveReel={handleSaveReel}
-          onSharePost={handleSharePost}
-          onShareReel={handleShareReel}
-          posts={profilePosts}
-          reelCommentEvent={reelCommentEvent}
-          reels={profileReels}
-          reelsPaused={commentsPostId !== null}
-          stats={profileStats}
-        />
-      </ScrollView>
+      {showDesktopRails ? (
+        <View style={styles.desktopShell}>
+          <ProfileDesktopSidebar
+            onOpenFriend={openUserProfile}
+            onOpenFriends={() => router.push("/friends")}
+            onOpenQr={() => setShowQr(true)}
+          />
+          <View style={styles.profileColumn}>{profileScroll}</View>
+          <View style={styles.settingsColumn}>{settings}</View>
+        </View>
+      ) : (
+        <ResponsiveContent maxWidth={layout.profileMaxWidth}>
+          <ProfileHeader
+            onOpenFriends={() => router.push("/friends")}
+            onOpenQr={() => setShowQr(true)}
+            onOpenSettings={() => setShowSettings(true)}
+          />
+          {profileScroll}
+        </ResponsiveContent>
+      )}
       <CommentsModal
         onClose={() => {
           setCommentsPostId(null);
@@ -375,53 +447,25 @@ export function ProfileScreen() {
         qrValue={profileShareUrl}
         visible={showQr}
       />
-      <ProfileSettingsSheet
-        onClose={() => setShowSettings(false)}
-        onLogout={async () => {
-          setShowSettings(false);
-          await unregisterCurrentDevicePushToken();
-          try {
-            await logout();
-          } catch {
-            // Dù API logout lỗi, vẫn xoá session local để người dùng thoát app.
-          }
-          await stopRealtime();
-          router.replace("/login");
-        }}
-        onOpenAccountSettings={() => {
-          setShowSettings(false);
-          router.push("/account-settings");
-        }}
-        onOpenLikedActivity={() => {
-          setShowSettings(false);
-          router.push({
-            pathname: "/profile-activity",
-            params: { kind: "reacted" },
-          });
-        }}
-        onOpenPoliciesTerms={() => {
-          setShowSettings(false);
-          router.push("/policies-terms");
-        }}
-        onOpenSavedActivity={() => {
-          setShowSettings(false);
-          router.push({
-            pathname: "/profile-activity",
-            params: { kind: "saved" },
-          });
-        }}
-        onOpenSupport={() => {
-          setShowSettings(false);
-          router.push("/support");
-        }}
-        visible={showSettings}
-      />
+      {!showDesktopRails && settings}
     </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { backgroundColor: colors.background, flexGrow: 1 },
+  desktopShell: {
+    alignSelf: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    maxWidth: layout.profileDesktopShellMaxWidth,
+    minHeight: 0,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
+    width: "100%",
+  },
   loading: {
     alignItems: "center",
     backgroundColor: colors.background,
@@ -429,5 +473,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "center",
   },
   loadingText: { color: colors.textMuted, fontSize: 14 },
+  profileColumn: {
+    flex: 1,
+    maxWidth: layout.profileMaxWidth,
+    minWidth: 0,
+  },
   screen: { backgroundColor: colors.background, flex: 1 },
+  settingsColumn: {
+    minHeight: 0,
+    width: layout.profileSettingsSidebarWidth,
+  },
 });

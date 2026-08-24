@@ -3,7 +3,11 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import type { LayoutChangeEvent } from "react-native";
+import type {
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from "react-native";
 import {
   Alert,
   AppState,
@@ -19,6 +23,11 @@ import {
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { showAppToast } from "@/components/common/app-toast";
+import { ResponsiveContent } from "@/components/layout/responsive-content";
+import {
+  getReelContentWidth,
+  getReelsOverlayLayout,
+} from "@/components/layout/responsive-layout";
 import {
   createFloatingTabBarStyle,
   TAB_BAR_BOTTOM,
@@ -30,6 +39,8 @@ import { ReelCard } from "@/components/reels/reel-card";
 import { ReelsHeader } from "@/components/reels/reels-header";
 import { ReelsSearchModal } from "@/components/reels/reels-search-modal";
 import { openProfileByUserId } from "@/features/profile/open-profile";
+import { getReelIndexFromOffset } from "@/features/reels/reel-pagination";
+import { useResponsive } from "@/hooks/use-responsive";
 import { reels } from "@/features/reels/data";
 import { reactPost, savePost } from "@/services/post.service";
 import { getReelShareLink } from "@/services/share-link.service";
@@ -38,7 +49,7 @@ import {
   formatReelCount,
   getReels,
 } from "@/services/reel.service";
-import { spacing } from "@/theme";
+import { layout, spacing } from "@/theme";
 import type { Reel, ReelSort } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -89,6 +100,8 @@ export function ReelsScreen() {
   const { theme } = useTheme();
   const colors = theme.reels;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const reelsOverlayLayout = getReelsOverlayLayout({ isDesktopWeb });
   const floatingTabBarStyle = useMemo(
     () => createFloatingTabBarStyle(theme),
     [theme],
@@ -189,6 +202,20 @@ export function ReelsScreen() {
   const handleInteractionLockChange = useCallback((locked: boolean) => {
     setIsInteractionLocked(locked);
   }, []);
+
+  const handleReelsScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const nextIndex = getReelIndexFromOffset({
+        itemCount: reelItems.length,
+        itemHeight: reelHeight + ITEM_GAP,
+        offsetY: event.nativeEvent.contentOffset.y,
+      });
+      setActiveIndex((current) =>
+        current === nextIndex ? current : nextIndex,
+      );
+    },
+    [reelHeight, reelItems.length],
+  );
 
   const pickVideo = async () => {
     if (Platform.OS !== "web") {
@@ -388,8 +415,15 @@ export function ReelsScreen() {
     void openProfileByUserId(router, userId);
   };
 
+  const reelContentWidth = getReelContentWidth({
+    height: reelHeight,
+    maxWidth: layout.reelsMaxWidth,
+  });
+
   return (
-    <View onLayout={handleLayout} style={styles.container}>
+    <View style={styles.page}>
+      <ResponsiveContent maxWidth={reelContentWidth}>
+      <View onLayout={handleLayout} style={styles.container}>
       {isLoadingReels ? (
         <ReelsLoadingSkeleton height={reelHeight} />
       ) : reelItems.length === 0 ? (
@@ -408,48 +442,41 @@ export function ReelsScreen() {
               offset: (reelHeight + ITEM_GAP) * index,
             })}
             keyExtractor={(item) => item.id}
-            onMomentumScrollEnd={(event) =>
-              setActiveIndex(
-                Math.round(
-                  event.nativeEvent.contentOffset.y / (reelHeight + ITEM_GAP),
-                ),
-              )
-            }
+            onMomentumScrollEnd={handleReelsScroll}
+            onScroll={handleReelsScroll}
             pagingEnabled
             ref={reelsListRef}
             initialNumToRender={2}
             maxToRenderPerBatch={2}
             renderItem={({ index, item }) => (
-              Math.abs(index - activeIndex) > 1 ? (
-                <View style={{ height: reelHeight }} />
-              ) : (
-                <ReelCard
-                  active={
-                    isAppActive &&
-                    isFocused &&
-                    !searchVisible &&
-                    commentsPostId === null &&
-                    !createVisible &&
-                    index === activeIndex
-                  }
-                  height={reelHeight}
-                  onInteractionLockChange={
-                    index === activeIndex
-                      ? handleInteractionLockChange
-                      : undefined
-                  }
-                  onComment={setCommentsPostId}
-                  onDelete={handleDeletedReel}
-                  onOpenAuthor={openUserProfile}
-                  onReact={handleReactReel}
-                  onSave={handleSaveReel}
-                  onShare={handleShareReel}
-                  reel={item}
-                  safeBottomInset={REEL_BOTTOM_INSET}
-                />
-              )
+              <ReelCard
+                active={
+                  isAppActive &&
+                  isFocused &&
+                  !searchVisible &&
+                  commentsPostId === null &&
+                  !createVisible &&
+                  index === activeIndex
+                }
+                height={reelHeight}
+                onInteractionLockChange={
+                  index === activeIndex
+                    ? handleInteractionLockChange
+                    : undefined
+                }
+                onComment={setCommentsPostId}
+                onDelete={handleDeletedReel}
+                onOpenAuthor={openUserProfile}
+                onReact={handleReactReel}
+                onSave={handleSaveReel}
+                onShare={handleShareReel}
+                reel={item}
+                safeBottomInset={isDesktopWeb ? 0 : REEL_BOTTOM_INSET}
+                videoTopOffset={reelsOverlayLayout.videoTopOffset}
+              />
             )}
             scrollEnabled={!isInteractionLocked}
+            scrollEventThrottle={16}
             showsVerticalScrollIndicator={false}
             windowSize={3}
           />
@@ -457,9 +484,11 @@ export function ReelsScreen() {
       )}
       <ReelsHeader
         activeSort={sort}
+        height={reelsOverlayLayout.headerHeight}
         onCreatePress={() => setCreateVisible(true)}
         onSearchPress={() => setSearchVisible(true)}
         onSortChange={setSort}
+        paddingTop={reelsOverlayLayout.headerPaddingTop}
       />
       <ReelsSearchModal
         onClose={() => setSearchVisible(false)}
@@ -491,6 +520,8 @@ export function ReelsScreen() {
         postId={commentsPostId}
         visible={commentsPostId !== null}
       />
+      </View>
+      </ResponsiveContent>
     </View>
   );
 }
@@ -585,6 +616,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textAlign: "center",
   },
   container: { backgroundColor: colors.reelBackground, flex: 1 },
+  page: { backgroundColor: colors.reelBackground, flex: 1 },
   skeletonAvatar: {
     backgroundColor: colors.visuals.rgb_255_255_255_0_18,
     borderRadius: 24,
@@ -641,7 +673,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     overflow: "hidden",
   },
   skeletonVideoFrame: {
-    aspectRatio: 9 / 16,
+    aspectRatio: 21 / 32,
     backgroundColor: colors.visuals.rgb_255_255_255_0_08,
     maxHeight: "100%",
     width: "100%",

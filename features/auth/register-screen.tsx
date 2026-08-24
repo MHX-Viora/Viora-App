@@ -205,6 +205,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   container: { gap: 36, maxWidth: 430, width: "100%" },
   content: {
+    alignItems: "center",
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: spacing.md,

@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemeModeSheet } from "@/components/profile/theme-mode-sheet";
+import { TmiSponsor } from "@/components/common/tmi-sponsor";
 import { spacing, type AppTheme, useTheme } from "@/theme";
 
 const SETTINGS = [
@@ -30,16 +31,8 @@ const SETTINGS = [
   },
 ] as const;
 
-export function ProfileSettingsSheet({
-  onClose,
-  onLogout,
-  onOpenAccountSettings,
-  onOpenLikedActivity,
-  onOpenPoliciesTerms,
-  onOpenSavedActivity,
-  onOpenSupport,
-  visible,
-}: {
+type ProfileSettingsSheetProps = {
+  inline?: boolean;
   onClose: () => void;
   onLogout: () => void;
   onOpenAccountSettings: () => void;
@@ -48,11 +41,119 @@ export function ProfileSettingsSheet({
   onOpenSavedActivity: () => void;
   onOpenSupport: () => void;
   visible: boolean;
-}) {
+};
+
+export function ProfileSettingsSheet({
+  inline = false,
+  onClose,
+  onLogout,
+  onOpenAccountSettings,
+  onOpenLikedActivity,
+  onOpenPoliciesTerms,
+  onOpenSavedActivity,
+  onOpenSupport,
+  visible,
+}: ProfileSettingsSheetProps) {
   const insets = useSafeAreaInsets();
   const [showThemeMode, setShowThemeMode] = useState(false);
   const { mode, theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const content = (
+    <View
+      accessibilityViewIsModal={!inline}
+      style={[
+        styles.sheet,
+        inline && styles.inlinePanel,
+        {
+          paddingBottom: inline
+            ? spacing.md
+            : Math.max(insets.bottom, spacing.xl),
+        },
+      ]}
+    >
+      {!inline && <View style={styles.handle} />}
+      <View style={styles.header}>
+        <Text style={styles.title}>Cài đặt và hoạt động</Text>
+        {!inline && (
+          <Pressable
+            accessibilityLabel="Đóng menu cài đặt"
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={onClose}
+          >
+            <Ionicons color={theme.colors.icon} name="close" size={26} />
+          </Pressable>
+        )}
+      </View>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {SETTINGS.map((item) => (
+          <Pressable
+            accessibilityRole="button"
+            key={item.label}
+            onPress={
+              item.action === "theme"
+                ? () => setShowThemeMode(true)
+                : item.action === "account-settings"
+                  ? onOpenAccountSettings
+                  : item.action === "saved"
+                    ? onOpenSavedActivity
+                    : item.action === "reacted"
+                      ? onOpenLikedActivity
+                      : item.action === "policies-terms"
+                        ? onOpenPoliciesTerms
+                        : onOpenSupport
+            }
+            style={({ pressed }) => [
+              styles.row,
+              pressed && styles.rowPressed,
+            ]}
+          >
+            <Ionicons color={theme.colors.icon} name={item.icon} size={23} />
+            <Text style={styles.rowText}>{item.label}</Text>
+            {item.action === "theme" && (
+              <Text style={styles.valueText}>
+                {mode === "modern" ? "Hiện đại" : "Cổ điển"}
+              </Text>
+            )}
+            <Ionicons
+              color={theme.colors.textMuted}
+              name="chevron-forward"
+              size={19}
+            />
+          </Pressable>
+        ))}
+        <View style={styles.divider} />
+        <Pressable
+          accessibilityRole="button"
+          onPress={onLogout}
+          style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        >
+          <Ionicons
+            color={theme.colors.danger}
+            name="log-out-outline"
+            size={23}
+          />
+          <Text style={styles.logoutText}>Đăng xuất</Text>
+        </Pressable>
+        <TmiSponsor style={styles.sponsor} />
+      </ScrollView>
+    </View>
+  );
+
+  if (inline) {
+    if (!visible) return null;
+
+    return (
+      <>
+        <View style={styles.inlineRoot}>{content}</View>
+        <ThemeModeSheet
+          onClose={() => setShowThemeMode(false)}
+          visible={showThemeMode}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -67,86 +168,13 @@ export function ProfileSettingsSheet({
         visible={visible}
       >
         <View style={styles.backdrop}>
-        <Pressable
-          accessibilityLabel="Đóng menu cài đặt"
-          accessibilityRole="button"
-          onPress={onClose}
-          style={StyleSheet.absoluteFill}
-        />
-        <View
-          accessibilityViewIsModal
-          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, spacing.xl) }]}
-        >
-          <View style={styles.handle} />
-          <View style={styles.header}>
-            <Text style={styles.title}>Cài đặt và hoạt động</Text>
-            <Pressable
-              accessibilityLabel="Đóng menu cài đặt"
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={onClose}
-            >
-              <Ionicons color={theme.colors.icon} name="close" size={26} />
-            </Pressable>
-          </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {SETTINGS.map((item) => (
-              <Pressable
-                accessibilityRole="button"
-                key={item.label}
-                onPress={
-                  item.action === "theme"
-                    ? () => setShowThemeMode(true)
-                    : item.action === "account-settings"
-                    ? onOpenAccountSettings
-                    : item.action === "saved"
-                      ? onOpenSavedActivity
-                      : item.action === "reacted"
-                        ? onOpenLikedActivity
-                        : item.action === "policies-terms"
-                            ? onOpenPoliciesTerms
-                            : onOpenSupport
-                }
-                style={({ pressed }) => [
-                  styles.row,
-                  pressed && styles.rowPressed,
-                ]}
-              >
-                <Ionicons color={theme.colors.icon} name={item.icon} size={23} />
-                <Text style={styles.rowText}>{item.label}</Text>
-                {item.action === "theme" && (
-                  <Text style={styles.valueText}>
-                    {mode === "modern" ? "Hiện đại" : "Cổ điển"}
-                  </Text>
-                )}
-                <Ionicons
-                  color={theme.colors.textMuted}
-                  name="chevron-forward"
-                  size={19}
-                />
-              </Pressable>
-            ))}
-            <View style={styles.divider} />
-            <Pressable
-              accessibilityRole="button"
-              onPress={onLogout}
-              style={({ pressed }) => [
-                styles.row,
-                pressed && styles.rowPressed,
-              ]}
-            >
-              <Ionicons
-                color={theme.colors.danger}
-                name="log-out-outline"
-                size={23}
-              />
-              <Text style={styles.logoutText}>Đăng xuất</Text>
-            </Pressable>
-            <Text style={styles.sponsorText}>
-              Phát triển và bảo trợ bởi TMI
-            </Text>
-          </ScrollView>
-        </View>
+          <Pressable
+            accessibilityLabel="Đóng menu cài đặt"
+            accessibilityRole="button"
+            onPress={onClose}
+            style={StyleSheet.absoluteFill}
+          />
+          {content}
         </View>
       </Modal>
       <ThemeModeSheet
@@ -176,6 +204,13 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     marginBottom: spacing.md,
     width: 40,
   },
+  inlinePanel: {
+    borderRadius: 12,
+    flex: 1,
+    maxHeight: "100%",
+    paddingTop: spacing.md,
+  },
+  inlineRoot: { flex: 1, minHeight: 0 },
   header: {
     alignItems: "center",
     flexDirection: "row",
@@ -207,11 +242,8 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     maxHeight: "82%",
     paddingTop: spacing.sm,
   },
-  sponsorText: {
-    color: theme.colors.textMuted,
-    fontSize: 12,
+  sponsor: {
     paddingTop: spacing.lg,
-    textAlign: "center",
   },
   title: { color: theme.colors.text, fontSize: 18, fontWeight: "800" },
   valueText: { color: theme.colors.textMuted, fontSize: 13 },

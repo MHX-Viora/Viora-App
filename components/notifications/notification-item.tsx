@@ -12,6 +12,7 @@ import {
 
 import { spacing } from "@/theme";
 import { VerifiedBadge } from "@/components/common/verified-badge";
+import { UserAvatar } from "@/components/common/user-avatar";
 import type { NotificationItemModel } from "@/types/notification";
 import { formatNotificationTime } from "@/utils/notification-time";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -45,10 +46,11 @@ function NotificationItemComponent({
       onPress={() => onPress(notification)}
       style={[styles.item, !notification.isRead && styles.unreadItem]}
     >
-      {notification.sender?.avatarUrl ? (
-        <Image
-          accessibilityLabel={`Ảnh đại diện của ${senderName}`}
-          source={{ uri: notification.sender.avatarUrl }}
+      {notification.sender ? (
+        <UserAvatar
+          displayName={senderName}
+          imageUrl={notification.sender.avatarUrl}
+          size={52}
           style={styles.avatar}
         />
       ) : (

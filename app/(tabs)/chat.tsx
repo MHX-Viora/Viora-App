@@ -1,5 +1,5 @@
-import { ConversationsScreen } from "@/features/chat/conversations-screen";
+import { ResponsiveChatScreen } from "@/features/chat/responsive-chat-screen";
 
 export default function ChatRoute() {
-  return <ConversationsScreen />;
+  return <ResponsiveChatScreen hasConversation={false} />;
 }

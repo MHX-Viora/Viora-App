@@ -23,6 +23,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
+import { useResponsive } from "@/hooks/use-responsive";
 import { searchHashtags } from "@/services/reel.service";
 import { spacing } from "@/theme";
 import type { Hashtag } from "@/types/reel";
@@ -53,6 +55,14 @@ export function CreateReelModal({
   selectedVideo: SelectedVideo | null;
   visible: boolean;
 }) {
+  const { theme } = useTheme();
+  const colors = theme.reels;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const dialogLayout = getResponsiveDialogLayout({
+    isDesktopWeb,
+    maxWidth: 720,
+  });
   const [caption, setCaption] = useState("");
   const [hashtagQuery, setHashtagQuery] = useState("");
   const [selectedHashtags, setSelectedHashtags] = useState<Hashtag[]>([]);
@@ -84,35 +94,52 @@ export function CreateReelModal({
 
   return (
     <Modal
-      animationType="slide"
+      animationType={isDesktopWeb ? "fade" : "slide"}
       onRequestClose={() => {
         if (!isSubmitting) onClose();
       }}
+      transparent={isDesktopWeb}
       visible={visible}
     >
-      {step === "select" ? (
-        <VideoSelectionStep
-          onClose={onClose}
-          onNext={() => setStep("details")}
-          onPickVideo={onPickVideo}
-          onRecordVideo={onRecordVideo}
-          selectedVideo={selectedVideo}
-        />
-      ) : (
-        <VideoDetailsStep
-          caption={caption}
-          hashtagQuery={hashtagQuery}
-          isSubmitting={isSubmitting}
-          onBack={() => setStep("select")}
-          onCaptionChange={setCaption}
-          onHashtagQueryChange={setHashtagQuery}
-          onPickVideo={onPickVideo}
-          onSelectedHashtagsChange={setSelectedHashtags}
-          onSubmit={submit}
-          selectedHashtags={selectedHashtags}
-          selectedVideo={selectedVideo}
-        />
-      )}
+      <View
+        style={[
+          styles.workflowBackdrop,
+          isDesktopWeb && styles.desktopWorkflowBackdrop,
+          dialogLayout.backdrop,
+        ]}
+      >
+        <View
+          style={[
+            styles.workflowSurface,
+            dialogLayout.surface,
+            isDesktopWeb && styles.desktopWorkflowSurface,
+          ]}
+        >
+          {step === "select" ? (
+            <VideoSelectionStep
+              onClose={onClose}
+              onNext={() => setStep("details")}
+              onPickVideo={onPickVideo}
+              onRecordVideo={onRecordVideo}
+              selectedVideo={selectedVideo}
+            />
+          ) : (
+            <VideoDetailsStep
+              caption={caption}
+              hashtagQuery={hashtagQuery}
+              isSubmitting={isSubmitting}
+              onBack={() => setStep("select")}
+              onCaptionChange={setCaption}
+              onHashtagQueryChange={setHashtagQuery}
+              onPickVideo={onPickVideo}
+              onSelectedHashtagsChange={setSelectedHashtags}
+              onSubmit={submit}
+              selectedHashtags={selectedHashtags}
+              selectedVideo={selectedVideo}
+            />
+          )}
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -736,6 +763,14 @@ function formatDuration(duration: number | null) {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  desktopWorkflowBackdrop: {
+    backgroundColor: colors.visuals.rgb_0_0_0_0_54,
+  },
+  desktopWorkflowSurface: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
   cameraScreen: { backgroundColor: colors.reelBackground, flex: 1 },
   cameraHeader: {
     alignItems: "center",
@@ -1084,4 +1119,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textAlign: "center",
   },
   submittingTitle: { color: colors.white, fontSize: 17, fontWeight: "800" },
+  workflowBackdrop: {
+    backgroundColor: colors.reelBackground,
+    flex: 1,
+  },
+  workflowSurface: { flex: 1 },
 });

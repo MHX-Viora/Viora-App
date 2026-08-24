@@ -1,9 +1,12 @@
 import { Tabs } from "expo-router";
+import { BottomTabBar } from "@react-navigation/bottom-tabs";
 import { useEffect, useMemo, useState } from "react";
 
+import { DesktopHeader } from "@/components/layout/desktop-header";
 import { TabIcon } from "@/components/layout/tab-icon";
 import { createFloatingTabBarStyle } from "@/components/layout/tab-bar-style";
-import { useTheme } from "@/theme";
+import { useResponsive } from "@/hooks/use-responsive";
+import { layout, useTheme } from "@/theme";
 import {
   getChatUnreadCount,
   subscribeChatUnreadCount,
@@ -18,6 +21,7 @@ const getBadge = (count: number) =>
 
 export default function TabLayout() {
   const { theme } = useTheme();
+  const { isDesktopWeb } = useResponsive();
   const floatingTabBarStyle = useMemo(
     () => createFloatingTabBarStyle(theme),
     [theme],
@@ -47,9 +51,23 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      tabBar={(props) =>
+        isDesktopWeb ? (
+          <DesktopHeader
+            activeRoute={props.state.routes[props.state.index]?.name ?? "index"}
+            chatBadge={getBadge(unreadChatCount)}
+            notificationBadge={getBadge(unreadNotificationCount)}
+          />
+        ) : (
+          <BottomTabBar {...props} />
+        )
+      }
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: theme.colors.background },
+        sceneStyle: {
+          backgroundColor: theme.colors.background,
+          paddingTop: isDesktopWeb ? layout.desktopHeaderHeight : 0,
+        },
         tabBarActiveTintColor: theme.colors.primary,
         tabBarHideOnKeyboard: true,
         tabBarInactiveTintColor: theme.colors.textMuted,

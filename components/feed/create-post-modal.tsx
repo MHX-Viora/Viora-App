@@ -18,8 +18,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ViewableImage } from "@/components/common/viewable-image";
+import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { normalizeFeedImageUri } from "@/features/feed/image-source";
+import { useResponsive } from "@/hooks/use-responsive";
 import { spacing, typography } from "@/theme";
 import type { CreatePostInput } from "@/types/feed";
 import type { MentionReference, MentionUser } from "@/types/mention";
@@ -49,6 +51,11 @@ export function CreatePostModal({
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const dialogLayout = getResponsiveDialogLayout({
+    isDesktopWeb,
+    maxWidth: 760,
+  });
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const [body, setBody] = useState("");
@@ -155,7 +162,7 @@ export function CreatePostModal({
 
   return (
     <Modal
-      animationType="slide"
+      animationType={isDesktopWeb ? "fade" : "slide"}
       hardwareAccelerated
       navigationBarTranslucent
       onRequestClose={() => {
@@ -168,9 +175,9 @@ export function CreatePostModal({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.backdrop}
+        style={[styles.backdrop, dialogLayout.backdrop]}
       >
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, dialogLayout.surface]}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <View style={styles.headerTop}>

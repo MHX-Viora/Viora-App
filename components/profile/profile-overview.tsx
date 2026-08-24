@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { VerifiedBadge } from "@/components/common/verified-badge";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -42,10 +43,10 @@ export function ProfileOverview({
           source={cover}
           style={styles.cover}
         />
-        <ViewableImage
-          accessibilityLabel={`Anh dai dien cua ${name}`}
-          contentFit="cover"
-          source={avatar}
+        <UserAvatar
+          displayName={name}
+          imageUrl={avatar}
+          size={86}
           style={styles.avatar}
         />
       </View>

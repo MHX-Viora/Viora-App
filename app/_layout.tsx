@@ -147,6 +147,7 @@ function RootLayoutContent() {
     const checkLoginStatus = async () => {
       const session = await getSession();
       const currentRoute = segments[0];
+
       const isAuthRoute =
         currentRoute === "login" ||
         currentRoute === "register" ||
@@ -253,6 +254,7 @@ function RootLayoutContent() {
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="__/auth/links" />
         <Stack.Screen name="complete-profile" />
+        <Stack.Screen name="download" />
         </Stack>
         <StatusBar
           backgroundColor={theme.colors.background}

@@ -4,22 +4,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Pressable,
   Share,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import type { LayoutChangeEvent } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
+import { ResponsiveContent } from "@/components/layout/responsive-content";
+import { getReelContentWidth } from "@/components/layout/responsive-layout";
 import { ReelCard } from "@/components/reels/reel-card";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { formatReelCount, getReelById } from "@/services/reel.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { getReelShareLink } from "@/services/share-link.service";
-import { spacing } from "@/theme";
+import { layout, spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -37,7 +39,13 @@ export function ReelPreviewScreen() {
   const [reel, setReel] = useState<Reel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reelHeight, setReelHeight] = useState(0);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+
+  const handleLayout = useCallback((event: LayoutChangeEvent) => {
+    const nextHeight = Math.round(event.nativeEvent.layout.height);
+    setReelHeight((current) => (current === nextHeight ? current : nextHeight));
+  }, []);
 
   const load = useCallback(async () => {
     if (!reelId) return;
@@ -130,42 +138,51 @@ export function ReelPreviewScreen() {
     void openProfileByUserId(router, userId);
   }, []);
 
+  const reelContentWidth = getReelContentWidth({
+    height: reelHeight,
+    maxWidth: layout.reelsMaxWidth,
+  });
+
   return (
     <SafeAreaView edges={[]} style={styles.screen}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.xs }]}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton}>
-          <Ionicons color={colors.white} name="chevron-back" size={24} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Reels</Text>
-        <View style={styles.iconButton} />
-      </View>
+      <ResponsiveContent maxWidth={reelContentWidth}>
+        <View onLayout={handleLayout} style={styles.content}>
+          <View style={[styles.header, { paddingTop: insets.top + spacing.xs }]}>
+            <Pressable onPress={() => router.back()} style={styles.iconButton}>
+              <Ionicons color={colors.white} name="chevron-back" size={24} />
+            </Pressable>
+            <Text style={styles.headerTitle}>Reels</Text>
+            <View style={styles.iconButton} />
+          </View>
 
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.white} />
+          {isLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator color={colors.white} />
+            </View>
+          ) : error ? (
+            <View style={styles.center}>
+              <Text style={styles.errorText}>{error}</Text>
+              <Pressable onPress={() => void load()} style={styles.retryButton}>
+                <Text style={styles.retryText}>Thu lai</Text>
+              </Pressable>
+            </View>
+          ) : reel && reelHeight > 0 ? (
+            <ReelCard
+              active
+              height={reelHeight}
+              onComment={setCommentsPostId}
+              onDelete={handleDeleted}
+              onOpenAuthor={openUserProfile}
+              onReact={handleReact}
+              onSave={handleSave}
+              onShare={handleShare}
+              reel={reel}
+              safeBottomInset={insets.bottom + spacing.xl}
+              videoTopOffset={0}
+            />
+          ) : null}
         </View>
-      ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={() => void load()} style={styles.retryButton}>
-            <Text style={styles.retryText}>Thu lai</Text>
-          </Pressable>
-        </View>
-      ) : reel ? (
-        <ReelCard
-          active
-          height={Dimensions.get("window").height}
-          onComment={setCommentsPostId}
-          onDelete={handleDeleted}
-          onOpenAuthor={openUserProfile}
-          onReact={handleReact}
-          onSave={handleSave}
-          onShare={handleShare}
-          reel={reel}
-          safeBottomInset={insets.bottom + spacing.xl}
-          videoTopOffset={0}
-        />
-      ) : null}
+      </ResponsiveContent>
       <CommentsModal
         onClose={() => setCommentsPostId(null)}
         onCommentCreated={handleCommentCreated}
@@ -184,6 +201,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "center",
     padding: spacing.lg,
   },
+  content: { backgroundColor: colors.reelBackground, flex: 1, overflow: "hidden" },
   errorText: { color: colors.white, textAlign: "center" },
   header: {
     alignItems: "center",

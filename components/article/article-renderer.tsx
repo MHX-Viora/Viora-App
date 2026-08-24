@@ -2,7 +2,9 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ViewableImage } from "@/components/common/viewable-image";
-import { spacing } from "@/theme";
+import { getResponsiveContentLayout } from "@/components/layout/responsive-layout";
+import { useResponsive } from "@/hooks/use-responsive";
+import { layout, spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 import { ArticleBlockType, type ArticleBlock } from "@/types/article";
 import { useMemo, useState } from "react";
@@ -14,11 +16,17 @@ function ArticleVideo({ block }: { block: ArticleBlock }) {
 
 function ArticleImage({ block }: { block: ArticleBlock }) {
   const { theme } = useTheme();
+  const { isDesktopWeb } = useResponsive();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const [aspectRatio, setAspectRatio] = useState(16 / 10);
 
   return (
-    <View>
+    <View
+      style={getResponsiveContentLayout({
+        isDesktopWeb,
+        maxWidth: layout.articleMediaMaxWidth,
+      })}
+    >
       <ViewableImage
         accessibilityLabel={block.caption || "Ảnh trong bài báo"}
         contentFit="contain"

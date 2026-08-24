@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import * as SystemUI from "expo-system-ui";
 import { useEffect, useState, useMemo } from "react";
 import {
@@ -28,6 +27,9 @@ import {
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { MentionText } from "@/components/mentions/mention-text";
 import { VerifiedBadge } from "@/components/common/verified-badge";
+import { UserAvatar } from "@/components/common/user-avatar";
+import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
+import { useResponsive } from "@/hooks/use-responsive";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -50,6 +52,11 @@ export function CommentsModal({
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const dialogLayout = getResponsiveDialogLayout({
+    isDesktopWeb,
+    maxWidth: 760,
+  });
   const insets = useSafeAreaInsets();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const {
@@ -102,14 +109,28 @@ export function CommentsModal({
 
   return (
     <Modal
-      animationType="slide"
+      animationType={isDesktopWeb ? "fade" : "slide"}
       navigationBarTranslucent
       onRequestClose={close}
       statusBarTranslucent
+      transparent={isDesktopWeb}
       visible={visible}
     >
-      <View style={styles.modalRoot}>
-        <SafeAreaView edges={["top"]} style={styles.screen}>
+      <View
+        style={[
+          styles.modalRoot,
+          isDesktopWeb && styles.desktopModalRoot,
+          dialogLayout.backdrop,
+        ]}
+      >
+        <SafeAreaView
+          edges={["top"]}
+          style={[
+            styles.screen,
+            dialogLayout.surface,
+            isDesktopWeb && styles.desktopScreen,
+          ]}
+        >
           <View style={styles.keyboardView}>
             <View style={styles.header}>
               <Text style={styles.title}>Bình luận</Text>
@@ -392,9 +413,10 @@ function CommentContent({
         disabled={!onOpenUser}
         onPress={() => onOpenUser?.(userId)}
       >
-        <Image
-          accessibilityLabel={`Ảnh đại diện của ${userName}`}
-          source={userAvatar}
+        <UserAvatar
+          displayName={userName}
+          imageUrl={userAvatar}
+          size={AVATAR_SIZE}
           style={styles.avatar}
         />
       </Pressable>
@@ -573,6 +595,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     zIndex: 20,
   },
   content: { color: colors.text, fontSize: 15, lineHeight: 22, marginTop: 3 },
+  desktopModalRoot: { backgroundColor: colors.visuals.rgb_0_0_0_0_42 },
+  desktopScreen: {
+    borderColor: colors.border,
+    borderWidth: 1,
+    height: "84%",
+    overflow: "hidden",
+  },
   emojiButton: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,

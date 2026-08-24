@@ -1,3 +1,3 @@
-import { ConversationSettingsScreen } from "@/features/chat/conversation-settings-screen";
+import { ResponsiveConversationSettingsScreen } from "@/features/chat/responsive-chat-screen";
 
-export default ConversationSettingsScreen;
+export default ResponsiveConversationSettingsScreen;

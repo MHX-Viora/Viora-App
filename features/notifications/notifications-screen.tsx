@@ -12,6 +12,8 @@ import { NotificationEmpty } from "@/components/notifications/notification-empty
 import { NotificationHeader } from "@/components/notifications/notification-header";
 import { NotificationItem } from "@/components/notifications/notification-item";
 import { NotificationSkeleton } from "@/components/notifications/notification-skeleton";
+import { ResponsiveContent } from "@/components/layout/responsive-content";
+import { getResponsiveBottomPadding } from "@/components/layout/responsive-layout";
 import { subscribeRealtimeNotifications } from "@/features/notifications/notification-events";
 import { navigateNotification } from "@/features/notifications/notification-navigation";
 import {
@@ -19,9 +21,10 @@ import {
     markAllNotificationsRead,
     markNotificationRead,
 } from "@/services/notification.service";
-import { spacing } from "@/theme";
+import { layout, spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
 import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
+import { useResponsive } from "@/hooks/use-responsive";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
@@ -39,6 +42,12 @@ export function NotificationsScreen() {
   const { theme } = useTheme();
   const colors = theme.notifications;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
+  const listBottomPadding = getResponsiveBottomPadding({
+    desktopPadding: spacing.xl,
+    isDesktopWeb,
+    mobilePadding: 112,
+  });
   const [notifications, setNotifications] = useState<NotificationItemModel[]>(
     [],
   );
@@ -221,6 +230,7 @@ export function NotificationsScreen() {
 
   return (
     <View style={styles.screen}>
+      <ResponsiveContent maxWidth={layout.notificationMaxWidth}>
       <NotificationHeader
         onMarkAllRead={confirmMarkAllRead}
         unreadCount={unreadCount}
@@ -237,6 +247,7 @@ export function NotificationsScreen() {
         <FlatList
           contentContainerStyle={[
             styles.content,
+            { paddingBottom: listBottomPadding },
             notifications.length === 0 && styles.emptyContent,
           ]}
           data={notifications}
@@ -269,12 +280,13 @@ export function NotificationsScreen() {
           windowSize={8}
         />
       )}
+      </ResponsiveContent>
     </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { paddingBottom: 112 },
+  content: {},
   emptyContent: { flexGrow: 1 },
   footer: { padding: spacing.lg },
   screen: { backgroundColor: colors.background, flex: 1 },

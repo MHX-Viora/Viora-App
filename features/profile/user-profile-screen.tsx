@@ -14,6 +14,7 @@ import {
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { showAppToast } from "@/components/common/app-toast";
+import { ResponsiveContent } from "@/components/layout/responsive-content";
 import { ProfileContent } from "@/components/profile/profile-content";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { openProfileByUserId } from "@/features/profile/open-profile";
@@ -34,6 +35,7 @@ import {
 } from "@/services/user.service";
 import { getUser } from "@/stores/session-store";
 import { spacing } from "@/theme";
+import { layout } from "@/theme/layout";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -409,68 +411,73 @@ export function UserProfileScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Quay lại"
-          accessibilityRole="button"
-          hitSlop={10}
-          onPress={() => router.back()}
-          style={styles.headerButton}
-        >
-          <Ionicons color={colors.text} name="arrow-back" size={24} />
-        </Pressable>
-        <Text numberOfLines={1} style={styles.headerTitle}>
-          {profile.displayName}
-        </Text>
-        <Pressable
-          accessibilityLabel="Tùy chọn hồ sơ"
-          accessibilityRole="button"
-          hitSlop={10}
-          style={styles.headerButton}
-        >
-          <Ionicons color={colors.text} name="ellipsis-horizontal" size={23} />
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <ProfileOverview
-          avatar={profile.avatarUrl}
-          cover={profile.coverUrl}
-          handle={getUsername(profile.displayName)}
-          isVerified={profile.isVerified}
-          name={profile.displayName}
-        />
-        <View style={styles.actionWrap}>
-          <ProfileActions
-            canMessage={canChat}
-            friendLabel={getFriendLabel(profile.friendship?.status)}
-            friendshipStatus={profile.friendship?.status ?? null}
-            isChatLoading={isChatLoading}
-            isActionLoading={isActionLoading}
-            isFollowing={profile.isFollowing}
-            onChat={handleChat}
-            onFollow={handleFollow}
-            onFriend={handleFriendAction}
-          />
+      <ResponsiveContent maxWidth={layout.profileMaxWidth}>
+        <View style={styles.header}>
+          <Pressable
+            accessibilityLabel="Quay lại"
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => router.back()}
+            style={styles.headerButton}
+          >
+            <Ionicons color={colors.text} name="arrow-back" size={24} />
+          </Pressable>
+          <Text numberOfLines={1} style={styles.headerTitle}>
+            {profile.displayName}
+          </Text>
+          <Pressable
+            accessibilityLabel="Tùy chọn hồ sơ"
+            accessibilityRole="button"
+            hitSlop={10}
+            style={styles.headerButton}
+          >
+            <Ionicons color={colors.text} name="ellipsis-horizontal" size={23} />
+          </Pressable>
         </View>
-        <ProfileContent
-          isLoading={isLoading}
-          onCommentPost={openPostComments}
-          onCommentReel={openReelComments}
-          onOpenAuthor={openUserProfile}
-          onReactPost={handleReactPost}
-          onReactReel={handleReactReel}
-          onSavePost={handleSavePost}
-          onSaveReel={handleSaveReel}
-          onSharePost={handleSharePost}
-          onShareReel={handleShareReel}
-          posts={posts}
-          reelCommentEvent={reelCommentEvent}
-          reels={reels}
-          reelsPaused={commentsPostId !== null}
-          stats={stats}
-        />
-      </ScrollView>
+
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <ProfileOverview
+            avatar={profile.avatarUrl}
+            cover={profile.coverUrl}
+            handle={getUsername(profile.displayName)}
+            isVerified={profile.isVerified}
+            name={profile.displayName}
+          />
+          <View style={styles.actionWrap}>
+            <ProfileActions
+              canMessage={canChat}
+              friendLabel={getFriendLabel(profile.friendship?.status)}
+              friendshipStatus={profile.friendship?.status ?? null}
+              isChatLoading={isChatLoading}
+              isActionLoading={isActionLoading}
+              isFollowing={profile.isFollowing}
+              onChat={handleChat}
+              onFollow={handleFollow}
+              onFriend={handleFriendAction}
+            />
+          </View>
+          <ProfileContent
+            isLoading={isLoading}
+            onCommentPost={openPostComments}
+            onCommentReel={openReelComments}
+            onOpenAuthor={openUserProfile}
+            onReactPost={handleReactPost}
+            onReactReel={handleReactReel}
+            onSavePost={handleSavePost}
+            onSaveReel={handleSaveReel}
+            onSharePost={handleSharePost}
+            onShareReel={handleShareReel}
+            posts={posts}
+            reelCommentEvent={reelCommentEvent}
+            reels={reels}
+            reelsPaused={commentsPostId !== null}
+            stats={stats}
+          />
+        </ScrollView>
+      </ResponsiveContent>
       <CommentsModal
         onClose={() => {
           setCommentsPostId(null);

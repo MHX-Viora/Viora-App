@@ -3,7 +3,6 @@ import { Image } from "expo-image";
 import { memo, useCallback, useEffect, useState, useMemo } from "react";
 import type { LayoutChangeEvent } from "react-native";
 import {
-  Dimensions,
   FlatList,
   Modal,
   Pressable,
@@ -22,7 +21,6 @@ import { type ThemeColors, useTheme } from "@/theme";
 
 const ITEM_GAP = 0;
 const GRID_GAP = 2;
-const VIDEO_TILE_WIDTH = (Dimensions.get("window").width - GRID_GAP * 2) / 3;
 
 const InactiveReelPage = memo(function InactiveReelPage({
   height,
@@ -335,7 +333,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.reelBackground,
     marginBottom: GRID_GAP,
     overflow: "hidden",
-    width: VIDEO_TILE_WIDTH,
+    width: "32.8%",
   },
   videoTileGap: { marginRight: GRID_GAP },
   viewerHeader: {

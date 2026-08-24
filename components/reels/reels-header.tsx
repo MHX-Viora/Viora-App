@@ -7,9 +7,6 @@ import type { ReelSort } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
-const REELS_HEADER_HEIGHT = 90;
-const REELS_HEADER_PADDING_TOP = 40;
-
 const SORT_TABS: { label: string; value: ReelSort }[] = [
   { label: "Bạn bè", value: "friends" },
   { label: "Theo dõi", value: "following" },
@@ -18,20 +15,24 @@ const SORT_TABS: { label: string; value: ReelSort }[] = [
 
 export function ReelsHeader({
   activeSort,
+  height = 90,
   onCreatePress,
   onSearchPress,
   onSortChange,
+  paddingTop = 40,
 }: {
   activeSort: ReelSort;
+  height?: number;
   onCreatePress: () => void;
   onSearchPress: () => void;
   onSortChange: (sort: ReelSort) => void;
+  paddingTop?: number;
 }) {
   const { theme } = useTheme();
   const colors = theme.reels;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height, paddingTop }]}>
       <View style={styles.row}>
         <Pressable
           accessibilityHint="Mở màn hình tạo bài đăng video mới"
@@ -83,10 +84,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: "700",
   },
   container: {
-    height: REELS_HEADER_HEIGHT,
     justifyContent: "flex-end",
     left: 0,
-    paddingTop: REELS_HEADER_PADDING_TOP,
     position: "absolute",
     right: 0,
     top: 0,

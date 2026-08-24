@@ -1,10 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CallAvatarHalo, CallBackdrop } from "@/components/calls/call-visuals";
+import { UserAvatar } from "@/components/common/user-avatar";
 import {
   clearIncomingCall,
   subscribeCallLifecycle,
@@ -174,13 +175,12 @@ export function IncomingCallHost() {
         </View>
         <View style={styles.identity}>
           <CallAvatarHalo size={250}>
-            {incomingCall?.caller.avatarUrl ? (
-              <Image source={{ uri: incomingCall.caller.avatarUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Ionicons color={colors.primary} name="person" size={34} />
-              </View>
-            )}
+            <UserAvatar
+              displayName={incomingCall?.caller.displayName}
+              imageUrl={incomingCall?.caller.avatarUrl}
+              size={128}
+              style={styles.avatar}
+            />
           </CallAvatarHalo>
           <Text numberOfLines={1} style={styles.name}>
             {incomingCall?.caller.displayName}

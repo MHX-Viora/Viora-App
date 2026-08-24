@@ -2,22 +2,23 @@ import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { ViewableImage } from "@/components/common/viewable-image";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { FixedTopBar } from "@/components/layout/fixed-top-bar";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
-export function PostComposer({ avatar, canCreateArticle, onArticlePress, onCreatePress, onImagePress, onSearchPress }: { avatar: string; canCreateArticle: boolean; onArticlePress: () => void; onCreatePress: () => void; onImagePress: () => void; onSearchPress: () => void }) {
+export function PostComposer({ avatar, canCreateArticle, displayName, onArticlePress, onCreatePress, onImagePress, onSearchPress }: { avatar: string; canCreateArticle: boolean; displayName: string; onArticlePress: () => void; onCreatePress: () => void; onImagePress: () => void; onSearchPress: () => void }) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <FixedTopBar>
       <View style={styles.container}>
-        <ViewableImage
-          accessibilityLabel="Ảnh đại diện của bạn"
-          source={avatar}
+        <UserAvatar
+          displayName={displayName}
+          imageUrl={avatar}
+          size={36}
           style={styles.avatar}
         />
         {canCreateArticle ? <Pressable

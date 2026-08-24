@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -15,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { showAppToast } from "@/components/common/app-toast";
+import { UserAvatar } from "@/components/common/user-avatar";
 import {
   createPrivateConversation,
   forwardChatMessage,
@@ -89,17 +89,7 @@ function ForwardTargetRow({
       onPress={() => onToggle(target.id)}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      {avatar ? (
-        <Image source={{ uri: avatar }} style={styles.avatar} />
-      ) : (
-        <View style={styles.avatarFallback}>
-          <Ionicons
-            color={colors.primary}
-            name={isGroup ? "people" : "person"}
-            size={22}
-          />
-        </View>
-      )}
+      <UserAvatar displayName={title} imageUrl={avatar} size={48} style={styles.avatar} />
       <View style={styles.rowBody}>
         <View style={styles.titleLine}>
           <Text numberOfLines={1} style={styles.title}>

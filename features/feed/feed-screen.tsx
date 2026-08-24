@@ -19,7 +19,11 @@ import { CreatePostModal } from "@/components/feed/create-post-modal";
 import { FeedSearchModal } from "@/components/feed/feed-search-modal";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
-import { FIXED_TOP_BAR_HEIGHT } from "@/components/layout/fixed-top-bar";
+import { ResponsiveContent } from "@/components/layout/responsive-content";
+import {
+  getFixedTopBarLayout,
+  getResponsiveBottomPadding,
+} from "@/components/layout/responsive-layout";
 import {
   TAB_BAR_BOTTOM,
   TAB_BAR_HEIGHT,
@@ -33,7 +37,8 @@ import {
 } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
-import { spacing } from "@/theme";
+import { useResponsive } from "@/hooks/use-responsive";
+import { layout, spacing } from "@/theme";
 import type { CreatePostInput, FeedPost } from "@/types/feed";
 import { canCreateArticle } from "@/types/account-style";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -46,8 +51,13 @@ export function FeedScreen() {
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const feedBottomPadding =
-    TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.lg;
+  const { isDesktopWeb } = useResponsive();
+  const feedTopPadding = getFixedTopBarLayout({ isDesktopWeb }).height;
+  const feedBottomPadding = getResponsiveBottomPadding({
+    desktopPadding: spacing.xl,
+    isDesktopWeb,
+    mobilePadding: TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.lg,
+  });
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -55,6 +65,7 @@ export function FeedScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [myAvatar, setMyAvatar] = useState(initialPosts[0].avatar);
+  const [myDisplayName, setMyDisplayName] = useState("Bạn");
   const [canPublishArticle, setCanPublishArticle] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -95,6 +106,9 @@ export function FeedScreen() {
       const session = await getSession();
       if (session?.user?.avatarUrl) {
         setMyAvatar(session.user.avatarUrl);
+      }
+      if (session?.user?.displayName) {
+        setMyDisplayName(session.user.displayName);
       }
       setCanPublishArticle(canCreateArticle(session?.user?.accountStyle));
     };
@@ -249,8 +263,9 @@ export function FeedScreen() {
 
   return (
     <View style={styles.screen}>
+      <ResponsiveContent maxWidth={layout.feedMaxWidth}>
       {isLoading ? (
-        <View style={styles.skeletonList}>
+        <View style={{ paddingTop: feedTopPadding }}>
           <PostSkeleton />
           <PostSkeleton />
           <PostSkeleton />
@@ -258,8 +273,7 @@ export function FeedScreen() {
       ) : (
         <FlatList
           contentContainerStyle={[
-            styles.content,
-            { paddingBottom: feedBottomPadding },
+            { paddingBottom: feedBottomPadding, paddingTop: feedTopPadding },
             posts.length === 0 && styles.emptyContent,
           ]}
           data={posts}
@@ -297,11 +311,13 @@ export function FeedScreen() {
       <PostComposer
         avatar={myAvatar}
         canCreateArticle={canPublishArticle}
+        displayName={myDisplayName}
         onArticlePress={() => router.push("/article/editor")}
         onCreatePress={() => setModalVisible(true)}
         onImagePress={openWithImagePicker}
         onSearchPress={() => setSearchVisible(true)}
       />
+      </ResponsiveContent>
       <CreatePostModal
         imageUris={draftImages}
         isSubmitting={isCreatingPost}
@@ -369,9 +385,6 @@ function PostSkeleton() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: {
-    paddingTop: FIXED_TOP_BAR_HEIGHT,
-  },
   emptyContent: { flexGrow: 1 },
   emptyState: {
     alignItems: "center",
@@ -486,7 +499,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginTop: spacing.sm,
     width: 90,
   },
-  skeletonList: { paddingTop: FIXED_TOP_BAR_HEIGHT },
   skeletonMedia: {
     backgroundColor: colors.border,
     height: 220,

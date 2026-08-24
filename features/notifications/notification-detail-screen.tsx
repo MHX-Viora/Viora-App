@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "@/theme";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { formatNotificationTime } from "@/utils/notification-time";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -58,8 +59,8 @@ export function NotificationDetailScreen() {
       >
         <View style={styles.card}>
           <View style={styles.senderRow}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            {avatarUrl || firstParam(params.senderName) ? (
+              <UserAvatar displayName={senderName} imageUrl={avatarUrl} size={56} style={styles.avatar} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Ionicons color={colors.primary} name="shield-checkmark" size={25} />

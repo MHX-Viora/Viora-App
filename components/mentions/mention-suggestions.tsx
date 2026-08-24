@@ -1,7 +1,7 @@
-import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { UserAvatar } from "@/components/common/user-avatar";
 import { searchMentionUsers } from "@/services/mention.service";
 import type { MentionUser } from "@/types/mention";
 import { getMentionQuery } from "@/utils/mention-composer";
@@ -48,8 +48,10 @@ export function MentionSuggestions({
       {users.slice(0, 6).map((user) => (
         <Pressable key={user.id} onPress={() => onSelect(user)} style={styles.row}>
           {showAvatar ? (
-            <Image
-              source={user.avatarUrl ? { uri: user.avatarUrl } : undefined}
+            <UserAvatar
+              displayName={user.displayName}
+              imageUrl={user.avatarUrl}
+              size={36}
               style={styles.avatar}
             />
           ) : null}

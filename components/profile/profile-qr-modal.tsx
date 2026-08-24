@@ -6,7 +6,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ViewableImage } from "@/components/common/viewable-image";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -159,9 +159,10 @@ export function ProfileQrModal({
             </View>
 
             <View style={styles.qrCard}>
-              <ViewableImage
-                accessibilityLabel={`Ảnh đại diện của ${name}`}
-                source={avatar}
+              <UserAvatar
+                displayName={name}
+                imageUrl={avatar}
+                size={62}
                 style={styles.avatar}
               />
               <Text style={styles.name}>{name}</Text>
