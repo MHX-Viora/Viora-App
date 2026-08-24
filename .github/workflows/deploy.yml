@@ -1,0 +1,445 @@
+```yaml
+name: Deploy Viora Frontend
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+concurrency:
+  group: viora-frontend-production
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================
+  # CI: VERIFY SOURCE
+  # ============================================================
+  build:
+    name: Verify frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    outputs:
+      started_at: ${{ steps.deploy_start.outputs.timestamp }}
+
+    steps:
+      - name: Record deploy start time
+        id: deploy_start
+        run: |
+          echo "timestamp=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run lint
+        run: npm run lint
+
+  # ============================================================
+  # CD: DEPLOY TO VPS
+  # ============================================================
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    needs:
+      - build
+
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy frontend
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh "$VPS_USER@$VPS_HOST" << 'EOF'
+            set -euo pipefail
+
+            APP_DIR="/var/www/viora/frontend"
+            HEALTH_URL="https://mxh.ankt.vn"
+
+            echo "========================================"
+            echo "Viora Frontend Production Deployment"
+            echo "========================================"
+
+            echo
+            echo "========================================"
+            echo "1. Kiểm tra repository"
+            echo "========================================"
+
+            cd "$APP_DIR"
+
+            if ! git diff --quiet || ! git diff --cached --quiet; then
+              echo "ERROR: Repository trên VPS có thay đổi chưa commit."
+              echo
+              git status --short
+              exit 1
+            fi
+
+            PREVIOUS_COMMIT="$(git rev-parse HEAD)"
+
+            echo "Phiên bản hiện tại:"
+            echo "$PREVIOUS_COMMIT"
+
+            echo
+            echo "========================================"
+            echo "2. Lấy source code mới"
+            echo "========================================"
+
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+
+            NEW_COMMIT="$(git rev-parse HEAD)"
+
+            echo
+            echo "Phiên bản mới:"
+            echo "$NEW_COMMIT"
+
+            echo
+            echo "========================================"
+            echo "3. Cài dependencies"
+            echo "========================================"
+
+            npm ci
+
+            echo
+            echo "========================================"
+            echo "4. Build Expo Web"
+            echo "========================================"
+
+            rm -rf dist
+
+            npx expo export --platform web
+
+            echo
+            echo "========================================"
+            echo "5. Kiểm tra build output"
+            echo "========================================"
+
+            if [ ! -f "$APP_DIR/dist/index.html" ]; then
+              echo "ERROR: Không tìm thấy dist/index.html."
+              exit 1
+            fi
+
+            if [ ! -d "$APP_DIR/dist/_expo" ]; then
+              echo "ERROR: Không tìm thấy dist/_expo."
+              exit 1
+            fi
+
+            echo "Build output hợp lệ."
+
+            ls -lah "$APP_DIR/dist"
+
+            echo
+            echo "========================================"
+            echo "6. Kiểm tra cấu hình Nginx"
+            echo "========================================"
+
+            nginx -t
+
+            echo
+            echo "========================================"
+            echo "7. Reload Nginx"
+            echo "========================================"
+
+            systemctl reload nginx
+
+            echo
+            echo "========================================"
+            echo "8. Health check production"
+            echo "========================================"
+
+            HEALTH_OK=false
+
+            for attempt in $(seq 1 10); do
+              echo "Health check: $attempt/10"
+
+              if curl \
+                --fail \
+                --silent \
+                --show-error \
+                --location \
+                --output /dev/null \
+                --max-time 15 \
+                "$HEALTH_URL"; then
+
+                HEALTH_OK=true
+                break
+              fi
+
+              sleep 3
+            done
+
+            if [ "$HEALTH_OK" != "true" ]; then
+              echo
+              echo "ERROR: Production health check thất bại."
+              echo "URL: $HEALTH_URL"
+              exit 1
+            fi
+
+            echo
+            echo "Health check thành công."
+
+            echo
+            echo "========================================"
+            echo "Frontend deployment completed successfully"
+            echo "========================================"
+            echo "Previous commit: $PREVIOUS_COMMIT"
+            echo "Current commit : $NEW_COMMIT"
+            echo "Website        : $HEALTH_URL"
+            echo "========================================"
+          EOF
+
+  # ============================================================
+  # TELEGRAM NOTIFICATION
+  # ============================================================
+  notify:
+    name: Telegram notification
+    runs-on: ubuntu-latest
+
+    needs:
+      - build
+      - deploy
+
+    if: ${{ always() }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Send Telegram notification
+        continue-on-error: true
+
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+
+          WORKFLOW: ${{ github.workflow }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ID: ${{ github.run_id }}
+
+          DEPLOY_START: ${{ needs.build.outputs.started_at }}
+
+          BUILD_STATUS: ${{ needs.build.result }}
+          DEPLOY_STATUS: ${{ needs.deploy.result }}
+
+        run: |
+          set -euo pipefail
+
+          # ----------------------------------------------------
+          # Validate Telegram configuration
+          # ----------------------------------------------------
+
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+            echo "TELEGRAM_BOT_TOKEN chưa được cấu hình."
+            exit 0
+          fi
+
+          if [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "TELEGRAM_CHAT_ID chưa được cấu hình."
+            exit 0
+          fi
+
+          # ----------------------------------------------------
+          # Commit information
+          # ----------------------------------------------------
+
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+
+          RUN_URL="https://github.com/${REPOSITORY}/actions/runs/${RUN_ID}"
+
+          if [ -z "${COMMIT_MESSAGE:-}" ]; then
+            COMMIT_MESSAGE="$(
+              git log -1 --pretty=%s 2>/dev/null \
+              || echo "Chạy workflow thủ công"
+            )"
+          fi
+
+          # Chỉ lấy dòng đầu tiên để Telegram message gọn hơn.
+          COMMIT_MESSAGE="$(
+            printf '%s\n' "$COMMIT_MESSAGE" \
+            | head -n 1
+          )"
+
+          # ----------------------------------------------------
+          # Calculate deployment duration
+          # ----------------------------------------------------
+
+          END_TIME="$(date +%s)"
+
+          if [ -n "${DEPLOY_START:-}" ]; then
+            TOTAL_SECONDS=$((END_TIME - DEPLOY_START))
+          else
+            TOTAL_SECONDS=0
+          fi
+
+          if [ "$TOTAL_SECONDS" -lt 0 ]; then
+            TOTAL_SECONDS=0
+          fi
+
+          HOURS=$((TOTAL_SECONDS / 3600))
+          MINUTES=$(((TOTAL_SECONDS % 3600) / 60))
+          SECONDS=$((TOTAL_SECONDS % 60))
+
+          if [ "$HOURS" -gt 0 ]; then
+            DEPLOY_TIME="${HOURS}h ${MINUTES}m ${SECONDS}s"
+          elif [ "$MINUTES" -gt 0 ]; then
+            DEPLOY_TIME="${MINUTES}m ${SECONDS}s"
+          else
+            DEPLOY_TIME="${SECONDS}s"
+          fi
+
+          # ----------------------------------------------------
+          # Determine deployment result
+          # ----------------------------------------------------
+
+          if \
+            [ "$BUILD_STATUS" = "success" ] \
+            && [ "$DEPLOY_STATUS" = "success" ]; then
+
+            TITLE="🚀 Viora Frontend Deploy Thành Công"
+            TIME_LABEL="Thời gian deploy"
+
+            RESULT_MESSAGE="$(
+              printf '%s\n' \
+                "🟢 Verify: SUCCESS" \
+                "🟢 Deploy: SUCCESS" \
+                "🟢 Expo Web Build: SUCCESS" \
+                "🟢 Nginx: SUCCESS" \
+                "🟢 Health Check: PASSED" \
+                "🌐 Website: https://mxh.ankt.vn"
+            )"
+
+          elif \
+            [ "$BUILD_STATUS" = "cancelled" ] \
+            || [ "$DEPLOY_STATUS" = "cancelled" ]; then
+
+            TITLE="⚠️ Viora Frontend Deploy Đã Bị Hủy"
+            TIME_LABEL="Thời gian chạy"
+
+            RESULT_MESSAGE="$(
+              printf '%s\n' \
+                "🟠 Verify: ${BUILD_STATUS}" \
+                "🟠 Deploy: ${DEPLOY_STATUS}" \
+                "ℹ️ Kiểm tra GitHub Actions để xác định trạng thái production."
+            )"
+
+          elif [ "$BUILD_STATUS" = "failure" ]; then
+
+            TITLE="❌ Viora Frontend Verify Thất Bại"
+            TIME_LABEL="Thời gian chạy"
+
+            RESULT_MESSAGE="$(
+              printf '%s\n' \
+                "🔴 Verify: FAILED" \
+                "⚪ Deploy: SKIPPED" \
+                "⚪ Production: NOT UPDATED" \
+                "ℹ️ Website trên VPS vẫn giữ phiên bản trước."
+            )"
+
+          elif [ "$DEPLOY_STATUS" = "failure" ]; then
+
+            TITLE="❌ Viora Frontend Deploy Thất Bại"
+            TIME_LABEL="Thời gian chạy"
+
+            RESULT_MESSAGE="$(
+              printf '%s\n' \
+                "🟢 Verify: SUCCESS" \
+                "🔴 Deploy hoặc Health Check: FAILED" \
+                "⚠️ Kiểm tra log GitHub Actions và trạng thái VPS." \
+                "🌐 Website: https://mxh.ankt.vn"
+            )"
+
+          else
+
+            TITLE="⚠️ Viora Frontend Workflow Có Trạng Thái Bất Thường"
+            TIME_LABEL="Thời gian chạy"
+
+            RESULT_MESSAGE="$(
+              printf '%s\n' \
+                "Verify: ${BUILD_STATUS}" \
+                "Deploy: ${DEPLOY_STATUS}" \
+                "ℹ️ Kiểm tra GitHub Actions để biết chi tiết."
+            )"
+
+          fi
+
+          # ----------------------------------------------------
+          # Compose Telegram message
+          # ----------------------------------------------------
+
+          MESSAGE="$(
+            printf '%s\n' \
+              "${TITLE}" \
+              "" \
+              "🌐 Môi trường: Production" \
+              "" \
+              "📦 Repository: ${REPOSITORY}" \
+              "🌿 Branch: ${BRANCH}" \
+              "" \
+              "🔖 Commit:" \
+              "${SHORT_SHA} - ${COMMIT_MESSAGE}" \
+              "" \
+              "👤 Người thực hiện: ${ACTOR}" \
+              "🚀 Workflow: ${WORKFLOW}" \
+              "🔢 Run: #${RUN_NUMBER}" \
+              "⏱️ ${TIME_LABEL}: ${DEPLOY_TIME}" \
+              "" \
+              "${RESULT_MESSAGE}" \
+              "" \
+              "🔗 Chi tiết:" \
+              "${RUN_URL}"
+          )"
+
+          # ----------------------------------------------------
+          # Send Telegram message
+          # ----------------------------------------------------
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --request POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "disable_web_page_preview=true" \
+            > /dev/null
+
+          echo "Telegram notification sent."
+```
