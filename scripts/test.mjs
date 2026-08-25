@@ -31,5 +31,8 @@ await import("../components/layout/responsive-layout.test.mjs");
 await import("../components/layout/workflow-modal-layout.test.mjs");
 await import("../components/layout/desktop-navigation.test.mjs");
 await import("../components/layout/desktop-header-introduction.test.mjs");
+await import("../components/layout/tab-bar-style.test.mjs");
+await import("../components/notifications/notification-header.test.mjs");
+await import("../components/profile/profile-header.test.mjs");
 await import("./web-deployment-config.test.mjs");
 await import("./play-release-config.test.mjs");

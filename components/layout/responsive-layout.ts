@@ -31,17 +31,23 @@ export const getResponsiveBottomPadding = ({
 }) => (isDesktopWeb ? desktopPadding : mobilePadding);
 
 export const getFixedTopBarLayout = ({
+  isCompactWeb = false,
   isDesktopWeb,
 }: {
+  isCompactWeb?: boolean;
   isDesktopWeb: boolean;
 }) =>
   isDesktopWeb
     ? ({ height: 76, paddingTop: 8 } as const)
+    : isCompactWeb
+      ? ({ height: 68, paddingTop: 0 } as const)
     : ({ height: 100, paddingTop: 60 } as const);
 
 export const getReelsOverlayLayout = ({
+  isCompactWeb = false,
   isDesktopWeb,
 }: {
+  isCompactWeb?: boolean;
   isDesktopWeb: boolean;
 }) =>
   isDesktopWeb
@@ -50,6 +56,12 @@ export const getReelsOverlayLayout = ({
         headerPaddingTop: 8,
         videoTopOffset: 0,
       } as const)
+    : isCompactWeb
+      ? ({
+          headerHeight: 74,
+          headerPaddingTop: 16,
+          videoTopOffset: 16,
+        } as const)
     : ({
         headerHeight: 90,
         headerPaddingTop: 40,

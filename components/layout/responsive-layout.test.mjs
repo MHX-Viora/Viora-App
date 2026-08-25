@@ -70,8 +70,15 @@ test("desktop composer sits close to the desktop header", () => {
   });
 });
 
-test("mobile composer keeps its existing safe top spacing", () => {
-  assert.deepEqual(getFixedTopBarLayout({ isDesktopWeb: false }), {
+test("compact web composer starts close to the viewport top", () => {
+  assert.deepEqual(getFixedTopBarLayout({ isCompactWeb: true, isDesktopWeb: false }), {
+    height: 68,
+    paddingTop: 0,
+  });
+});
+
+test("native mobile composer keeps its safe top spacing", () => {
+  assert.deepEqual(getFixedTopBarLayout({ isCompactWeb: false, isDesktopWeb: false }), {
     height: 100,
     paddingTop: 60,
   });
@@ -83,6 +90,17 @@ test("desktop reels video and overlay header start directly below navigation", (
     headerPaddingTop: 8,
     videoTopOffset: 0,
   });
+});
+
+test("compact web reels moves its sort bar closer to the viewport top", () => {
+  assert.deepEqual(
+    getReelsOverlayLayout({ isCompactWeb: true, isDesktopWeb: false }),
+    {
+      headerHeight: 74,
+      headerPaddingTop: 16,
+      videoTopOffset: 16,
+    },
+  );
 });
 
 test("mobile reels keeps its safe overlay spacing", () => {

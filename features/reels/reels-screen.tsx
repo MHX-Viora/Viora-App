@@ -100,8 +100,11 @@ export function ReelsScreen() {
   const { theme } = useTheme();
   const colors = theme.reels;
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { isDesktopWeb } = useResponsive();
-  const reelsOverlayLayout = getReelsOverlayLayout({ isDesktopWeb });
+  const { isDesktopWeb, isWeb } = useResponsive();
+  const reelsOverlayLayout = getReelsOverlayLayout({
+    isCompactWeb: isWeb && !isDesktopWeb,
+    isDesktopWeb,
+  });
   const floatingTabBarStyle = useMemo(
     () => createFloatingTabBarStyle(theme),
     [theme],

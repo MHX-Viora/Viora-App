@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useResponsive } from "@/hooks/use-responsive";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -13,7 +14,12 @@ type Props = {
 export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
   const { theme } = useTheme();
   const colors = theme.notifications;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb, isWeb } = useResponsive();
+  const isCompactWeb = isWeb && !isDesktopWeb;
+  const styles = useMemo(
+    () => createStyles(colors, isCompactWeb),
+    [colors, isCompactWeb],
+  );
   return (
     <View style={styles.header}>
       <View>
@@ -35,7 +41,7 @@ export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
+const createStyles = (colors: ThemeColors, isCompactWeb: boolean) => StyleSheet.create({
   action: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.border,
@@ -55,7 +61,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "space-between",
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: 54,
+    paddingTop: isCompactWeb ? 16 : 54,
   },
   title: { color: colors.text, fontSize: 28, fontWeight: "900" },
 });

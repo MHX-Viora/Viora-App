@@ -68,7 +68,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginTop: spacing.xs,
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingTop: 40,
+    paddingTop: spacing.sm,
   },
   headerAction: {
     alignItems: "center",

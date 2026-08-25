@@ -51,8 +51,12 @@ export function FeedScreen() {
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const { isDesktopWeb } = useResponsive();
-  const feedTopPadding = getFixedTopBarLayout({ isDesktopWeb }).height;
+  const { isDesktopWeb, isWeb } = useResponsive();
+  const isCompactWeb = isWeb && !isDesktopWeb;
+  const feedTopPadding = getFixedTopBarLayout({
+    isCompactWeb,
+    isDesktopWeb,
+  }).height;
   const feedBottomPadding = getResponsiveBottomPadding({
     desktopPadding: spacing.xl,
     isDesktopWeb,

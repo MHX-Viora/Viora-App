@@ -7,9 +7,12 @@ import { type AppTheme, useTheme } from "@/theme";
 
 export function FixedTopBar({ children }: PropsWithChildren) {
   const { theme } = useTheme();
-  const { isDesktopWeb } = useResponsive();
+  const { isDesktopWeb, isWeb } = useResponsive();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const barLayout = getFixedTopBarLayout({ isDesktopWeb });
+  const barLayout = getFixedTopBarLayout({
+    isCompactWeb: isWeb && !isDesktopWeb,
+    isDesktopWeb,
+  });
 
   return <View style={[styles.container, barLayout]}>{children}</View>;
 }
