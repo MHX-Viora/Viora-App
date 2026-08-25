@@ -84,27 +84,25 @@ export const onCallRealtimeReconnected = (handler: () => void) => {
   return () => reconnectListeners.delete(handler);
 };
 
-export const sendCallOffer = async (callId: string, offer: unknown) => {
+const invokeCallHub = async (methodName: string, ...args: unknown[]) => {
   const next = await startCallRealtime();
-  await next?.invoke("Offer", callId, offer);
+  if (!next) {
+    throw new Error("Không thể kết nối máy chủ cuộc gọi.");
+  }
+  await next.invoke(methodName, ...args);
 };
 
-export const sendCallAccepted = async (callId: string) => {
-  const next = await startCallRealtime();
-  await next?.invoke("AcceptCall", callId);
-};
+export const sendCallOffer = (callId: string, offer: unknown) =>
+  invokeCallHub("Offer", callId, offer);
 
-export const sendCallAnswer = async (callId: string, answer: unknown) => {
-  const next = await startCallRealtime();
-  await next?.invoke("Answer", callId, answer);
-};
+export const sendCallAccepted = (callId: string) =>
+  invokeCallHub("AcceptCall", callId);
 
-export const sendCallIceCandidate = async (callId: string, candidate: unknown) => {
-  const next = await startCallRealtime();
-  await next?.invoke("IceCandidate", callId, candidate);
-};
+export const sendCallAnswer = (callId: string, answer: unknown) =>
+  invokeCallHub("Answer", callId, answer);
 
-export const sendReconnectCall = async (callId: string) => {
-  const next = await startCallRealtime();
-  await next?.invoke("ReconnectCall", callId);
-};
+export const sendCallIceCandidate = (callId: string, candidate: unknown) =>
+  invokeCallHub("IceCandidate", callId, candidate);
+
+export const sendReconnectCall = (callId: string) =>
+  invokeCallHub("ReconnectCall", callId);

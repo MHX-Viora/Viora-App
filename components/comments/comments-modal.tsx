@@ -37,12 +37,14 @@ import { type ThemeColors, useTheme } from "@/theme";
 const QUICK_EMOJIS = ["❤️", "😂", "😍", "🔥", "👏", "👍"];
 
 export function CommentsModal({
+  embedded = false,
   onClose,
   onCommentCreated,
   onOpenUser,
   postId,
   visible,
 }: {
+  embedded?: boolean;
   onClose: () => void;
   onCommentCreated?: (postId: string) => void;
   onOpenUser?: (userId: string) => void;
@@ -107,15 +109,7 @@ export function CommentsModal({
     }
   }, [visible]);
 
-  return (
-    <Modal
-      animationType={isDesktopWeb ? "fade" : "slide"}
-      navigationBarTranslucent
-      onRequestClose={close}
-      statusBarTranslucent
-      transparent={isDesktopWeb}
-      visible={visible}
-    >
+  const content = (
       <View
         style={[
           styles.modalRoot,
@@ -268,6 +262,30 @@ export function CommentsModal({
           </View>
         </SafeAreaView>
       </View>
+  );
+
+  if (embedded) {
+    if (!visible) return null;
+    return (
+      <View
+        accessibilityViewIsModal
+        style={styles.embeddedModalRoot}
+      >
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Modal
+      animationType={isDesktopWeb ? "fade" : "slide"}
+      navigationBarTranslucent
+      onRequestClose={close}
+      statusBarTranslucent
+      transparent={isDesktopWeb}
+      visible={visible}
+    >
+      {content}
     </Modal>
   );
 }
@@ -614,6 +632,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   emojiRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
   emojiText: { fontSize: 17 },
+  embeddedModalRoot: {
+    ...StyleSheet.absoluteFillObject,
+    elevation: 50,
+    zIndex: 50,
+  },
   emptyList: { flexGrow: 1 },
   emptyTitle: {
     color: colors.text,

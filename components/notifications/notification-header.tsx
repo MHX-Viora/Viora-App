@@ -17,8 +17,8 @@ export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
   const { isDesktopWeb, isWeb } = useResponsive();
   const isCompactWeb = isWeb && !isDesktopWeb;
   const styles = useMemo(
-    () => createStyles(colors, isCompactWeb),
-    [colors, isCompactWeb],
+    () => createStyles(colors, isWeb, isCompactWeb),
+    [colors, isCompactWeb, isWeb],
   );
   return (
     <View style={styles.header}>
@@ -41,7 +41,11 @@ export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
   );
 }
 
-const createStyles = (colors: ThemeColors, isCompactWeb: boolean) => StyleSheet.create({
+const createStyles = (
+  colors: ThemeColors,
+  isWeb: boolean,
+  isCompactWeb: boolean,
+) => StyleSheet.create({
   action: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.border,
@@ -59,9 +63,9 @@ const createStyles = (colors: ThemeColors, isCompactWeb: boolean) => StyleSheet.
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingBottom: spacing.md,
+    paddingBottom: isWeb ? spacing.sm : spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingTop: isCompactWeb ? 16 : 54,
+    paddingTop: isCompactWeb ? 16 : isWeb ? 28 : 54,
   },
   title: { color: colors.text, fontSize: 28, fontWeight: "900" },
 });

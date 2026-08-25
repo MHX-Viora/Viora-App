@@ -352,6 +352,19 @@ export function ProfileScreen() {
         onShareReel={handleShareReel}
         posts={profilePosts}
         reelCommentEvent={reelCommentEvent}
+        reelViewerOverlay={
+          <CommentsModal
+            embedded
+            onClose={() => {
+              setCommentsPostId(null);
+              setCommentTargetType(null);
+            }}
+            onCommentCreated={handleCommentCreated}
+            onOpenUser={openUserProfile}
+            postId={commentsPostId}
+            visible={commentsPostId !== null && commentTargetType === "reel"}
+          />
+        }
         reels={profileReels}
         reelsPaused={commentsPostId !== null}
         stats={profileStats}
@@ -434,7 +447,7 @@ export function ProfileScreen() {
         onCommentCreated={handleCommentCreated}
         onOpenUser={openUserProfile}
         postId={commentsPostId}
-        visible={commentsPostId !== null}
+        visible={commentsPostId !== null && commentTargetType === "post"}
       />
       <ProfileQrModal
         avatar={profileAvatar}

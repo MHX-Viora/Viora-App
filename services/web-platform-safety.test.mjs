@@ -47,6 +47,19 @@ test("web call routes do not import React Native WebRTC or LiveKit Native", () =
   }
 });
 
+test("web call routes use browser WebRTC and the existing LiveKit web client", () => {
+  const voice = readCallScreen("voice-call-screen");
+  const group = readCallScreen("group-call-screen");
+
+  assert.match(voice, /webrtc-call\.service\.web/);
+  assert.match(voice, /sendCallOffer/);
+  assert.match(voice, /ReceiveIceCandidate/);
+  assert.doesNotMatch(voice, /WebCallUnavailable/);
+  assert.match(group, /from "livekit-client"/);
+  assert.match(group, /joinGroupCall/);
+  assert.doesNotMatch(group, /WebCallUnavailable/);
+});
+
 test("application entry delegates native initialization to a platform bootstrap", () => {
   const entry = readFileSync(new URL("../index.js", import.meta.url), "utf8");
   const webBootstrap = readFileSync(
@@ -57,4 +70,16 @@ test("application entry delegates native initialization to a platform bootstrap"
   assert.match(entry, /platform-bootstrap/);
   assert.doesNotMatch(entry, forbiddenNativeImports);
   assert.doesNotMatch(webBootstrap, forbiddenNativeImports);
+});
+
+test("voice-call fallback dispatches by platform without eagerly importing native WebRTC", () => {
+  const fallback = readFileSync(
+    new URL("../features/calls/voice-call-screen.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(fallback, forbiddenNativeImports);
+  assert.match(fallback, /Platform\.OS === "web"/);
+  assert.match(fallback, /voice-call-screen\.web/);
+  assert.match(fallback, /voice-call-screen\.native/);
 });

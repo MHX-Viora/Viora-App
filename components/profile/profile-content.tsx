@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { memo, useCallback, useEffect, useRef, useState, useTransition, useMemo } from "react";
+import type { ReactNode } from "react";
 import {
   Animated,
   Pressable,
@@ -35,6 +36,7 @@ export function ProfileContent({
   onShareReel,
   posts,
   reelCommentEvent,
+  reelViewerOverlay,
   reels,
   reelsPaused,
   stats,
@@ -53,6 +55,7 @@ export function ProfileContent({
   onShareReel?: (reel: Reel) => void;
   posts: FeedPost[];
   reelCommentEvent?: { id: string; nonce: number } | null;
+  reelViewerOverlay?: ReactNode;
   reels: Reel[];
   reelsPaused?: boolean;
   stats: readonly { label: string; value: string }[];
@@ -132,6 +135,7 @@ export function ProfileContent({
           onShare={onShareReel}
           paused={reelsPaused}
           reels={reels}
+          viewerOverlay={reelViewerOverlay}
         />
       ) : (
         <View style={styles.emptyState}>

@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   getContainedVideoSize,
+  getReelDesktopCopyWidth,
   getReelVideoContentWidth,
   getReelVideoVerticalShift,
   WEB_REEL_VIDEO_STYLE,
@@ -69,8 +70,20 @@ test("desktop reel gives the video its full width without cutting the right side
     getReelVideoContentWidth({
       containerWidth: 360,
       isDesktopWeb: false,
+      viewportWidth: 360,
     }),
     360,
+  );
+});
+
+test("compact web reel never grows wider than the phone viewport", () => {
+  assert.equal(
+    getReelVideoContentWidth({
+      containerWidth: 420,
+      isDesktopWeb: false,
+      viewportWidth: 375,
+    }),
+    375,
   );
 });
 
@@ -100,6 +113,46 @@ test("web reel has equal top and bottom spacing while native keeps its shift", (
 test("web reel card applies loaded video metadata to its foreground frame", () => {
   assert.match(reelCardSource, /loadedmetadata/);
   assert.match(reelCardSource, /getContainedVideoSize/);
+});
+
+test("wide Web reel keeps its copy inside the empty space left of the video", () => {
+  assert.equal(
+    getReelDesktopCopyWidth({
+      containerWidth: 1920,
+      videoWidth: 508,
+    }),
+    560,
+  );
+  assert.equal(
+    getReelDesktopCopyWidth({
+      containerWidth: 1440,
+      videoWidth: 810,
+    }),
+    283,
+  );
+});
+
+test("compact Web reel keeps the mobile overlay when no side space is available", () => {
+  assert.equal(
+    getReelDesktopCopyWidth({
+      containerWidth: 504,
+      videoWidth: 432,
+    }),
+    null,
+  );
+});
+
+test("Web reel copy truncates long captions and keeps actions on the right", () => {
+  assert.match(reelCardSource, /ellipsizeMode="tail"[\s\S]{0,100}numberOfLines=\{2\}/);
+  assert.match(reelCardSource, /desktopCopyWidth/);
+  assert.match(reelCardSource, /flexBasis: desktopCopyWidth/);
+  assert.match(reelCardSource, /desktopRail/);
+});
+
+test("Web video controls are centered at the foreground video width", () => {
+  assert.match(reelCardSource, /desktopControlsWidth/);
+  assert.match(reelCardSource, /styles\.desktopControlsPanel/);
+  assert.match(reelCardSource, /width: desktopControlsWidth/);
 });
 
 test("reel detail uses the centered responsive desktop viewport", () => {

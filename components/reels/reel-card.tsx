@@ -15,6 +15,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -25,6 +26,7 @@ import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout
 import { ReelAction } from "@/components/reels/reel-action";
 import {
   getContainedVideoSize,
+  getReelDesktopCopyWidth,
   getReelVideoContentWidth,
   getReelVideoVerticalShift,
   WEB_REEL_VIDEO_STYLE,
@@ -75,6 +77,7 @@ export function ReelCard({
   const colors = theme.reels;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isDesktopWeb } = useResponsive();
+  const { width: viewportWidth } = useWindowDimensions();
   const reportDialogLayout = getResponsiveDialogLayout({
     isDesktopWeb,
     maxWidth: 640,
@@ -215,6 +218,7 @@ export function ReelCard({
         containerWidth: getReelVideoContentWidth({
           containerWidth: videoViewportSize.width,
           isDesktopWeb,
+          viewportWidth,
         }),
         videoHeight: videoSourceSize.height,
         videoWidth: videoSourceSize.width,
@@ -224,6 +228,15 @@ export function ReelCard({
     isDesktopWeb,
     nativeShift: REEL_VIDEO_VERTICAL_SHIFT,
   });
+  const desktopCopyWidth = isDesktopWeb && containedVideoSize
+    ? getReelDesktopCopyWidth({
+        containerWidth: videoViewportSize.width,
+        videoWidth: containedVideoSize.width,
+      })
+    : null;
+  const desktopControlsWidth = isDesktopWeb && containedVideoSize
+    ? containedVideoSize.width
+    : null;
 
   const getSeekTime = (event: GestureResponderEvent) => {
     if (seekWidth <= 0 || duration <= 0) return null;
@@ -474,7 +487,19 @@ export function ReelCard({
         pointerEvents="box-none"
       >
         <View pointerEvents="box-none" style={styles.bottomContent}>
-          <View style={styles.copy}>
+          <View
+            style={[
+              styles.copy,
+              desktopCopyWidth !== null && [
+                styles.desktopCopy,
+                {
+                  flexBasis: desktopCopyWidth,
+                  maxWidth: desktopCopyWidth,
+                  width: desktopCopyWidth,
+                },
+              ],
+            ]}
+          >
             <View style={styles.authorLine}>
               <Pressable
                 accessibilityRole="button"
@@ -482,7 +507,7 @@ export function ReelCard({
                 onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
                 style={styles.authorPressable}
               >
-                <Text numberOfLines={1} style={styles.author}>
+                <Text ellipsizeMode="tail" numberOfLines={1} style={styles.author}>
                   {reel.author}
                 </Text>
               </Pressable>
@@ -493,10 +518,10 @@ export function ReelCard({
                 />
               )}
             </View>
-            <Text numberOfLines={2} style={styles.caption}>
+            <Text ellipsizeMode="tail" numberOfLines={2} style={styles.caption}>
               {reel.caption}
             </Text>
-            <Text numberOfLines={1} style={styles.hashtags}>
+            <Text ellipsizeMode="tail" numberOfLines={1} style={styles.hashtags}>
               {reel.hashtags}
             </Text>
             {(reel.caption.length > 70 || reel.hashtags.length > 45) && (
@@ -509,7 +534,12 @@ export function ReelCard({
               </Pressable>
             )}
           </View>
-          <View style={styles.rail}>
+          <View
+            style={[
+              styles.rail,
+              desktopCopyWidth !== null && styles.desktopRail,
+            ]}
+          >
             <View style={styles.avatarWrap}>
               <Pressable
                 accessibilityRole="button"
@@ -588,7 +618,13 @@ export function ReelCard({
           <View
             accessibilityLabel="Điều khiển video"
             accessibilityViewIsModal
-            style={styles.controlsPanel}
+            style={[
+              styles.controlsPanel,
+              desktopControlsWidth !== null && [
+                styles.desktopControlsPanel,
+                { width: desktopControlsWidth },
+              ],
+            ]}
           >
             <View style={styles.moderationGroup}>
               <Pressable onPress={openReport} style={styles.moderationAction}>
@@ -861,6 +897,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   controlsTitle: { color: colors.white, fontSize: 17, fontWeight: "700" },
   copy: { flex: 1, paddingBottom: spacing.xs, paddingRight: spacing.md },
+  desktopCopy: { alignSelf: "flex-end", flexGrow: 0, flexShrink: 0 },
+  desktopControlsPanel: {
+    alignSelf: "center",
+    flexShrink: 1,
+    maxWidth: "100%",
+  },
+  desktopRail: { marginLeft: "auto" },
   follow: {
     alignItems: "center",
     backgroundColor: colors.primary,

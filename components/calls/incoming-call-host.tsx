@@ -5,6 +5,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CallAvatarHalo, CallBackdrop } from "@/components/calls/call-visuals";
+import { getCallSurfaceLayout } from "@/components/calls/call-screen-layout";
 import { UserAvatar } from "@/components/common/user-avatar";
 import {
   clearIncomingCall,
@@ -25,12 +26,14 @@ import { spacing } from "@/theme";
 import { CallType } from "@/types/call";
 import type { IncomingCallEvent } from "@/types/call";
 import { type ThemeColors, useTheme } from "@/theme";
+import { useResponsive } from "@/hooks/use-responsive";
 
 
 export function IncomingCallHost() {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb } = useResponsive();
   const insets = useSafeAreaInsets();
   const [incomingCall, setIncomingCall] = useState<IncomingCallEvent | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -152,17 +155,19 @@ export function IncomingCallHost() {
 
   return (
     <Modal animationType="fade" presentationStyle="fullScreen" visible={incomingCall !== null}>
-      <View
-        style={[
-          styles.screen,
-          {
-            paddingBottom: Math.max(insets.bottom, spacing.xl),
-            paddingTop: Math.max(insets.top, spacing.xl),
-          },
-        ]}
-      >
-        <CallBackdrop />
-        <View style={styles.header}>
+      <View style={styles.modalBackdrop}>
+        <View
+          style={[
+            styles.screen,
+            getCallSurfaceLayout({ isDesktopWeb }),
+            {
+              paddingBottom: Math.max(insets.bottom, spacing.xl),
+              paddingTop: Math.max(insets.top, spacing.xl),
+            },
+          ]}
+        >
+          <CallBackdrop />
+          <View style={styles.header}>
           <Text style={styles.headerText}>
             {incomingCall?.isGroupCall
               ? incomingCall.callType === CallType.Video
@@ -172,8 +177,8 @@ export function IncomingCallHost() {
                 ? "Cuộc gọi video đến"
                 : "Cuộc gọi đến"}
           </Text>
-        </View>
-        <View style={styles.identity}>
+          </View>
+          <View style={styles.identity}>
           <CallAvatarHalo size={250}>
             <UserAvatar
               displayName={incomingCall?.caller.displayName}
@@ -194,8 +199,8 @@ export function IncomingCallHost() {
                   ? "Đang gọi video cho bạn"
                   : "Đang gọi cho bạn"}
           </Text>
-        </View>
-        <View style={styles.actions}>
+          </View>
+          <View style={styles.actions}>
           <View style={styles.actionItem}>
             <Pressable accessibilityLabel="Từ chối cuộc gọi" disabled={isConnecting} onPress={reject} style={[styles.button, styles.reject]}>
               <Ionicons color={colors.white} name="close" size={28} />
@@ -207,6 +212,7 @@ export function IncomingCallHost() {
               <Ionicons color={colors.white} name="call" size={28} />
             </Pressable>
             <Text style={styles.actionLabel}>Trả lời</Text>
+          </View>
           </View>
         </View>
       </View>
@@ -275,6 +281,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   name: { color: colors.text, fontSize: 28, fontWeight: "900", maxWidth: "100%" },
+  modalBackdrop: {
+    backgroundColor: colors.background,
+    flex: 1,
+  },
   reject: {
     backgroundColor: colors.danger,
     shadowColor: colors.danger,

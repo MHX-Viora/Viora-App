@@ -25,7 +25,8 @@ test("uses the shared fallback across app and web user surfaces", async () => {
     "../layout/desktop-header.tsx",
     "../chat/conversation-row.tsx",
     "../../features/chat/chat-screen.tsx",
-    "../../features/calls/voice-call-screen.tsx",
+    "../../features/calls/voice-call-screen.native.tsx",
+    "../../features/calls/voice-call-screen.web.tsx",
     "../../features/profile/friends-screen.tsx",
   ];
 

@@ -1,7 +1,12 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { memo, useCallback, useEffect, useState, useMemo } from "react";
-import type { LayoutChangeEvent } from "react-native";
+import type { ReactNode } from "react";
+import type {
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+} from "react-native";
 import {
   FlatList,
   Modal,
@@ -13,6 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ReelCard } from "@/components/reels/reel-card";
+import { getReelViewerIndex } from "@/components/reels/reels-grid-viewer-state";
 import { formatReelCount } from "@/services/reel.service";
 import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
@@ -65,6 +71,7 @@ export function ReelsGridViewer({
   onViewingChange,
   paused,
   reels,
+  viewerOverlay,
 }: {
   header?: React.ReactNode;
   onComment?: (reelId: string) => void;
@@ -78,6 +85,7 @@ export function ReelsGridViewer({
   onViewingChange?: (viewing: boolean) => void;
   paused?: boolean;
   reels: Reel[];
+  viewerOverlay?: ReactNode;
 }) {
   const { theme } = useTheme();
   const colors = theme.reels;
@@ -92,6 +100,13 @@ export function ReelsGridViewer({
   useEffect(() => {
     setItems(reels);
   }, [reels]);
+
+  useEffect(() => {
+    setViewerIndex((current) => {
+      if (current === null) return null;
+      return items.length > 0 ? Math.min(current, items.length - 1) : null;
+    });
+  }, [items.length]);
 
   useEffect(() => {
     onViewingChange?.(isViewing);
@@ -167,6 +182,18 @@ export function ReelsGridViewer({
     if (nextHeight !== viewerHeight) setViewerHeight(nextHeight);
   };
 
+  const handleViewerScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const nextIndex = getReelViewerIndex({
+        itemCount: items.length,
+        itemHeight: viewerHeight + ITEM_GAP,
+        offset: event.nativeEvent.contentOffset.y,
+      });
+      if (nextIndex !== null) setViewerIndex(nextIndex);
+    },
+    [items.length, viewerHeight],
+  );
+
   const closeViewer = () => {
     setViewerIndex(null);
     setIsViewerLocked(false);
@@ -241,14 +268,8 @@ export function ReelsGridViewer({
               })}
               initialScrollIndex={viewerIndex}
               keyExtractor={(item) => item.id}
-              onMomentumScrollEnd={(event) =>
-                setViewerIndex(
-                  Math.round(
-                    event.nativeEvent.contentOffset.y /
-                      (viewerHeight + ITEM_GAP),
-                  ),
-                )
-              }
+              onMomentumScrollEnd={handleViewerScroll}
+              onScroll={handleViewerScroll}
               pagingEnabled
               renderItem={({ index, item }) => (
                 index === viewerIndex ? (
@@ -271,10 +292,12 @@ export function ReelsGridViewer({
                 )
               )}
               scrollEnabled={!isViewerLocked}
+              scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
               windowSize={3}
             />
           )}
+          {viewerOverlay}
         </SafeAreaView>
       </Modal>
     </>
