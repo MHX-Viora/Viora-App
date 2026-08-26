@@ -122,13 +122,9 @@ jobs:
             echo "4. Build Expo Web"
             echo "========================================"
 
-            # Expo inlines EXPO_PUBLIC_* values at build time. Set this explicitly
-            # so stale shell or dotenv values cannot restore the cross-origin helper.
-            export EXPO_PUBLIC_FIREBASE_WEB_AUTH_DOMAIN="mxh.ankt.vn"
-
             rm -rf dist
 
-            npx expo export --platform web --clear
+            npx expo export --platform web
 
             echo
             echo "========================================"
@@ -146,15 +142,6 @@ jobs:
             fi
 
             echo "Build output hợp lệ."
-            if ! grep -R \
-              --fixed-strings \
-              --quiet \
-              'mxh.ankt.vn","EXPO_PUBLIC_FIREBASE_WEB_AUTH_DOMAIN' \
-              "$APP_DIR/dist/_expo/static/js/web"; then
-              echo "ERROR: Web bundle is not using Firebase authDomain mxh.ankt.vn."
-              exit 1
-            fi
-
             ls -lah "$APP_DIR/dist"
 
             echo
