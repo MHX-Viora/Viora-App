@@ -65,21 +65,21 @@ test("desktop web does not reserve mobile tab or safe-area padding", () => {
 
 test("desktop composer sits close to the desktop header", () => {
   assert.deepEqual(getFixedTopBarLayout({ isDesktopWeb: true }), {
-    height: 76,
+    height: 134,
     paddingTop: 8,
   });
 });
 
 test("compact web composer starts close to the viewport top", () => {
   assert.deepEqual(getFixedTopBarLayout({ isCompactWeb: true, isDesktopWeb: false }), {
-    height: 68,
+    height: 126,
     paddingTop: 0,
   });
 });
 
 test("native mobile composer keeps its safe top spacing", () => {
   assert.deepEqual(getFixedTopBarLayout({ isCompactWeb: false, isDesktopWeb: false }), {
-    height: 100,
+    height: 186,
     paddingTop: 60,
   });
 });
@@ -98,7 +98,7 @@ test("compact web reels moves its sort bar closer to the viewport top", () => {
     {
       headerHeight: 74,
       headerPaddingTop: 16,
-      videoTopOffset: 16,
+      videoTopOffset: 0,
     },
   );
 });

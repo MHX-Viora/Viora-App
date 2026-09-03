@@ -19,6 +19,7 @@ import { CreatePostModal } from "@/components/feed/create-post-modal";
 import { FeedSearchModal } from "@/components/feed/feed-search-modal";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
+import type { FeedCategory } from "@/components/feed/feed-category-header";
 import { ResponsiveContent } from "@/components/layout/responsive-content";
 import {
   getFixedTopBarLayout,
@@ -63,6 +64,9 @@ export function FeedScreen() {
     mobilePadding: TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.lg,
   });
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [activeCategory, setActiveCategory] =
+    useState<FeedCategory>("community");
+  const activeCategoryRef = useRef<FeedCategory>("community");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,7 +80,10 @@ export function FeedScreen() {
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [draftImages, setDraftImages] = useState<string[]>([]);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-  const loadPosts = async (nextPage: number) => {
+  const loadPosts = async (
+    nextPage: number,
+    category = activeCategoryRef.current,
+  ) => {
     if (nextPage === 1) {
       setIsLoading(true);
       setErrorMessage("");
@@ -88,7 +95,10 @@ export function FeedScreen() {
       const result = await getPosts({
         page: nextPage,
         pageSize: PAGE_SIZE,
+        postType: category === "community" ? 0 : 2,
       });
+
+      if (activeCategoryRef.current !== category) return;
 
       setPosts((current) =>
         nextPage === 1 ? result.posts : [...current, ...result.posts],
@@ -96,12 +106,15 @@ export function FeedScreen() {
       setPage(nextPage);
       setTotalPages(result.totalPages);
     } catch (error) {
+      if (activeCategoryRef.current !== category) return;
       setErrorMessage(
         error instanceof Error ? error.message : "Không thể tải bài viết.",
       );
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      if (activeCategoryRef.current === category) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
   };
 
@@ -118,12 +131,22 @@ export function FeedScreen() {
     };
 
     loadCurrentUser();
-    loadPosts(1);
+    loadPosts(1, "community");
   }, []);
+
+  const selectCategory = (category: FeedCategory) => {
+    if (activeCategoryRef.current === category) return;
+    activeCategoryRef.current = category;
+    setActiveCategory(category);
+    setPosts([]);
+    setPage(1);
+    setTotalPages(1);
+    void loadPosts(1, category);
+  };
 
   const loadMorePosts = () => {
     if (isLoading || isLoadingMore || page >= totalPages) return;
-    loadPosts(page + 1);
+    loadPosts(page + 1, activeCategoryRef.current);
   };
 
   const pickImages = async (): Promise<string[] | null> => {
@@ -172,7 +195,13 @@ export function FeedScreen() {
 
     try {
       const newPost = await createPost(payload);
-      setPosts((current) => [newPost, ...current]);
+      if (activeCategoryRef.current === "community") {
+        setPosts((current) => [newPost, ...current]);
+      } else {
+        activeCategoryRef.current = "community";
+        setActiveCategory("community");
+        await loadPosts(1, "community");
+      }
       closeModal();
       showAppToast({
         message: "Bài viết của bạn đã được đăng.",
@@ -285,7 +314,10 @@ export function FeedScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>
-                {errorMessage || "Chưa có bài viết"}
+                {errorMessage ||
+                  (activeCategory === "articles"
+                    ? "Chưa có bài báo"
+                    : "Chưa có bài viết")}
               </Text>
               <Text style={styles.emptyText}>
                 Kéo xuống để thử tải lại.
@@ -295,7 +327,7 @@ export function FeedScreen() {
           ListFooterComponent={isLoadingMore ? <PostSkeleton /> : null}
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.35}
-          onRefresh={() => loadPosts(1)}
+          onRefresh={() => loadPosts(1, activeCategoryRef.current)}
           refreshing={isLoading}
           renderItem={({ item }) => (
             <PostCard
@@ -313,12 +345,16 @@ export function FeedScreen() {
         />
       )}
       <PostComposer
+        activeCategory={activeCategory}
         avatar={myAvatar}
         canCreateArticle={canPublishArticle}
         displayName={myDisplayName}
         onArticlePress={() => router.push("/article/editor")}
+        onArticlesFeedPress={() => selectCategory("articles")}
+        onCommunityPress={() => selectCategory("community")}
         onCreatePress={() => setModalVisible(true)}
         onImagePress={openWithImagePicker}
+        onReelsPress={() => router.push("/(tabs)/reels")}
         onSearchPress={() => setSearchVisible(true)}
       />
       </ResponsiveContent>

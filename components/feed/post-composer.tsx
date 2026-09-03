@@ -3,18 +3,53 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { UserAvatar } from "@/components/common/user-avatar";
+import {
+  FeedCategoryHeader,
+  type FeedCategory,
+} from "@/components/feed/feed-category-header";
 import { FixedTopBar } from "@/components/layout/fixed-top-bar";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
-export function PostComposer({ avatar, canCreateArticle, displayName, onArticlePress, onCreatePress, onImagePress, onSearchPress }: { avatar: string; canCreateArticle: boolean; displayName: string; onArticlePress: () => void; onCreatePress: () => void; onImagePress: () => void; onSearchPress: () => void }) {
+export function PostComposer({
+  activeCategory,
+  avatar,
+  canCreateArticle,
+  displayName,
+  onArticlePress,
+  onArticlesFeedPress,
+  onCommunityPress,
+  onCreatePress,
+  onImagePress,
+  onReelsPress,
+  onSearchPress,
+}: {
+  activeCategory: FeedCategory;
+  avatar: string;
+  canCreateArticle: boolean;
+  displayName: string;
+  onArticlePress: () => void;
+  onArticlesFeedPress: () => void;
+  onCommunityPress: () => void;
+  onCreatePress: () => void;
+  onImagePress: () => void;
+  onReelsPress: () => void;
+  onSearchPress: () => void;
+}) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <FixedTopBar>
-      <View style={styles.container}>
+      <View style={styles.topBarContent}>
+        <FeedCategoryHeader
+          activeCategory={activeCategory}
+          onArticlesPress={onArticlesFeedPress}
+          onCommunityPress={onCommunityPress}
+          onReelsPress={onReelsPress}
+        />
+        <View style={styles.container}>
         <UserAvatar
           displayName={displayName}
           imageUrl={avatar}
@@ -53,6 +88,7 @@ export function PostComposer({ avatar, canCreateArticle, displayName, onArticleP
         >
           <Ionicons color={colors.text} name="search-outline" size={24} />
         </Pressable>
+        </View>
       </View>
     </FixedTopBar>
   );
@@ -86,4 +122,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   promptText: { color: colors.textMuted, fontSize: 15 },
+  topBarContent: { gap: spacing.sm },
 });
