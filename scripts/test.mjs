@@ -28,6 +28,7 @@ await import("../components/reels/reels-grid-viewer-state.test.mjs");
 await import("../components/reels/profile-reel-detail-web.test.mjs");
 await import("../features/landing/app-introduction-screen.test.mjs");
 await import("../features/chat/responsive-chat-layout.test.mjs");
+await import("../features/chat/chat-send-status.test.mjs");
 await import("../services/web-platform-safety.test.mjs");
 await import("../services/call-realtime-delivery.test.mjs");
 await import("../stores/session-storage.web.test.mjs");

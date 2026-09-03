@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -478,6 +479,84 @@ function SystemMessage({ message }: { message: ChatMessage }) {
   );
 }
 
+function MessageSendStatus({
+  isMedia,
+  status,
+  styles,
+}: {
+  isMedia: boolean;
+  status?: ChatMessage["sendStatus"];
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const initialStatus = status && status !== "sent" ? status : null;
+  const [displayedStatus, setDisplayedStatus] = useState(initialStatus);
+  const displayedStatusRef = useRef(displayedStatus);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const nextStatus = status && status !== "sent" ? status : null;
+    let animation: Animated.CompositeAnimation | undefined;
+
+    if (nextStatus) {
+      displayedStatusRef.current = nextStatus;
+      setDisplayedStatus(nextStatus);
+      opacity.setValue(0);
+      translateX.setValue(6);
+      animation = Animated.parallel([
+        Animated.timing(opacity, {
+          duration: 180,
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          duration: 180,
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]);
+      animation.start();
+    } else if (displayedStatusRef.current) {
+      animation = Animated.parallel([
+        Animated.timing(opacity, {
+          duration: 180,
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          duration: 180,
+          toValue: -4,
+          useNativeDriver: true,
+        }),
+      ]);
+      animation.start(({ finished }) => {
+        if (finished) {
+          displayedStatusRef.current = null;
+          setDisplayedStatus(null);
+        }
+      });
+    }
+
+    return () => animation?.stop();
+  }, [opacity, status, translateX]);
+
+  if (!displayedStatus) return null;
+
+  return (
+    <Animated.Text
+      accessibilityLiveRegion="polite"
+      style={[
+        styles.sendStatus,
+        isMedia && styles.mediaSendStatus,
+        displayedStatus === "failed" && styles.failedSendStatus,
+        { opacity, transform: [{ translateX }] },
+      ]}
+    >
+      {displayedStatus === "sending" ? "Đang gửi…" : "Gửi lỗi"}
+    </Animated.Text>
+  );
+}
+
 function MessageRow({
   isActionsOpen,
   isHighlighted,
@@ -526,12 +605,6 @@ function MessageRow({
     Boolean(textContent);
   const canRecall =
     message.isMine && !message.isDeleted && !message.id.startsWith("pending-");
-  const sendStatusLabel =
-    message.isMine && message.sendStatus && message.sendStatus !== "sent"
-      ? message.sendStatus === "sending"
-        ? "Đang gửi..."
-        : "Gửi lỗi"
-      : "";
   const actions = (
     <View
       style={[
@@ -598,17 +671,6 @@ function MessageRow({
         <View style={styles.avatarSpace} />
       ) : null}
       {message.isMine && isActionsOpen ? actions : null}
-      {sendStatusLabel ? (
-        <Text
-          style={[
-            styles.sendStatus,
-            !hasBubbleBackground && styles.mediaSendStatus,
-            message.sendStatus === "failed" && styles.failedSendStatus,
-          ]}
-        >
-          {sendStatusLabel}
-        </Text>
-      ) : null}
       <View
         style={[
           styles.bubble,
@@ -694,15 +756,24 @@ function MessageRow({
             ))}
           </View>
         )}
-        <Text
-          style={[
-            styles.messageTime,
-            message.isMine && hasBubbleBackground && styles.mineTime,
-            !hasBubbleBackground && styles.mediaTime,
-          ]}
-        >
-          {formatChatTime(message.createdAt)}
-        </Text>
+        <View style={styles.messageMeta}>
+          {message.isMine ? (
+            <MessageSendStatus
+              isMedia={!hasBubbleBackground}
+              status={message.sendStatus}
+              styles={styles}
+            />
+          ) : null}
+          <Text
+            style={[
+              styles.messageTime,
+              message.isMine && hasBubbleBackground && styles.mineTime,
+              !hasBubbleBackground && styles.mediaTime,
+            ]}
+          >
+            {formatChatTime(message.createdAt)}
+          </Text>
+        </View>
       </View>
       {!message.isMine && isActionsOpen ? actions : null}
     </Pressable>
@@ -781,6 +852,8 @@ export function ChatScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const pendingScrollToEndRef = useRef(false);
   const pendingScrollAnimatedRef = useRef(false);
+  const pendingOutgoingIdsRef = useRef(new Set<string>());
+  const bufferedMineMessagesRef = useRef(new Map<string, ChatMessage>());
   const isAtBottomRef = useRef(true);
   const dissolvedRef = useRef(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -862,6 +935,34 @@ export function ChatScreen() {
   const normalizeMessage = useCallback(
     (message: ChatMessage): ChatMessage => message,
     [],
+  );
+
+  const flushBufferedMineMessages = useCallback(() => {
+    if (
+      pendingOutgoingIdsRef.current.size > 0 ||
+      bufferedMineMessagesRef.current.size === 0
+    ) {
+      return;
+    }
+
+    const bufferedMessages = [...bufferedMineMessagesRef.current.values()].reverse();
+    bufferedMineMessagesRef.current.clear();
+    setMessages((current) => {
+      const existingIds = new Set(current.map((item) => item.id));
+      return [
+        ...bufferedMessages.filter((item) => !existingIds.has(item.id)),
+        ...current,
+      ];
+    });
+  }, []);
+
+  const finishPendingOutgoing = useCallback(
+    (optimisticId: string, confirmedId?: string) => {
+      pendingOutgoingIdsRef.current.delete(optimisticId);
+      if (confirmedId) bufferedMineMessagesRef.current.delete(confirmedId);
+      flushBufferedMineMessages();
+    },
+    [flushBufferedMineMessages],
   );
 
   const searchChatMentionUsers = useCallback(
@@ -1140,6 +1241,10 @@ export function ChatScreen() {
       subscribeRealtimeMessages((message) => {
         if (message.conversationId !== conversationId) return;
         const nextMessage = normalizeMessage(message);
+        if (nextMessage.isMine && pendingOutgoingIdsRef.current.size > 0) {
+          bufferedMineMessagesRef.current.set(nextMessage.id, nextMessage);
+          return;
+        }
         setMessages((current) =>
           current.some((item) => item.id === nextMessage.id)
             ? current
@@ -1498,6 +1603,7 @@ export function ChatScreen() {
         },
       };
 
+      pendingOutgoingIdsRef.current.add(optimisticId);
       setMessages((current) => [optimisticMessage, ...current]);
       scrollToEndAfterLayout(true);
 
@@ -1508,19 +1614,29 @@ export function ChatScreen() {
       });
       const sentMessage = {
         ...normalizeMessage(message),
+        clientRenderId: optimisticId,
         isMine: true,
         sendStatus: "sent" as const,
       };
-      setMessages((current) =>
-        current.some((item) => item.id === sentMessage.id)
-          ? current.filter((item) => item.id !== optimisticId)
-          : current.map((item) =>
-              item.id === optimisticId ? sentMessage : item,
-            ),
-      );
+      setMessages((current) => {
+        if (!current.some((item) => item.id === optimisticId)) {
+          return current.some((item) => item.id === sentMessage.id)
+            ? current
+            : [sentMessage, ...current];
+        }
+        return current
+          .filter(
+            (item) => item.id === optimisticId || item.id !== sentMessage.id,
+          )
+          .map((item) =>
+            item.id === optimisticId ? sentMessage : item,
+          );
+      });
+      finishPendingOutgoing(optimisticId, sentMessage.id);
       scrollToEndAfterLayout(true);
     } catch (error) {
       if (pendingLocationId) {
+        finishPendingOutgoing(pendingLocationId);
         setMessages((current) =>
           current.map((item) =>
             item.id === pendingLocationId ? { ...item, sendStatus: "failed" } : item,
@@ -1532,7 +1648,7 @@ export function ChatScreen() {
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
-  }, [canSendInConversation, conversationId, normalizeMessage, scrollToEndAfterLayout]);
+  }, [canSendInConversation, conversationId, finishPendingOutgoing, normalizeMessage, scrollToEndAfterLayout]);
 
   const recallMessage = useCallback(
     async (message: ChatMessage) => {
@@ -1635,6 +1751,7 @@ export function ChatScreen() {
       },
     };
 
+    pendingOutgoingIdsRef.current.add(optimisticId);
     setMessages((current) => [optimisticMessage, ...current]);
     setContent("");
     setDraftMentions([]);
@@ -1651,18 +1768,28 @@ export function ChatScreen() {
       });
       const sentMessage = {
         ...normalizeMessage(message),
+        clientRenderId: optimisticId,
         isMine: true,
         sendStatus: "sent" as const,
       };
-      setMessages((current) =>
-        current.some((item) => item.id === sentMessage.id)
-          ? current.filter((item) => item.id !== optimisticId)
-          : current.map((item) =>
-              item.id === optimisticId ? sentMessage : item,
-            ),
-      );
+      setMessages((current) => {
+        if (!current.some((item) => item.id === optimisticId)) {
+          return current.some((item) => item.id === sentMessage.id)
+            ? current
+            : [sentMessage, ...current];
+        }
+        return current
+          .filter(
+            (item) => item.id === optimisticId || item.id !== sentMessage.id,
+          )
+          .map((item) =>
+            item.id === optimisticId ? sentMessage : item,
+          );
+      });
+      finishPendingOutgoing(optimisticId, sentMessage.id);
       scrollToEndAfterLayout(true);
     } catch (error) {
+      finishPendingOutgoing(optimisticId);
       if (handleRoomApiError(error)) {
         setMessages((current) =>
           current.filter((item) => item.id !== optimisticId),
@@ -1675,7 +1802,7 @@ export function ChatScreen() {
         ),
       );
     }
-  }, [attachments, canSendInConversation, content, conversationId, draftMentions, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
+  }, [attachments, canSendInConversation, content, conversationId, draftMentions, finishPendingOutgoing, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
 
   const startCall = useCallback(async (callType: CallType) => {
     if (!conversationDetails || isStartingCall) return;
@@ -1879,7 +2006,7 @@ export function ChatScreen() {
           contentContainerStyle={styles.messagesContent}
           data={messages}
           inverted
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.clientRenderId ?? item.id}
           ListFooterComponent={
             isLoadingMore ? <ActivityIndicator color={colors.primary} /> : null
           }
@@ -2428,10 +2555,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     lineHeight: 22,
   },
   messageTime: {
-    alignSelf: "flex-end",
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: "700",
+  },
+  messageMeta: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    flexDirection: "row",
+    gap: 4,
+    justifyContent: "flex-end",
   },
   messagesContent: {
     backgroundColor: colors.background,
@@ -2459,7 +2592,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: "800",
   },
   mediaTime: {
-    alignSelf: "flex-start",
     backgroundColor: colors.visuals.rgb_102_112_133_0_32,
     borderRadius: 999,
     color: colors.white,
@@ -2469,7 +2601,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 2,
   },
   mediaSendStatus: {
-    alignSelf: "flex-start",
     backgroundColor: colors.visuals.rgb_102_112_133_0_32,
     borderRadius: 999,
     color: colors.white,
@@ -2600,16 +2731,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   replyText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
   screen: { backgroundColor: colors.background, flex: 1 },
   sendStatus: {
-    backgroundColor: colors.background,
-    borderRadius: 999,
-    bottom: -8,
     color: colors.primary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "900",
-    paddingHorizontal: spacing.xs,
-    position: "absolute",
-    right: spacing.md,
-    zIndex: 2,
   },
   emptyMessages: {
     alignItems: "center",

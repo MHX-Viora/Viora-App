@@ -158,6 +158,7 @@ export type ChatSearchResultsPage = {
 
 export type ChatMessage = {
   id: string;
+  clientRenderId?: string;
   conversationId: string;
   sender: ChatParticipant;
   messageType: number | null;
