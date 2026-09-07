@@ -1,5 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -12,22 +12,36 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ArticleSortTabs } from "@/components/feed/article-sort-tabs";
+import type { FeedCategory } from "@/components/feed/feed-category-header";
 import { PostCard } from "@/components/feed/post-card";
 import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { useResponsive } from "@/hooks/use-responsive";
 import { getPosts } from "@/services/feed.service";
 import { spacing } from "@/theme";
-import type { FeedPost } from "@/types/feed";
+import type { FeedPost, PostFeedSort } from "@/types/feed";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
 const PAGE_SIZE = 10;
 
 export function FeedSearchModal({
+  articleSort,
+  category,
   onClose,
+  onOpenArticle,
+  onOpenAuthor,
+  onArticleSortChange,
+  onShare,
   visible,
 }: {
+  articleSort: PostFeedSort;
+  category: FeedCategory;
   onClose: () => void;
+  onOpenArticle?: (articleId: string) => void;
+  onOpenAuthor?: (userId: string) => void;
+  onArticleSortChange: (sort: PostFeedSort) => void;
+  onShare?: (postId: string) => void;
   visible: boolean;
 }) {
   const { theme } = useTheme();
@@ -45,11 +59,13 @@ export function FeedSearchModal({
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const searchRequestIdRef = useRef(0);
 
   const normalizedQuery = query.trim();
 
-  const searchPosts = async (keyword: string, nextPage: number) => {
+  const searchPosts = useCallback(async (keyword: string, nextPage: number) => {
     if (!keyword) return;
+    const requestId = ++searchRequestIdRef.current;
 
     if (nextPage === 1) {
       setIsSearching(true);
@@ -63,7 +79,11 @@ export function FeedSearchModal({
         keyword,
         page: nextPage,
         pageSize: PAGE_SIZE,
+        postType: category === "articles" ? 2 : 0,
+        sort: category === "articles" ? articleSort : undefined,
       });
+
+      if (searchRequestIdRef.current !== requestId) return;
 
       setResults((current) =>
         nextPage === 1 ? result.posts : [...current, ...result.posts],
@@ -71,17 +91,25 @@ export function FeedSearchModal({
       setPage(nextPage);
       setTotalPages(result.totalPages);
     } catch (error) {
+      if (searchRequestIdRef.current !== requestId) return;
       setErrorMessage(
-        error instanceof Error ? error.message : "Không thể tìm kiếm bài viết.",
+        error instanceof Error
+          ? error.message
+          : category === "articles"
+            ? "Không thể tìm kiếm bài báo."
+            : "Không thể tìm kiếm bài viết.",
       );
     } finally {
-      setIsSearching(false);
-      setIsLoadingMore(false);
+      if (searchRequestIdRef.current === requestId) {
+        setIsSearching(false);
+        setIsLoadingMore(false);
+      }
     }
-  };
+  }, [articleSort, category]);
 
   useEffect(() => {
     if (!visible) return;
+    searchRequestIdRef.current += 1;
 
     if (!normalizedQuery) {
       setResults([]);
@@ -97,7 +125,7 @@ export function FeedSearchModal({
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [normalizedQuery, visible]);
+  }, [normalizedQuery, searchPosts, visible]);
 
   const loadMoreResults = () => {
     if (!normalizedQuery || isSearching || isLoadingMore || page >= totalPages) {
@@ -108,6 +136,7 @@ export function FeedSearchModal({
   };
 
   const close = () => {
+    searchRequestIdRef.current += 1;
     setQuery("");
     setResults([]);
     setErrorMessage("");
@@ -128,14 +157,14 @@ export function FeedSearchModal({
           dialogLayout.backdrop,
         ]}
       >
-      <SafeAreaView
-        edges={["top"]}
-        style={[
-          styles.screen,
-          dialogLayout.surface,
-          isDesktopWeb && styles.desktopScreen,
-        ]}
-      >
+        <SafeAreaView
+          edges={["top"]}
+          style={[
+            styles.screen,
+            dialogLayout.surface,
+            isDesktopWeb && styles.desktopScreen,
+          ]}
+        >
         <View style={styles.header}>
           <Pressable
             accessibilityLabel="Đóng tìm kiếm"
@@ -149,10 +178,18 @@ export function FeedSearchModal({
           <View style={styles.searchBox}>
             <Ionicons color={colors.textMuted} name="search" size={20} />
             <TextInput
-              accessibilityLabel="Tìm kiếm bài viết"
+              accessibilityLabel={
+                category === "articles"
+                  ? "Tìm kiếm bài báo"
+                  : "Tìm kiếm bài viết"
+              }
               autoFocus
               onChangeText={setQuery}
-              placeholder="Tìm bài viết, tác giả..."
+              placeholder={
+                category === "articles"
+                  ? "Tìm bài báo, chủ đề, tác giả..."
+                  : "Tìm bài viết, tác giả..."
+              }
               placeholderTextColor={colors.textMuted}
               returnKeyType="search"
               style={styles.input}
@@ -174,6 +211,12 @@ export function FeedSearchModal({
             )}
           </View>
         </View>
+
+        {category === "articles" ? (
+          <View style={styles.sortBar}>
+            <ArticleSortTabs onChange={onArticleSortChange} value={articleSort} />
+          </View>
+        ) : null}
 
         {normalizedQuery ? (
           <FlatList
@@ -197,16 +240,32 @@ export function FeedSearchModal({
             ListFooterComponent={isLoadingMore ? <SearchSkeleton /> : null}
             onEndReached={loadMoreResults}
             onEndReachedThreshold={0.35}
-            renderItem={({ item }) => <PostCard post={item} />}
+            renderItem={({ item }) => (
+              <PostCard
+                onOpenArticle={onOpenArticle}
+                onOpenAuthor={onOpenAuthor}
+                onShare={onShare}
+                post={item}
+                variant={category === "articles" ? "news" : "default"}
+              />
+            )}
             showsVerticalScrollIndicator={false}
           />
         ) : (
           <EmptySearch
-            title="Tìm kiếm trên trang chủ"
-            description="Nhập tên tác giả, nội dung hoặc địa điểm"
+            title={
+              category === "articles"
+                ? "Tìm kiếm bài báo"
+                : "Tìm kiếm trên trang chủ"
+            }
+            description={
+              category === "articles"
+                ? "Tìm bài báo, chủ đề, tác giả..."
+                : "Nhập tên tác giả, nội dung hoặc địa điểm"
+            }
           />
         )}
-      </SafeAreaView>
+        </SafeAreaView>
       </View>
     </Modal>
   );
@@ -336,6 +395,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  sortBar: {
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md,
   },
   skeletonAvatar: {

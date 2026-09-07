@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { spacing, type ThemeColors, useTheme } from "@/theme";
 
@@ -42,7 +42,12 @@ export function FeedCategoryHeader({
   ];
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        Platform.OS !== "web" && styles.nativeContainer,
+      ]}
+    >
       {items.map((item) => (
         <Pressable
           accessibilityLabel={item.label}
@@ -85,5 +90,6 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       justifyContent: "center",
     },
+    nativeContainer: { height: 55, paddingTop: 5 },
     pressedItem: { opacity: 0.68 },
   });

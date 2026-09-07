@@ -1,5 +1,7 @@
 import type { MentionReference } from "@/types/mention";
 
+export type PostFeedSort = "trending" | "latest";
+
 export type FeedPost = {
   id: string;
   author: string;

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  getFixedTopBarBackgroundLayout,
   getFixedTopBarLayout,
   getReelContentWidth,
   getReelsOverlayLayout,
@@ -18,6 +19,14 @@ const createGroupRouteSource = readFileSync(
 );
 const userProfileScreenSource = readFileSync(
   new URL("../../features/profile/user-profile-screen.tsx", import.meta.url),
+  "utf8",
+);
+const fixedTopBarSource = readFileSync(
+  new URL("./fixed-top-bar.tsx", import.meta.url),
+  "utf8",
+);
+const feedCategoryHeaderSource = readFileSync(
+  new URL("../feed/feed-category-header.tsx", import.meta.url),
   "utf8",
 );
 
@@ -63,10 +72,10 @@ test("desktop web does not reserve mobile tab or safe-area padding", () => {
   );
 });
 
-test("desktop composer sits close to the desktop header", () => {
+test("desktop composer attaches directly below the desktop header", () => {
   assert.deepEqual(getFixedTopBarLayout({ isDesktopWeb: true }), {
-    height: 134,
-    paddingTop: 8,
+    height: 126,
+    paddingTop: 0,
   });
 });
 
@@ -77,11 +86,46 @@ test("compact web composer starts close to the viewport top", () => {
   });
 });
 
-test("native mobile composer keeps its safe top spacing", () => {
+test("native mobile composer keeps its background flush with the viewport", () => {
   assert.deepEqual(getFixedTopBarLayout({ isCompactWeb: false, isDesktopWeb: false }), {
-    height: 186,
-    paddingTop: 60,
+    height: 131,
+    paddingTop: 0,
   });
+});
+
+test("article toolbar reserves room for search and sort rows", () => {
+  assert.deepEqual(getFixedTopBarLayout({ isArticle: true, isDesktopWeb: true }), {
+    height: 170,
+    paddingTop: 0,
+  });
+  assert.deepEqual(getFixedTopBarLayout({ isArticle: true, isDesktopWeb: false }), {
+    height: 175,
+    paddingTop: 0,
+  });
+});
+
+test("fixed composer background fully covers content behind its top inset", () => {
+  assert.match(fixedTopBarSource, /backgroundColor:\s*theme\.colors\.background/);
+});
+
+test("native home background extends through the full top safe area", () => {
+  assert.deepEqual(
+    getFixedTopBarBackgroundLayout({ barHeight: 131, isWeb: false, topInset: 24 }),
+    { height: 155, top: -24 },
+  );
+});
+
+test("web home background stays aligned to the web viewport", () => {
+  assert.deepEqual(
+    getFixedTopBarBackgroundLayout({ barHeight: 126, isWeb: true, topInset: 24 }),
+    { height: 126, top: 0 },
+  );
+});
+
+test("native category tabs lower only their content by five pixels", () => {
+  assert.match(feedCategoryHeaderSource, /Platform\.OS\s*!==\s*"web"/);
+  assert.match(feedCategoryHeaderSource, /height:\s*55/);
+  assert.match(feedCategoryHeaderSource, /paddingTop:\s*5/);
 });
 
 test("desktop reels video and overlay header start directly below navigation", () => {

@@ -40,7 +40,7 @@ import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
 import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing } from "@/theme";
-import type { CreatePostInput, FeedPost } from "@/types/feed";
+import type { CreatePostInput, FeedPost, PostFeedSort } from "@/types/feed";
 import { canCreateArticle } from "@/types/account-style";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -53,8 +53,15 @@ export function FeedScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { isDesktopWeb, isWeb } = useResponsive();
+  const [activeCategory, setActiveCategory] =
+    useState<FeedCategory>("community");
+  const activeCategoryRef = useRef<FeedCategory>("community");
+  const [articleSort, setArticleSort] = useState<PostFeedSort>("trending");
+  const articleSortRef = useRef<PostFeedSort>("trending");
+  const loadRequestIdRef = useRef(0);
   const isCompactWeb = isWeb && !isDesktopWeb;
   const feedTopPadding = getFixedTopBarLayout({
+    isArticle: activeCategory === "articles",
     isCompactWeb,
     isDesktopWeb,
   }).height;
@@ -64,9 +71,6 @@ export function FeedScreen() {
     mobilePadding: TAB_BAR_BOTTOM + TAB_BAR_HEIGHT + insets.bottom + spacing.lg,
   });
   const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [activeCategory, setActiveCategory] =
-    useState<FeedCategory>("community");
-  const activeCategoryRef = useRef<FeedCategory>("community");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,7 +87,9 @@ export function FeedScreen() {
   const loadPosts = async (
     nextPage: number,
     category = activeCategoryRef.current,
+    sort = articleSortRef.current,
   ) => {
+    const requestId = ++loadRequestIdRef.current;
     if (nextPage === 1) {
       setIsLoading(true);
       setErrorMessage("");
@@ -96,9 +102,14 @@ export function FeedScreen() {
         page: nextPage,
         pageSize: PAGE_SIZE,
         postType: category === "community" ? 0 : 2,
+        sort: category === "articles" ? sort : undefined,
       });
 
-      if (activeCategoryRef.current !== category) return;
+      if (
+        loadRequestIdRef.current !== requestId ||
+        activeCategoryRef.current !== category ||
+        (category === "articles" && articleSortRef.current !== sort)
+      ) return;
 
       setPosts((current) =>
         nextPage === 1 ? result.posts : [...current, ...result.posts],
@@ -106,12 +117,20 @@ export function FeedScreen() {
       setPage(nextPage);
       setTotalPages(result.totalPages);
     } catch (error) {
-      if (activeCategoryRef.current !== category) return;
+      if (
+        loadRequestIdRef.current !== requestId ||
+        activeCategoryRef.current !== category ||
+        (category === "articles" && articleSortRef.current !== sort)
+      ) return;
       setErrorMessage(
         error instanceof Error ? error.message : "Không thể tải bài viết.",
       );
     } finally {
-      if (activeCategoryRef.current === category) {
+      if (
+        loadRequestIdRef.current === requestId &&
+        activeCategoryRef.current === category &&
+        (category !== "articles" || articleSortRef.current === sort)
+      ) {
         setIsLoading(false);
         setIsLoadingMore(false);
       }
@@ -144,9 +163,19 @@ export function FeedScreen() {
     void loadPosts(1, category);
   };
 
+  const selectArticleSort = (sort: PostFeedSort) => {
+    if (articleSortRef.current === sort) return;
+    articleSortRef.current = sort;
+    setArticleSort(sort);
+    setPosts([]);
+    setPage(1);
+    setTotalPages(1);
+    void loadPosts(1, "articles", sort);
+  };
+
   const loadMorePosts = () => {
     if (isLoading || isLoadingMore || page >= totalPages) return;
-    loadPosts(page + 1, activeCategoryRef.current);
+    loadPosts(page + 1, activeCategoryRef.current, articleSortRef.current);
   };
 
   const pickImages = async (): Promise<string[] | null> => {
@@ -327,7 +356,9 @@ export function FeedScreen() {
           ListFooterComponent={isLoadingMore ? <PostSkeleton /> : null}
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.35}
-          onRefresh={() => loadPosts(1, activeCategoryRef.current)}
+          onRefresh={() =>
+            loadPosts(1, activeCategoryRef.current, articleSortRef.current)
+          }
           refreshing={isLoading}
           renderItem={({ item }) => (
             <PostCard
@@ -339,6 +370,7 @@ export function FeedScreen() {
               onSave={handleSavePost}
               onShare={handleSharePost}
               post={item}
+              variant={activeCategory === "articles" ? "news" : "default"}
             />
           )}
           showsVerticalScrollIndicator={false}
@@ -346,10 +378,12 @@ export function FeedScreen() {
       )}
       <PostComposer
         activeCategory={activeCategory}
+        articleSort={articleSort}
         avatar={myAvatar}
         canCreateArticle={canPublishArticle}
         displayName={myDisplayName}
         onArticlePress={() => router.push("/article/editor")}
+        onArticleSortChange={selectArticleSort}
         onArticlesFeedPress={() => selectCategory("articles")}
         onCommunityPress={() => selectCategory("community")}
         onCreatePress={() => setModalVisible(true)}
@@ -368,7 +402,19 @@ export function FeedScreen() {
         visible={modalVisible}
       />
       <FeedSearchModal
+        articleSort={articleSort}
+        category={activeCategory}
         onClose={() => setSearchVisible(false)}
+        onOpenArticle={(articleId) => {
+          setSearchVisible(false);
+          router.push({ pathname: "/article/[id]", params: { id: articleId } });
+        }}
+        onOpenAuthor={(userId) => {
+          setSearchVisible(false);
+          openUserProfile(userId);
+        }}
+        onArticleSortChange={selectArticleSort}
+        onShare={handleSharePost}
         visible={searchVisible}
       />
       <CommentsModal

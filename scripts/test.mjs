@@ -12,6 +12,7 @@ await import("../features/article/article-reader-layout.test.mjs");
 await import("../features/article/article-editor-layout.test.mjs");
 await import("../features/feed/post-preview-layout.test.mjs");
 await import("../features/feed/home-content-header.test.mjs");
+await import("../features/feed/article-news-layout.test.mjs");
 await import("../features/auth/complete-profile-logout.test.mjs");
 await import("../features/auth/complete-profile-theme.test.mjs");
 await import("../features/profile/profile-desktop-layout.test.mjs");
