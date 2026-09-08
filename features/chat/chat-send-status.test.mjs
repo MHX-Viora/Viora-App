@@ -31,10 +31,10 @@ test("own realtime confirmation waits for its optimistic message instead of rend
   );
   assert.equal(
     chatScreen.match(/pendingOutgoingIdsRef\.current\.add\(optimisticId\)/g)?.length,
-    2,
+    3,
   );
   assert.equal(
     chatScreen.match(/finishPendingOutgoing\(optimisticId, sentMessage\.id\)/g)?.length,
-    2,
+    3,
   );
 });

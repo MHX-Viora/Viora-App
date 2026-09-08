@@ -11,16 +11,19 @@ import { type AppTheme, useTheme } from "@/theme";
 
 export function FixedTopBar({
   children,
+  categoryOnly = false,
   isArticle = false,
-}: PropsWithChildren<{ isArticle?: boolean }>) {
+}: PropsWithChildren<{ categoryOnly?: boolean; isArticle?: boolean }>) {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { isDesktopWeb, isWeb } = useResponsive();
+  const { isDesktopWeb, isLargeDesktop, isWeb } = useResponsive();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const barLayout = getFixedTopBarLayout({
+    categoryOnly,
     isArticle,
     isCompactWeb: isWeb && !isDesktopWeb,
     isDesktopWeb,
+    useDesktopSideRails: isDesktopWeb && isLargeDesktop,
   });
   const backgroundLayout = getFixedTopBarBackgroundLayout({
     barHeight: barLayout.height,
@@ -36,7 +39,6 @@ export function FixedTopBar({
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     backgroundColor: theme.colors.background,
-    justifyContent: "flex-end",
     left: 0,
     position: "absolute",
     right: 0,

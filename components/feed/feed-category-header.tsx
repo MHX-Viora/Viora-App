@@ -1,10 +1,12 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo } from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { spacing, type ThemeColors, useTheme } from "@/theme";
+import { getFeedCategorySidebarLayout } from "@/components/layout/responsive-layout";
+import { useResponsive } from "@/hooks/use-responsive";
+import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 
-export type FeedCategory = "community" | "articles";
+export type FeedCategory = "community" | "reels" | "articles";
 
 export function FeedCategoryHeader({
   activeCategory,
@@ -20,6 +22,14 @@ export function FeedCategoryHeader({
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isDesktopWeb, width } = useResponsive();
+  const desktopLayout = getFeedCategorySidebarLayout({
+    feedMaxWidth: layout.feedMaxWidth,
+    isDesktopWeb,
+    pageGutter: layout.pageGutter,
+    viewportWidth: width,
+  });
+  const usesDesktopSideRails = desktopLayout !== null;
   const items = [
     {
       active: activeCategory === "community",
@@ -28,7 +38,7 @@ export function FeedCategoryHeader({
       onPress: onCommunityPress,
     },
     {
-      active: false,
+      active: activeCategory === "reels",
       icon: "play-circle-outline" as const,
       label: "Video ngắn",
       onPress: onReelsPress,
@@ -45,6 +55,8 @@ export function FeedCategoryHeader({
     <View
       style={[
         styles.container,
+        usesDesktopSideRails && styles.desktopContainer,
+        desktopLayout,
         Platform.OS !== "web" && styles.nativeContainer,
       ]}
     >
@@ -57,7 +69,9 @@ export function FeedCategoryHeader({
           onPress={item.onPress}
           style={({ pressed }) => [
             styles.item,
+            usesDesktopSideRails && styles.desktopItem,
             item.active && styles.activeItem,
+            item.active && usesDesktopSideRails && styles.desktopActiveItem,
             pressed && styles.pressedItem,
           ]}
         >
@@ -65,7 +79,9 @@ export function FeedCategoryHeader({
             color={item.active ? colors.primary : colors.textMuted}
             name={item.icon}
             size={24}
+            style={[styles.icon, usesDesktopSideRails && styles.desktopIcon]}
           />
+          {usesDesktopSideRails ? <Text style={styles.label}>{item.label}</Text> : null}
         </Pressable>
       ))}
     </View>
@@ -83,12 +99,47 @@ const createStyles = (colors: ThemeColors) =>
       height: 50,
       paddingHorizontal: spacing.sm,
     },
+    desktopActiveItem: {
+      backgroundColor: colors.primarySoft,
+      borderBottomColor: "transparent",
+    },
+    desktopContainer: {
+      backgroundColor: "transparent",
+      borderBottomWidth: 0,
+      flexDirection: "column",
+      gap: spacing.xs,
+      height: "auto",
+      paddingHorizontal: 0,
+      position: "absolute",
+      top: spacing.lg,
+    },
+    desktopIcon: { transform: [] },
+    desktopItem: {
+      borderBottomWidth: 0,
+      borderRadius: 8,
+      flex: undefined,
+      flexDirection: "row",
+      gap: spacing.md,
+      justifyContent: "flex-start",
+      minHeight: 48,
+      paddingHorizontal: spacing.md,
+      paddingTop: 0,
+      width: "100%",
+    },
+    icon: { transform: [{ translateY: 5 }] },
     item: {
       alignItems: "center",
       borderBottomColor: "transparent",
       borderBottomWidth: 2,
       flex: 1,
       justifyContent: "center",
+      paddingTop: spacing.md,
+    },
+    label: {
+      color: colors.text,
+      flexShrink: 1,
+      fontSize: 15,
+      fontWeight: "700",
     },
     nativeContainer: { height: 55, paddingTop: 5 },
     pressedItem: { opacity: 0.68 },

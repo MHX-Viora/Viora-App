@@ -56,20 +56,21 @@ test("news cards show publication details with only share and options controls",
   );
 });
 
-test("the article header combines search, publishing, and exactly two sort modes", () => {
+test("the article header combines search, publishing, and three sort modes", () => {
   assert.match(composerSource, /activeCategory === "articles" \? \(/);
   assert.match(composerSource, /Tìm bài báo, chủ đề, tác giả\.\.\./);
   assert.match(composerSource, /Tạo bài báo/);
   assert.match(composerSource, /ArticleSortTabs/);
   assert.match(sortTabsSource, /Xu hướng/);
   assert.match(sortTabsSource, /Mới nhất/);
+  assert.match(sortTabsSource, /recommended/);
   assert.match(composerSource, /articleSort: PostFeedSort/);
   assert.match(composerSource, /onArticleSortChange: \(sort: PostFeedSort\) => void/);
 });
 
 test("article search and pagination keep the selected server sort", () => {
   assert.match(feedSource, /category=\{activeCategory\}/);
-  assert.match(feedSource, /useState<PostFeedSort>\("trending"\)/);
+  assert.match(feedSource, /useState<PostFeedSort>\("recommended"\)/);
   assert.match(feedSource, /loadRequestIdRef\.current/);
   assert.match(searchSource, /category: FeedCategory/);
   assert.match(
@@ -83,4 +84,31 @@ test("article search and pagination keep the selected server sort", () => {
   assert.match(searchSource, /onOpenArticle=\{onOpenArticle\}/);
   assert.match(serviceSource, /sort\?: PostFeedSort/);
   assert.match(serviceSource, /params\.append\("sort", sort\)/);
+  assert.match(
+    serviceSource,
+    /sort === "recommended"[\s\S]*?\/api\/articles\/recommended/,
+  );
+});
+
+test("article category selection is stored in route params for refresh", () => {
+  assert.match(
+    feedSource,
+    /onArticlesFeedPress=\{\(\) => \{[\s\S]*?router\.setParams\(\{ category: "articles" \}\)[\s\S]*?selectCategory\("articles"\)/,
+  );
+  assert.match(
+    feedSource,
+    /onCommunityPress=\{\(\) => \{[\s\S]*?router\.setParams\(\{ category: "community" \}\)[\s\S]*?selectCategory\("community"\)/,
+  );
+});
+
+test("recommended article impressions are sent once per visible item", () => {
+  assert.match(feedSource, /viewedArticleIdsRef/);
+  assert.match(feedSource, /onViewableItemsChanged/);
+  assert.match(feedSource, /trackArticleInteraction\(item\.id, "impression"\)/);
+});
+
+test("news cards expose an explicit not-interested recommendation signal", () => {
+  assert.match(cardSource, /onNotInterested\?: \(postId: string\) => void/);
+  assert.match(cardSource, /isNewsLayout && !post\.isMine && onNotInterested/);
+  assert.match(feedSource, /trackArticleInteraction\(postId, "notInterested"\)/);
 });

@@ -38,14 +38,10 @@ const getPayloadCallId = (payload: unknown) => {
       : "";
 };
 
-const webVideoStyle = {
-  backgroundColor: "#071426", height: "100%", objectFit: "cover", width: "100%",
-} as const;
-
-function Video({ stream, muted }: { stream: MediaStream | null; muted?: boolean }) {
+function Video({ backgroundColor, stream, muted }: { backgroundColor: string; stream: MediaStream | null; muted?: boolean }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => { if (ref.current) ref.current.srcObject = stream; }, [stream]);
-  return <video autoPlay muted={muted} playsInline ref={ref} style={webVideoStyle} />;
+  return <video autoPlay muted={muted} playsInline ref={ref} style={{ backgroundColor, height: "100%", objectFit: "cover", width: "100%" }} />;
 }
 
 function Audio({ muted, stream }: { muted: boolean; stream: MediaStream | null }) {
@@ -286,7 +282,7 @@ export function VoiceCallScreen() {
       ]}>
         <CallBackdrop />
         {isVideo && remoteStream ? (
-          <View style={styles.remoteVideo}><Video stream={remoteStream} /></View>
+          <View style={styles.remoteVideo}><Video backgroundColor={colors.background} stream={remoteStream} /></View>
         ) : null}
         <Audio muted={!speakerOn} stream={remoteStream} />
         <View style={styles.topBar}>
@@ -305,7 +301,7 @@ export function VoiceCallScreen() {
           ) : null}
         </View>
         {isVideo && localStream ? (
-          <View style={styles.localVideo}><Video muted stream={localStream} /></View>
+          <View style={styles.localVideo}><Video backgroundColor={colors.background} muted stream={localStream} /></View>
         ) : null}
         {status === "failed" && mode === "caller" && !offerStateRef.current.sent ? (
           <Pressable
@@ -351,7 +347,7 @@ export function VoiceCallScreen() {
             onPress={() => void leave()}
             style={styles.endButton}
           >
-            <Ionicons color={colors.white} name="call" size={28} />
+            <Ionicons color={colors.dangerContrast} name="call" size={28} />
           </Pressable>
         </View>
       </View>

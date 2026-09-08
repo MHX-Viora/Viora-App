@@ -129,11 +129,17 @@ export const getPosts = async ({
   });
 
   if (keyword.trim()) params.append("keyword", keyword.trim());
-  if (postType !== undefined) params.append("postType", String(postType));
-  if (sort) params.append("sort", sort);
+  if (sort !== "recommended" && postType !== undefined) {
+    params.append("postType", String(postType));
+  }
+  if (sort && sort !== "recommended") params.append("sort", sort);
   if (userId?.trim()) params.append("userId", userId.trim());
 
-  const response = await authenticatedFetch(`${BASE_URL}/api/feed?${params}`);
+  const endpoint =
+    sort === "recommended"
+      ? `${BASE_URL}/api/articles/recommended?${params}`
+      : `${BASE_URL}/api/feed?${params}`;
+  const response = await authenticatedFetch(endpoint);
   const text = await response.text();
   const data = parseResponseText(text);
 

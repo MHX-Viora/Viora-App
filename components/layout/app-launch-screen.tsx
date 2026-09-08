@@ -4,13 +4,15 @@ import {
   APP_LAUNCH_ARTWORK_ASPECT_RATIO,
   APP_LAUNCH_ARTWORK_WIDTH,
 } from "@/components/layout/app-launch-layout";
+import { useTheme } from "@/theme";
 
 export function AppLaunchScreen() {
+  const { theme } = useTheme();
   return (
     <View
       accessibilityLabel="Đang khởi động Mạng xã hội ANKT"
       accessibilityRole="progressbar"
-      style={styles.screen}
+      style={[styles.screen, { backgroundColor: theme.colors.background }]}
     >
       <Image
         accessibilityLabel="Logo Mạng xã hội ANKT"
@@ -31,7 +33,6 @@ const styles = StyleSheet.create({
   screen: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
-    backgroundColor: "#000000",
     justifyContent: "center",
     zIndex: 100,
   },

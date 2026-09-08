@@ -1,5 +1,6 @@
 import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import {
   DarkTheme,
   DefaultTheme,
@@ -83,6 +84,11 @@ const synchronizeAuthenticatedApp = (reason: "cold-start" | "resume") => {
 
 function RootLayoutContent() {
   const { theme } = useTheme();
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(theme.colors.background).catch(
+      () => undefined,
+    );
+  }, [theme.colors.background]);
   const navigationTheme = useMemo(() => {
     const base = theme.isDark ? DarkTheme : DefaultTheme;
     return {

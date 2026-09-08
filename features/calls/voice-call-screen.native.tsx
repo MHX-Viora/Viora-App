@@ -709,7 +709,7 @@ export function VoiceCallScreen() {
           </>
         ) : null}
         <Pressable accessibilityLabel="Kết thúc cuộc gọi" onPress={end} style={styles.endButton}>
-          <Ionicons color={colors.white} name="call" size={28} />
+          <Ionicons color={colors.dangerContrast} name="call" size={28} />
         </Pressable>
       </View>
     </View>

@@ -7,13 +7,20 @@ test("desktop navigation contains exactly the five existing visible tabs", () =>
     desktopNavigationItems.map(({ route, title }) => ({ route, title })),
     [
       { route: "index", title: "Trang chủ" },
-      { route: "reels", title: "Reels" },
+      { route: "utilities", title: "Tiện ích" },
       { route: "chat", title: "Trò chuyện" },
       { route: "notification", title: "Thông báo" },
       { route: "profile", title: "Hồ sơ" },
     ],
   );
-  assert.equal(desktopNavigationItems.some((item) => item.route === "utilities"), false);
+  assert.equal(desktopNavigationItems.some((item) => item.route === "reels"), false);
+  assert.deepEqual(desktopNavigationItems[1], {
+    href: "/utilities",
+    icon: "grid-outline",
+    iconActive: "grid",
+    route: "utilities",
+    title: "Tiện ích",
+  });
 });
 
 test("desktop navigation maps tab state to an existing route", () => {

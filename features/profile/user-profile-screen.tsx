@@ -669,7 +669,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.danger,
     borderColor: colors.danger,
   },
-  emphasisActionText: { color: colors.white },
+  emphasisActionText: { color: colors.dangerContrast },
   header: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,

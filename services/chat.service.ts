@@ -830,6 +830,7 @@ export const sendChatMessage = async (input: {
   replyToMessageId?: string;
   mentionUserIds?: string[];
   attachments: SendMessageAttachment[];
+  stickerId?: string;
 }): Promise<ChatMessage> => {
   const uploadedAttachments = await uploadChatAttachments(input.attachments);
   const body = {
@@ -841,11 +842,12 @@ export const sendChatMessage = async (input: {
       mimeType: attachment.mimeType,
       thumbnailUrl: attachment.thumbnailUrl ?? null,
     })),
-    content: input.content,
+    content: input.stickerId ? null : input.content,
     conversationId: input.conversationId,
-    messageType: getMessageType(input.content, input.attachments),
+    messageType: input.stickerId ? 5 : getMessageType(input.content, input.attachments),
     replyMessageId: input.replyToMessageId,
     mentionUserIds: input.mentionUserIds,
+    stickerId: input.stickerId,
   };
 
   const response = await authenticatedFetch(`${BASE_URL}/api/chat/messages`, {

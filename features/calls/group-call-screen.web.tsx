@@ -1,17 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Room, RoomEvent, Track, type TrackPublication } from "livekit-client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { endGroupCall, joinGroupCall } from "@/services/group-call.service";
 import { getUser } from "@/stores/session-store";
-import { colors, spacing } from "@/theme";
+import { spacing, type ThemeColors, useTheme } from "@/theme";
 import { CallType } from "@/types/call";
 
 type VideoPublication = TrackPublication & { participantName: string; isLocal?: boolean };
 
-function VideoTile({ publication }: { publication: VideoPublication }) {
+function VideoTile({ publication, styles }: { publication: VideoPublication; styles: ReturnType<typeof createStyles> }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const track = publication.track;
@@ -36,6 +36,9 @@ function AudioTrack({ publication }: { publication: TrackPublication }) {
 }
 
 export function GroupCallScreen() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { callId = "" } = useLocalSearchParams<{ callId?: string }>();
   const roomRef = useRef<Room | null>(null);
   const leftRef = useRef(false);
@@ -101,19 +104,19 @@ export function GroupCallScreen() {
   return <View style={styles.screen}>
     <View style={styles.header}><Text style={styles.title}>Cuộc gọi nhóm</Text><Text style={styles.subtitle}>{room.remoteParticipants.size + 1} người tham gia</Text></View>
     {audioTracks.map((publication) => <AudioTrack key={publication.trackSid} publication={publication} />)}
-    <View style={styles.grid}>{videos.length ? videos.map((publication) => <VideoTile key={`${publication.participantName}-${publication.trackSid}`} publication={publication} />) : <Text style={styles.loading}>Đang chờ người tham gia…</Text>}</View>
+    <View style={styles.grid}>{videos.length ? videos.map((publication) => <VideoTile key={`${publication.participantName}-${publication.trackSid}`} publication={publication} styles={styles} />) : <Text style={styles.loading}>Đang chờ người tham gia…</Text>}</View>
     <View style={styles.controls}>
       <Pressable accessibilityLabel="Bật/tắt mic" style={styles.control} onPress={() => void toggleMic()}><Ionicons color={colors.text} name={micOn ? "mic" : "mic-off"} size={24} /></Pressable>
       <Pressable accessibilityLabel="Bật/tắt camera" style={styles.control} onPress={() => void toggleCamera()}><Ionicons color={colors.text} name={cameraOn ? "videocam" : "videocam-off"} size={24} /></Pressable>
-      <Pressable accessibilityLabel="Rời cuộc gọi" style={[styles.control, styles.danger]} onPress={() => void leave()}><Ionicons color="#fff" name="call" size={24} /></Pressable>
-      {canEnd && <Pressable accessibilityLabel="Kết thúc cuộc gọi" style={[styles.control, styles.danger]} onPress={() => void leave(true)}><Ionicons color="#fff" name="stop-circle" size={24} /></Pressable>}
+      <Pressable accessibilityLabel="Rời cuộc gọi" style={[styles.control, styles.danger]} onPress={() => void leave()}><Ionicons color={colors.dangerContrast} name="call" size={24} /></Pressable>
+      {canEnd && <Pressable accessibilityLabel="Kết thúc cuộc gọi" style={[styles.control, styles.danger]} onPress={() => void leave(true)}><Ionicons color={colors.dangerContrast} name="stop-circle" size={24} /></Pressable>}
     </View>
   </View>;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1, padding: spacing.lg }, center: { alignItems: "center", backgroundColor: colors.background, flex: 1, gap: spacing.md, justifyContent: "center", padding: spacing.xl },
   header: { alignItems: "center", paddingVertical: spacing.md }, title: { color: colors.text, fontSize: 21, fontWeight: "800" }, subtitle: { color: colors.textMuted, marginTop: spacing.xs },
-  grid: { alignContent: "center", flex: 1, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "center" }, tile: { backgroundColor: colors.surface, borderRadius: 14, height: "46%", maxWidth: "48%", minWidth: "42%", overflow: "hidden" }, video: { backgroundColor: "#071426", height: "100%", objectFit: "cover", width: "100%" }, tileName: { backgroundColor: "rgba(0,0,0,.5)", bottom: 0, color: "#fff", left: 0, padding: 7, position: "absolute", right: 0 },
-  controls: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", paddingVertical: spacing.md }, control: { alignItems: "center", backgroundColor: colors.surface, borderRadius: 26, height: 52, justifyContent: "center", width: 52 }, danger: { backgroundColor: "#d9364f" }, loading: { color: colors.textMuted }, error: { color: colors.text, textAlign: "center" }, back: { backgroundColor: colors.primary, borderRadius: 20, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }, backText: { color: colors.primaryContrast, fontWeight: "700" },
+  grid: { alignContent: "center", flex: 1, flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, justifyContent: "center" }, tile: { backgroundColor: colors.surface, borderRadius: 14, height: "46%", maxWidth: "48%", minWidth: "42%", overflow: "hidden" }, video: { backgroundColor: colors.background, height: "100%", objectFit: "cover", width: "100%" }, tileName: { backgroundColor: colors.overlay, bottom: 0, color: colors.white, left: 0, padding: 7, position: "absolute", right: 0 },
+  controls: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "center", paddingVertical: spacing.md }, control: { alignItems: "center", backgroundColor: colors.surface, borderRadius: 26, height: 52, justifyContent: "center", width: 52 }, danger: { backgroundColor: colors.danger }, loading: { color: colors.textMuted }, error: { color: colors.text, textAlign: "center" }, back: { backgroundColor: colors.primary, borderRadius: 20, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }, backText: { color: colors.primaryContrast, fontWeight: "700" },
 });

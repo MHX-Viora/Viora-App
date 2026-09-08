@@ -203,13 +203,13 @@ export function IncomingCallHost() {
           <View style={styles.actions}>
           <View style={styles.actionItem}>
             <Pressable accessibilityLabel="Từ chối cuộc gọi" disabled={isConnecting} onPress={reject} style={[styles.button, styles.reject]}>
-              <Ionicons color={colors.white} name="close" size={28} />
+              <Ionicons color={colors.dangerContrast} name="close" size={28} />
             </Pressable>
             <Text style={styles.actionLabel}>Từ chối</Text>
           </View>
           <View style={styles.actionItem}>
             <Pressable accessibilityLabel="Nhận cuộc gọi" disabled={isConnecting} onPress={accept} style={[styles.button, styles.accept]}>
-              <Ionicons color={colors.white} name="call" size={28} />
+              <Ionicons color={colors.primaryContrast} name="call" size={28} />
             </Pressable>
             <Text style={styles.actionLabel}>Trả lời</Text>
           </View>

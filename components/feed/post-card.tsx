@@ -155,6 +155,7 @@ type Props = {
   onOpenAuthor?: (userId: string) => void;
   onOpenPost?: (postId: string) => void;
   onOpenArticle?: (articleId: string) => void;
+  onNotInterested?: (postId: string) => void;
   onReact?: (postId: string, reactionType: number) => void;
   onSave?: (postId: string) => void;
   onShare?: (postId: string) => void;
@@ -168,6 +169,7 @@ export function PostCard({
   onOpenAuthor,
   onOpenPost,
   onOpenArticle,
+  onNotInterested,
   onReact,
   onSave,
   onShare,
@@ -713,6 +715,18 @@ export function PostCard({
               <Ionicons color={colors.text} name="flag-outline" size={22} />
               <Text style={styles.sheetActionText}>Báo cáo bài viết</Text>
             </Pressable>
+            {isNewsLayout && !post.isMine && onNotInterested ? (
+              <Pressable
+                onPress={() => {
+                  setOptionsVisible(false);
+                  onNotInterested(post.id);
+                }}
+                style={styles.sheetAction}
+              >
+                <Ionicons color={colors.text} name="eye-off-outline" size={22} />
+                <Text style={styles.sheetActionText}>Không quan tâm</Text>
+              </Pressable>
+            ) : null}
             {post.isMine && (
               <Pressable
                 disabled={isDeleting}

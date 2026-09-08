@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemeModeSheet } from "@/components/profile/theme-mode-sheet";
 import { TmiSponsor } from "@/components/common/tmi-sponsor";
-import { spacing, type AppTheme, useTheme } from "@/theme";
+import { getThemeDefinition, spacing, type AppTheme, useTheme } from "@/theme";
 
 const SETTINGS = [
   { action: "saved", icon: "bookmark-outline", label: "Đã lưu" },
@@ -113,7 +113,7 @@ export function ProfileSettingsSheet({
             <Text style={styles.rowText}>{item.label}</Text>
             {item.action === "theme" && (
               <Text style={styles.valueText}>
-                {mode === "modern" ? "Hiện đại" : "Cổ điển"}
+                {getThemeDefinition(mode).name}
               </Text>
             )}
             <Ionicons

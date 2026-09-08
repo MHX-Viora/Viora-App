@@ -98,16 +98,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="reels"
+        name="utilities"
         options={{
-          tabBarAccessibilityLabel: "Reels",
+          tabBarAccessibilityLabel: "Tiện ích",
           tabBarIcon: ({ focused }) => (
             <TabIcon
               focused={focused}
-              name={focused ? "play-circle" : "play-circle-outline"}
+              name={focused ? "grid" : "grid-outline"}
             />
           ),
-          title: "Reels",
+          title: "Tiện ích",
         }}
       />
       <Tabs.Screen
@@ -126,10 +126,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="utilities"
+        name="reels"
         options={{
           href: null,
-          title: "Tiện ích",
+          title: "Reels",
         }}
       />
       <Tabs.Screen

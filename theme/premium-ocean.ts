@@ -1,0 +1,93 @@
+import type { AppTheme, ThemeColors } from "./types";
+import { premiumOceanVisuals } from "./visuals";
+
+const oceanColors: ThemeColors = {
+  avatarBorder: "#19D8C4",
+  background: "#06182A",
+  badge: "#13B9D0",
+  black: "#000000",
+  border: "rgba(60, 210, 220, 0.22)",
+  borderRead: "rgba(145, 167, 188, 0.20)",
+  borderSubtle: "rgba(60, 210, 220, 0.14)",
+  card: "rgba(12, 32, 54, 0.92)",
+  danger: "#FF6178",
+  dangerContrast: "#06182A",
+  dangerSoft: "rgba(255, 97, 120, 0.14)",
+  divider: "rgba(60, 210, 220, 0.18)",
+  glow: "rgba(20, 207, 210, 0.30)",
+  icon: "#DDEAF6",
+  input: "#0C2036",
+  messageMine: "rgba(19, 185, 208, 0.28)",
+  messageMineMuted: "#BFD3E4",
+  messageMineText: "#F5FAFF",
+  messageOther: "#102840",
+  overlay: "rgba(2, 12, 24, 0.72)",
+  placeholder: "#7E94A9",
+  primary: "#13C8C5",
+  primaryContrast: "#06182A",
+  primaryPressed: "#0FAEBC",
+  primarySoft: "rgba(19, 200, 197, 0.14)",
+  qrBackground: "#F5FAFF",
+  qrForeground: "#06182A",
+  reaction: "rgba(21, 159, 227, 0.18)",
+  reelBackground: "#030D18",
+  secondaryBackground: "#081D31",
+  shadow: "rgba(20, 207, 210, 0.30)",
+  success: "#24D6A2",
+  successContrast: "#06182A",
+  successSoft: "rgba(36, 214, 162, 0.14)",
+  successText: "#55E8BB",
+  surface: "#0C2036",
+  surfaceElevated: "#102840",
+  tabBar: "rgba(8, 29, 49, 0.94)",
+  tabBarBorder: "rgba(60, 210, 220, 0.22)",
+  text: "#F5FAFF",
+  textMuted: "#91A7BC",
+  toastBackground: "#102840",
+  toastText: "#F5FAFF",
+  verified: "#159FE3",
+  verifiedContrast: "#06182A",
+  visuals: premiumOceanVisuals,
+  warning: "#F4C95D",
+  warningSoft: "rgba(244, 201, 93, 0.14)",
+  white: "#FFFFFF",
+};
+
+const oceanReelsColors: ThemeColors = {
+  ...oceanColors,
+  background: "#030D18",
+  card: "rgba(12, 32, 54, 0.82)",
+  surface: "rgba(12, 32, 54, 0.84)",
+};
+
+const oceanNotificationColors: ThemeColors = {
+  ...oceanColors,
+  surfaceElevated: "#102840",
+};
+
+export const premiumOceanTheme: AppTheme = {
+  colors: oceanColors,
+  effects: {
+    blurEnabled: true,
+    cardRadius: 20,
+    glassEnabled: true,
+    glowEnabled: true,
+    gradientEnabled: true,
+    shadow: {
+      elevation: 7,
+      shadowColor: oceanColors.primary,
+      shadowOffset: { height: 3, width: 0 },
+      shadowOpacity: 0.2,
+      shadowRadius: 10,
+    },
+  },
+  gradients: {
+    messageMine: ["#0B5967", "#0D456E"],
+    premiumBadge: ["#19D8C4", "#168FE5"],
+    primary: ["#19D8C4", "#13B9D0", "#168FE5"],
+  },
+  isDark: true,
+  mode: "premium-ocean",
+  notifications: oceanNotificationColors,
+  reels: oceanReelsColors,
+};

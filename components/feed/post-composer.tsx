@@ -9,6 +9,7 @@ import {
   type FeedCategory,
 } from "@/components/feed/feed-category-header";
 import { FixedTopBar } from "@/components/layout/fixed-top-bar";
+import { DesktopDownloadPromo } from "@/components/landing/desktop-download-promo";
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 import type { PostFeedSort } from "@/types/feed";
@@ -55,6 +56,7 @@ export function PostComposer({
           onCommunityPress={onCommunityPress}
           onReelsPress={onReelsPress}
         />
+        <DesktopDownloadPromo />
         {activeCategory === "articles" ? (
           <View style={[styles.container, styles.articleContainer]}>
             <View style={styles.articlePrimaryRow}>

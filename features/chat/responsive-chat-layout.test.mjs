@@ -38,22 +38,46 @@ const settingsSubpageSources = [
 
 test("desktop chat keeps the conversation list beside its detail pane", () => {
   assert.equal(
-    getResponsiveChatMode({ hasConversation: false, isDesktopWeb: true }),
+    getResponsiveChatMode({
+      hasConversation: false,
+      isDesktopWeb: true,
+      isLargeDesktop: true,
+    }),
     "split-empty",
   );
   assert.equal(
-    getResponsiveChatMode({ hasConversation: true, isDesktopWeb: true }),
+    getResponsiveChatMode({
+      hasConversation: true,
+      isDesktopWeb: true,
+      isLargeDesktop: false,
+    }),
     "split-detail",
+  );
+  assert.equal(
+    getResponsiveChatMode({
+      hasConversation: true,
+      isDesktopWeb: true,
+      isLargeDesktop: true,
+    }),
+    "split-detail-settings",
   );
 });
 
 test("compact chat preserves list-to-detail navigation", () => {
   assert.equal(
-    getResponsiveChatMode({ hasConversation: false, isDesktopWeb: false }),
+    getResponsiveChatMode({
+      hasConversation: false,
+      isDesktopWeb: false,
+      isLargeDesktop: false,
+    }),
     "list",
   );
   assert.equal(
-    getResponsiveChatMode({ hasConversation: true, isDesktopWeb: false }),
+    getResponsiveChatMode({
+      hasConversation: true,
+      isDesktopWeb: false,
+      isLargeDesktop: false,
+    }),
     "detail",
   );
 });
@@ -118,6 +142,58 @@ test("message scrolling stays enabled without a visible vertical scrollbar", () 
   assert.match(
     chatScreenSource,
     /ref=\{listRef\}[\s\S]*?showsVerticalScrollIndicator=\{false\}/,
+  );
+});
+
+test("chat tools keep their actions in a colorful four-column grid", () => {
+  for (const action of [
+    "takePhoto()",
+    "pickMedia()",
+    "pickFiles()",
+    "toggleRecording()",
+    "shareLocation()",
+  ]) {
+    assert.match(chatScreenSource, new RegExp(action.replace(/[()]/g, "\\$&")));
+  }
+  assert.match(chatScreenSource, /styles\.toolIcon/);
+  assert.match(chatScreenSource, /styles\.cameraToolIcon/);
+  assert.match(chatScreenSource, /styles\.imageToolIcon/);
+  assert.match(chatScreenSource, /width:\s*"25%"/);
+});
+
+test("sticker is a quick action beside the chat tools button", () => {
+  const toolsPanel = chatScreenSource.match(
+    /\{showChatTools && \([\s\S]*?\{recorderState\.isRecording && \(/,
+  )?.[0];
+  const inputRow = chatScreenSource.match(
+    /<View style=\{styles\.inputRow\}>[\s\S]*?<TextInput/,
+  )?.[0];
+
+  assert.ok(toolsPanel);
+  assert.ok(inputRow);
+  assert.doesNotMatch(toolsPanel, /name="happy-outline"/);
+  assert.match(
+    inputRow,
+    /styles\.moreToolButton[\s\S]*?<MaterialCommunityIcons[\s\S]*?colors\.verified[\s\S]*?name=\{showChatTools \? "close" : "tools"\}/,
+  );
+  assert.match(
+    inputRow,
+    /styles\.stickerQuickButton[\s\S]*?colors\.danger[\s\S]*?name="sticker-emoji"[\s\S]*?<TextInput/,
+  );
+});
+
+test("message input pill only contains the text field", () => {
+  const messageInputShell = chatScreenSource.match(
+    /<View style=\{styles\.messageInputShell\}>[\s\S]*?<\/View>/,
+  )?.[0];
+
+  assert.ok(messageInputShell);
+  assert.match(messageInputShell, /<TextInput/);
+  assert.doesNotMatch(messageInputShell, /<Pressable|pickFiles\(\)|pickMedia\(\)/);
+  assert.doesNotMatch(chatScreenSource, /composerQuickAction/);
+  assert.match(
+    chatScreenSource,
+    /messageInputShell:\s*\{[\s\S]*?borderRadius:\s*999/,
   );
 });
 

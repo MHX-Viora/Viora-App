@@ -19,16 +19,22 @@ export function ArticleSortTabs({
   return (
     <View accessibilityRole="tablist" style={styles.row}>
       <SortButton
-        active={value === "trending"}
-        icon="flame-outline"
-        label="Xu hướng"
-        onPress={() => onChange("trending")}
+        active={value === "recommended"}
+        icon="sparkles-outline"
+        label="Đề xuất"
+        onPress={() => onChange("recommended")}
       />
       <SortButton
         active={value === "latest"}
         icon="time-outline"
         label="Mới nhất"
         onPress={() => onChange("latest")}
+      />
+      <SortButton
+        active={value === "trending"}
+        icon="flame-outline"
+        label="Xu hướng"
+        onPress={() => onChange("trending")}
       />
     </View>
   );
@@ -41,7 +47,7 @@ function SortButton({
   onPress,
 }: {
   active: boolean;
-  icon: "flame-outline" | "time-outline";
+  icon: "flame-outline" | "sparkles-outline" | "time-outline";
   label: string;
   onPress: () => void;
 }) {
@@ -76,7 +82,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
     minHeight: 34,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   buttonActive: {
     backgroundColor: colors.primarySoft,

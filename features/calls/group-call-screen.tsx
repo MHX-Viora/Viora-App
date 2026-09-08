@@ -48,7 +48,17 @@ function Control({ active = true, danger, icon, label, onPress }: ControlProps) 
       onPress={onPress}
       style={[styles.control, !active && styles.controlOff, danger && styles.controlDanger]}
     >
-      <Ionicons color={colors.white} name={icon} size={21} />
+      <Ionicons
+        color={
+          danger
+            ? colors.dangerContrast
+            : active
+              ? colors.primaryContrast
+              : colors.background
+        }
+        name={icon}
+        size={21}
+      />
     </Pressable>
   );
 }
