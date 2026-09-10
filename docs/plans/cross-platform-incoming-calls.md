@@ -51,4 +51,3 @@
 - Web Push requires HTTPS (except localhost), Firebase Web config, and VAPID key: document as deployment requirements.
 - Accept/cancel races: use an atomic conditional database update and treat a lost transition as conflict.
 - Shared realtime regression: only add Call handlers beside existing Call handlers; do not change connection/reconnect or non-call events.
-

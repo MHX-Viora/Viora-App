@@ -71,4 +71,3 @@ connection.on("CallAnsweredElsewhere", (payload) => {
 - Firebase Admin and device-token storage remain the only push backend.
 - Firebase Web identifiers and VAPID public key are deployment configuration; no credential is committed.
 - TURN remains optional backend configuration through `Calls:Turn`; this task does not provision infrastructure.
-

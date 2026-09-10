@@ -29,4 +29,3 @@ test("the accept request identifies the winning realtime connection", () => {
   assert.match(callService, /X-ANKT-Realtime-Connection-Id/);
   assert.match(callService, /getRealtimeConnectionId/);
 });
-
