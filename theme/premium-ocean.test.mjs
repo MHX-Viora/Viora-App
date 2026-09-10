@@ -78,7 +78,7 @@ test("Premium Ocean buttons and outgoing messages meet AA text contrast", () => 
   );
   assert.match(
     chatSource,
-    /cameraToolIcon[\s\S]*?<Ionicons color=\{colors\.dangerContrast\}/,
+    /<Ionicons color=\{colors\.primaryContrast\} name="send"/,
   );
 });
 

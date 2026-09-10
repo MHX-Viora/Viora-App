@@ -2,17 +2,24 @@ import type { IceServer } from "@/types/call";
 import { PermissionsAndroid, Platform } from "react-native";
 
 type MediaTrackLike = {
-  _switchCamera?: () => void;
   enabled: boolean;
   kind?: string;
+  release?: () => void;
   stop: () => void;
 };
 
 type MediaStreamLike = {
+  addTrack?: (track: MediaTrackLike) => void;
   getAudioTracks?: () => MediaTrackLike[];
   getTracks: () => MediaTrackLike[];
   getVideoTracks?: () => MediaTrackLike[];
+  release?: (releaseTracks?: boolean) => void;
+  removeTrack?: (track: MediaTrackLike) => void;
   toURL?: () => string;
+};
+
+type RtpSenderLike = {
+  replaceTrack: (track: MediaTrackLike | null) => Promise<void>;
 };
 
 type PeerStateSnapshot = {
@@ -57,7 +64,10 @@ type WebRtcModule = {
     addEventListener?: (event: string, handler: (event: PeerEvent) => void) => void;
     addIceCandidate: (candidate: unknown) => Promise<void>;
     addStream?: (stream: MediaStreamLike) => void;
-    addTrack?: (track: MediaTrackLike, stream: MediaStreamLike) => void;
+    addTrack?: (
+      track: MediaTrackLike,
+      stream: MediaStreamLike,
+    ) => RtpSenderLike;
     close: () => void;
     connectionState?: string;
     createAnswer: () => Promise<unknown>;
@@ -138,18 +148,18 @@ export const createVoicePeer = async (
   }
 
   const { MediaStream, RTCPeerConnection, mediaDevices } = await loadWebRtc();
-  const stream = await mediaDevices.getUserMedia({
+  let stream = await mediaDevices.getUserMedia({
     audio: true,
     video: options?.video ? { facingMode: "user" } : false,
   });
-  const localUrl = stream.toURL?.() ?? "";
+  let localStreamUrl = stream.toURL?.() ?? "";
   let remoteStreamUrl = "";
-  if (localUrl) {
+  if (localStreamUrl) {
     console.info("[Call][Media] local stream ready", {
       audioTracks: stream.getAudioTracks?.().length ?? 0,
       videoTracks: stream.getVideoTracks?.().length ?? 0,
     });
-    options?.onLocalStream?.(localUrl);
+    options?.onLocalStream?.(localStreamUrl);
   }
 
   const peer = new RTCPeerConnection({ iceServers });
@@ -166,8 +176,12 @@ export const createVoicePeer = async (
     onConnectionStateChange?.(getEffectivePeerState(state));
   };
 
+  let videoSender: RtpSenderLike | null = null;
   if (peer.addTrack) {
-    stream.getTracks().forEach((track) => peer.addTrack?.(track, stream));
+    stream.getTracks().forEach((track) => {
+      const sender = peer.addTrack?.(track, stream);
+      if (track.kind === "video" && sender) videoSender = sender;
+    });
   } else {
     peer.addStream?.(stream);
   }
@@ -220,6 +234,42 @@ export const createVoicePeer = async (
     stream.getTracks().filter((track) => track.kind === "video");
 
   let isClosed = false;
+  let isSwitchingCamera = false;
+  let currentCameraFacingMode: "environment" | "user" = "user";
+
+  const acquireCameraTrack = async (
+    facingMode: "environment" | "user",
+  ) => {
+    const cameraStream = await mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode },
+    });
+    const [cameraTrack] =
+      cameraStream.getVideoTracks?.() ??
+      cameraStream.getTracks().filter((track) => track.kind === "video");
+    if (!cameraTrack) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      cameraStream.release?.();
+      throw new Error("Không tìm thấy camera phù hợp trên thiết bị.");
+    }
+    cameraStream.release?.(false);
+    return cameraTrack;
+  };
+
+  const attachCameraTrack = async (replacementTrack: MediaTrackLike) => {
+    if (!videoSender || !MediaStream) {
+      replacementTrack.stop();
+      replacementTrack.release?.();
+      throw new Error("Thiết bị không hỗ trợ đổi camera trong cuộc gọi.");
+    }
+    await videoSender.replaceTrack(replacementTrack);
+    const previousStream = stream;
+    stream = new MediaStream([...audioTracks(), replacementTrack]);
+    previousStream.release?.(false);
+    localStreamUrl = stream.toURL?.() ?? "";
+    if (localStreamUrl) options?.onLocalStream?.(localStreamUrl);
+  };
+
   return {
     addIceCandidate: async (candidate: unknown) => {
       await peer.addIceCandidate(candidate);
@@ -245,7 +295,7 @@ export const createVoicePeer = async (
       console.info("[Call][Signal] offer created");
       return offer;
     },
-    getLocalStreamUrl: () => localUrl,
+    getLocalStreamUrl: () => localStreamUrl,
     getRemoteStreamUrl: () => remoteStreamUrl,
     setAnswer: async (answer: unknown) => {
       await peer.setRemoteDescription(answer);
@@ -261,8 +311,43 @@ export const createVoicePeer = async (
         track.enabled = enabled;
       });
     },
-    switchCamera: () => {
-      videoTracks().forEach((track) => track._switchCamera?.());
+    switchCamera: async () => {
+      if (isClosed || isSwitchingCamera) return;
+      const [previousTrack] = videoTracks();
+      if (!previousTrack) {
+        throw new Error("Không tìm thấy camera đang hoạt động.");
+      }
+
+      isSwitchingCamera = true;
+      const previousFacingMode = currentCameraFacingMode;
+      const nextFacingMode =
+        previousFacingMode === "user" ? "environment" : "user";
+      const wasEnabled = previousTrack.enabled;
+      try {
+        stream.removeTrack?.(previousTrack);
+        previousTrack.stop();
+        previousTrack.release?.();
+        const replacementTrack = await acquireCameraTrack(nextFacingMode);
+        replacementTrack.enabled = wasEnabled;
+        await attachCameraTrack(replacementTrack);
+        currentCameraFacingMode = nextFacingMode;
+      } catch (error) {
+        try {
+          const fallbackTrack = await acquireCameraTrack(previousFacingMode);
+          fallbackTrack.enabled = wasEnabled;
+          await attachCameraTrack(fallbackTrack);
+        } catch (restoreError) {
+          console.info(
+            "[Call][Media] could not restore previous camera",
+            restoreError instanceof Error
+              ? restoreError.message
+              : String(restoreError),
+          );
+        }
+        throw error;
+      } finally {
+        isSwitchingCamera = false;
+      }
     },
   };
 };

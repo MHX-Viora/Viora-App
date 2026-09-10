@@ -1,5 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+} from "expo-audio";
 import { useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useCallback, useEffect, useState, useMemo } from "react";
@@ -18,10 +22,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { showAppToast } from "@/components/common/app-toast";
+import { downloadChatAttachment } from "@/services/chat-attachment-download.service";
 import { getConversationAttachments } from "@/services/chat.service";
 import { spacing } from "@/theme";
 import type { ChatSharedAttachment } from "@/types/chat";
 import { formatChatTime } from "@/utils/chat-time";
+import { toggleChatAudioPlayback } from "@/utils/chat-audio-playback";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
@@ -110,7 +117,28 @@ function MediaViewer({
   );
 }
 
-function AudioRow({ item }: { item: ChatSharedAttachment }) {
+function DownloadOverlay() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  return (
+    <View pointerEvents="none" style={styles.downloadOverlay}>
+      <ActivityIndicator color={colors.white} size="small" />
+      <Text style={styles.downloadOverlayText}>Đang tải xuống...</Text>
+    </View>
+  );
+}
+
+function AudioRow({
+  isDownloading,
+  item,
+  onLongPress,
+}: {
+  isDownloading: boolean;
+  item: ChatSharedAttachment;
+  onLongPress: () => void;
+}) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -127,13 +155,20 @@ function AudioRow({ item }: { item: ChatSharedAttachment }) {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => {
-        if (status.playing) {
-          player.pause();
-          return;
-        }
-        player.play();
-      }}
+      onLongPress={onLongPress}
+      onPress={() =>
+        void toggleChatAudioPlayback({
+          player,
+          preparePlayback: () =>
+            setAudioModeAsync({
+              allowsRecording: false,
+              playsInSilentMode: true,
+            }),
+          status,
+        }).catch(() =>
+          Alert.alert("Không thể phát âm thanh", "Vui lòng thử lại."),
+        )
+      }
       style={styles.fileRow}
     >
       <View style={styles.fileIcon}>
@@ -165,6 +200,7 @@ function AudioRow({ item }: { item: ChatSharedAttachment }) {
           {durationLabel} - {formatChatTime(item.createdAt)}
         </Text>
       </View>
+      {isDownloading ? <DownloadOverlay /> : null}
     </Pressable>
   );
 }
@@ -189,6 +225,8 @@ export function ConversationAttachmentsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [viewingItem, setViewingItem] = useState<ChatSharedAttachment | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ChatSharedAttachment | null>(null);
+  const [downloadingItemId, setDownloadingItemId] = useState<string | null>(null);
 
   const load = useCallback(
     async (nextPage: number, mode: "initial" | "refresh" | "more") => {
@@ -228,6 +266,29 @@ export function ConversationAttachmentsScreen() {
   }, [load]);
 
   const isMediaTab = type === 1 || type === 2;
+
+  const downloadSelectedItem = useCallback(async () => {
+    if (!selectedItem || downloadingItemId === selectedItem.id) return;
+    const item = selectedItem;
+    setDownloadingItemId(item.id);
+    setSelectedItem(null);
+    try {
+      const result = await downloadChatAttachment(item);
+      showAppToast({
+        message: `Đã tải ${result.fileName}`,
+        type: "success",
+      });
+    } catch (downloadError) {
+      showAppToast({
+        message: downloadError instanceof Error
+          ? downloadError.message
+          : "Không thể tải tệp. Vui lòng thử lại.",
+        type: "error",
+      });
+    } finally {
+      setDownloadingItemId(null);
+    }
+  }, [downloadingItemId, selectedItem]);
 
   return (
     <View style={styles.screen}>
@@ -290,6 +351,7 @@ export function ConversationAttachmentsScreen() {
             item.type === "image" || item.type === "video" ? (
               <Pressable
                 accessibilityRole="imagebutton"
+                onLongPress={() => setSelectedItem(item)}
                 onPress={() => setViewingItem(item)}
                 style={styles.mediaTile}
               >
@@ -310,12 +372,18 @@ export function ConversationAttachmentsScreen() {
                     <Ionicons color={colors.white} name="play" size={18} />
                   </View>
                 ) : null}
+                {downloadingItemId === item.id ? <DownloadOverlay /> : null}
               </Pressable>
             ) : item.type === "audio" ? (
-              <AudioRow item={item} />
+              <AudioRow
+                isDownloading={downloadingItemId === item.id}
+                item={item}
+                onLongPress={() => setSelectedItem(item)}
+              />
             ) : (
               <Pressable
                 accessibilityRole="button"
+                onLongPress={() => setSelectedItem(item)}
                 onPress={() => void openAttachment(item)}
                 style={styles.fileRow}
               >
@@ -335,6 +403,7 @@ export function ConversationAttachmentsScreen() {
                   </Text>
                 </View>
                 <Ionicons color={colors.textMuted} name="open-outline" size={18} />
+                {downloadingItemId === item.id ? <DownloadOverlay /> : null}
               </Pressable>
             )
           }
@@ -352,11 +421,78 @@ export function ConversationAttachmentsScreen() {
       )}
 
       <MediaViewer item={viewingItem} onClose={() => setViewingItem(null)} />
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setSelectedItem(null)}
+        transparent
+        visible={selectedItem !== null}
+      >
+        <Pressable
+          accessibilityLabel="Đóng tùy chọn tệp"
+          onPress={() => setSelectedItem(null)}
+          style={styles.actionBackdrop}
+        >
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            style={[styles.actionSheet, { paddingBottom: Math.max(spacing.lg, insets.bottom) }]}
+          >
+            <View style={styles.actionHandle} />
+            <Text numberOfLines={1} style={styles.actionTitle}>
+              {selectedItem?.name || "Tệp đính kèm"}
+            </Text>
+            <Pressable
+              accessibilityLabel="Tải xuống"
+              accessibilityRole="button"
+              disabled={downloadingItemId !== null}
+              onPress={() => void downloadSelectedItem()}
+              style={styles.downloadAction}
+            >
+              {downloadingItemId ? (
+                <ActivityIndicator color={colors.primaryContrast} size="small" />
+              ) : (
+                <Ionicons color={colors.primaryContrast} name="download-outline" size={20} />
+              )}
+              <Text style={styles.downloadActionText}>
+                {downloadingItemId ? "Đang tải..." : "Tải xuống"}
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  actionBackdrop: {
+    alignItems: "center",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_48,
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  actionHandle: {
+    alignSelf: "center",
+    backgroundColor: colors.border,
+    borderRadius: 999,
+    height: 4,
+    marginBottom: spacing.md,
+    width: 42,
+  },
+  actionSheet: {
+    backgroundColor: colors.surfaceElevated,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    maxWidth: 480,
+    padding: spacing.lg,
+    width: "100%",
+  },
+  actionTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: spacing.md,
+    textAlign: "center",
+  },
   activeWaveBar: { backgroundColor: colors.danger },
   activeTab: { backgroundColor: colors.primary, borderColor: colors.primary },
   activeTabText: { color: colors.primaryContrast },
@@ -369,6 +505,35 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   emptyList: { flexGrow: 1, justifyContent: "center" },
   emptyText: { color: colors.textMuted, padding: spacing.xl, textAlign: "center" },
+  downloadAction: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+  },
+  downloadActionText: {
+    color: colors.primaryContrast,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  downloadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_48,
+    borderRadius: 8,
+    gap: spacing.xs,
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  downloadOverlayText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: "800",
+  },
   fileIcon: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
@@ -389,6 +554,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.sm,
     padding: spacing.md,
+    position: "relative",
   },
   fileText: { flex: 1 },
   header: {

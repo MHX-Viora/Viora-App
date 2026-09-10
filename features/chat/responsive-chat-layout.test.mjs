@@ -26,6 +26,10 @@ const conversationsScreenSource = readFileSync(
   new URL("./conversations-screen.tsx", import.meta.url),
   "utf8",
 );
+const conversationRowSource = readFileSync(
+  new URL("../../components/chat/conversation-row.tsx", import.meta.url),
+  "utf8",
+);
 const settingsSubpageSources = [
   "../../app/chat/settings/[conversationId]-attachments.tsx",
   "../../app/chat/settings/[conversationId]-links.tsx",
@@ -145,23 +149,41 @@ test("message scrolling stays enabled without a visible vertical scrollbar", () 
   );
 });
 
-test("chat tools keep their actions in a colorful four-column grid", () => {
-  for (const action of [
-    "takePhoto()",
-    "pickMedia()",
-    "pickFiles()",
-    "toggleRecording()",
-    "shareLocation()",
-  ]) {
-    assert.match(chatScreenSource, new RegExp(action.replace(/[()]/g, "\\$&")));
-  }
-  assert.match(chatScreenSource, /styles\.toolIcon/);
-  assert.match(chatScreenSource, /styles\.cameraToolIcon/);
-  assert.match(chatScreenSource, /styles\.imageToolIcon/);
-  assert.match(chatScreenSource, /width:\s*"25%"/);
+test("shared chat header keeps square bottom corners on app and web", () => {
+  assert.match(
+    chatScreenSource,
+    /header:\s*\{[\s\S]{0,260}borderBottomLeftRadius:\s*0[\s\S]{0,120}borderBottomRightRadius:\s*0/,
+  );
 });
 
-test("sticker is a quick action beside the chat tools button", () => {
+test("conversation verification badge stays directly after the room name", () => {
+  assert.match(
+    conversationRowSource,
+    /title:\s*\{[\s\S]{0,120}flexShrink:\s*1/,
+  );
+  assert.doesNotMatch(
+    conversationRowSource,
+    /title:\s*\{[\s\S]{0,120}\bflex:\s*1/,
+  );
+});
+
+test("chat tools expose clear media actions in a neutral three-column grid", () => {
+  for (const action of [
+    /takePhoto\(\)/,
+    /pickMedia\(\["images"\]\)/,
+    /pickMedia\(\["videos"\]\)/,
+    /pickFiles\(\)/,
+    /toggleRecording\(\)/,
+    /shareLocation\(\)/,
+  ]) {
+    assert.match(chatScreenSource, action);
+  }
+  assert.match(chatScreenSource, /styles\.toolIcon/);
+  assert.match(chatScreenSource, /toolIcon:[\s\S]*?backgroundColor: colors\.primarySoft/);
+  assert.match(chatScreenSource, /width:\s*"33\.333%"/);
+});
+
+test("sticker is a consistent quick action beside attachment", () => {
   const toolsPanel = chatScreenSource.match(
     /\{showChatTools && \([\s\S]*?\{recorderState\.isRecording && \(/,
   )?.[0];
@@ -174,11 +196,11 @@ test("sticker is a quick action beside the chat tools button", () => {
   assert.doesNotMatch(toolsPanel, /name="happy-outline"/);
   assert.match(
     inputRow,
-    /styles\.moreToolButton[\s\S]*?<MaterialCommunityIcons[\s\S]*?colors\.verified[\s\S]*?name=\{showChatTools \? "close" : "tools"\}/,
+    /styles\.composerActionButton[\s\S]*?<Ionicons[\s\S]*?colors\.primary[\s\S]*?name=\{showChatTools \? "close" : "add"\}/,
   );
   assert.match(
     inputRow,
-    /styles\.stickerQuickButton[\s\S]*?colors\.danger[\s\S]*?name="sticker-emoji"[\s\S]*?<TextInput/,
+    /styles\.composerActionButton[\s\S]*?colors\.primary[\s\S]*?name="sticker-emoji"[\s\S]*?<TextInput/,
   );
 });
 

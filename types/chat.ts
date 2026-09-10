@@ -269,6 +269,7 @@ export type SendMessageAttachment = {
   uri: string;
   name: string;
   type: string;
+  file?: File;
   kind: "image" | "video" | "audio" | "file";
   size?: number;
   duration?: number;

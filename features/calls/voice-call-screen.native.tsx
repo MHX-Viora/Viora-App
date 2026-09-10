@@ -612,8 +612,16 @@ export function VoiceCallScreen() {
     });
   }, []);
 
-  const switchCamera = useCallback(() => {
-    peerRef.current?.switchCamera();
+  const switchCamera = useCallback(async () => {
+    if (!peerRef.current) return;
+    try {
+      await peerRef.current.switchCamera();
+    } catch (error) {
+      Alert.alert(
+        "Không thể đổi camera",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    }
   }, []);
 
   const statusText =
@@ -701,7 +709,7 @@ export function VoiceCallScreen() {
             </Pressable>
             <Pressable
               accessibilityLabel="Đổi camera"
-              onPress={switchCamera}
+              onPress={() => void switchCamera()}
               style={styles.secondaryButton}
             >
               <Ionicons color={colors.white} name="camera-reverse" size={24} />

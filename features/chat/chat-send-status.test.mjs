@@ -5,12 +5,15 @@ import test from "node:test";
 const chatScreen = readFileSync(new URL("./chat-screen.tsx", import.meta.url), "utf8");
 const chatTypes = readFileSync(new URL("../../types/chat.ts", import.meta.url), "utf8");
 
-test("outgoing send status shares one metadata row with the timestamp", () => {
+test("outgoing send status appears after the timestamp with a compact separator", () => {
   assert.match(chatScreen, /function MessageSendStatus/);
   assert.match(
     chatScreen,
-    /styles\.messageMeta[\s\S]{0,500}<MessageSendStatus[\s\S]{0,500}formatChatTime\(message\.createdAt\)/,
+    /styles\.messageMeta[\s\S]{0,500}formatChatTime\(message\.createdAt\)[\s\S]{0,500}<MessageSendStatus/,
   );
+  assert.match(chatScreen, /displayedStatus === "sending" \? "· Đang gửi" : "· Gửi lỗi"/);
+  assert.doesNotMatch(chatScreen, /Đang gửi…/);
+  assert.match(chatScreen, /sendStatus: \{[\s\S]{0,120}fontSize: 10/);
 });
 
 test("confirmed messages animate the pending label away without remounting", () => {

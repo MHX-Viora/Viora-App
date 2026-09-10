@@ -9,7 +9,6 @@ import {
   mapSharedLinksPage,
 } from "@/features/chat/chat.mapper";
 import { authenticatedFetch } from "@/services/authenticated-fetch";
-import { getAccessToken } from "@/stores/session-store";
 import type { CreateGroupInput } from "@/types/chat-group";
 import type {
   ChatMessage,
@@ -58,6 +57,13 @@ export class ChatApiError extends Error {
     super(message);
     this.name = "ChatApiError";
     this.status = status;
+  }
+}
+
+export class ChatAttachmentUploadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ChatAttachmentUploadError";
   }
 }
 
@@ -783,6 +789,11 @@ const appendUploadFile = (
   formData: FormData,
   attachment: SendMessageAttachment,
 ) => {
+  if (attachment.file) {
+    formData.append("files", attachment.file, attachment.name);
+    return;
+  }
+
   formData.append("files", {
     name: attachment.name,
     type: attachment.type || "application/octet-stream",
@@ -798,17 +809,23 @@ const uploadChatAttachments = async (
   const formData = new FormData();
   attachments.forEach((attachment) => appendUploadFile(formData, attachment));
 
-  const token = await getAccessToken();
-  const response = await fetch(`${BASE_URL}/api/chat/attachments/upload`, {
-    body: formData,
-    credentials: "include",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    method: "POST",
-  });
+  let response: Response;
+  try {
+    response = await authenticatedFetch(`${BASE_URL}/api/chat/attachments/upload`, {
+      body: formData,
+      method: "POST",
+    });
+  } catch (error) {
+    throw new ChatAttachmentUploadError(
+      error instanceof Error
+        ? error.message
+        : "Không thể upload tệp đính kèm chat.",
+    );
+  }
   const data = parseResponseText(await response.text());
 
   if (!response.ok) {
-    throw new Error(
+    throw new ChatAttachmentUploadError(
       getErrorMessage(data, "Không thể upload tệp đính kèm chat."),
     );
   }
@@ -818,7 +835,9 @@ const uploadChatAttachments = async (
     .filter((item): item is UploadedChatAttachment => item !== null);
 
   if (uploaded.length !== attachments.length) {
-    throw new Error("Backend trả về dữ liệu upload tệp không hợp lệ.");
+    throw new ChatAttachmentUploadError(
+      "Backend trả về dữ liệu upload tệp không hợp lệ.",
+    );
   }
 
   return uploaded;
