@@ -16,18 +16,18 @@ export type PendingIncomingCallData = {
   type: "IncomingCall";
 };
 
-let webPendingIncomingCall: string | null = null;
-
 const storage = Platform.OS === "web"
   ? {
-      async deleteItemAsync() {
-        webPendingIncomingCall = null;
+      async deleteItemAsync(key: string) {
+        if (typeof window !== "undefined") window.sessionStorage.removeItem(key);
       },
-      async getItemAsync() {
-        return webPendingIncomingCall;
+      async getItemAsync(key: string) {
+        return typeof window === "undefined"
+          ? null
+          : window.sessionStorage.getItem(key);
       },
-      async setItemAsync(_key: string, value: string) {
-        webPendingIncomingCall = value;
+      async setItemAsync(key: string, value: string) {
+        if (typeof window !== "undefined") window.sessionStorage.setItem(key, value);
       },
     }
   : SecureStore;
@@ -59,6 +59,7 @@ const normalizePendingIncomingCall = (
     value["conversation.id"],
   );
   const callerId = firstString(
+    isRecord(value.caller) ? value.caller.id : null,
     value.callerId,
     value["caller.id"],
   );
@@ -69,11 +70,13 @@ const normalizePendingIncomingCall = (
     callId,
     callType: normalizeCallType(value.callType),
     callerAvatarUrl: firstString(
+      isRecord(value.caller) ? value.caller.avatarUrl : null,
       value.callerAvatarUrl,
       value.callerAvatar,
       value["caller.avatarUrl"],
     ),
     callerDisplayName: firstString(
+      isRecord(value.caller) ? value.caller.displayName : null,
       value.callerDisplayName,
       value.callerName,
       value["caller.displayName"],

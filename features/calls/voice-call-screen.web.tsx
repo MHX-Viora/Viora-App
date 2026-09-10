@@ -7,7 +7,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CallAvatarHalo, CallBackdrop } from "@/components/calls/call-visuals";
 import { getCallSurfaceLayout } from "@/components/calls/call-screen-layout";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { subscribeCallAccepted } from "@/features/calls/call-events";
+import {
+  subscribeCallAccepted,
+  subscribeCallLifecycle,
+} from "@/features/calls/call-events";
 import {
   createWebCallOfferState,
   sendWebCallOfferOnce,
@@ -17,8 +20,8 @@ import {
   acceptVoiceCall, cancelVoiceCall, endVoiceCall, getIceServers, rejectVoiceCall,
 } from "@/services/call.service";
 import {
-  onCallRealtime, sendCallAccepted, sendCallAnswer, sendCallIceCandidate,
-  sendCallOffer, startCallRealtime,
+  onCallRealtime, onCallRealtimeReconnected, sendCallAccepted, sendCallAnswer,
+  sendCallIceCandidate, sendCallOffer, sendReconnectCall, startCallRealtime,
 } from "@/services/call-realtime.service";
 import { createVoicePeer } from "@/services/webrtc-call.service.web";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
@@ -72,6 +75,8 @@ export function VoiceCallScreen() {
   const remoteReadyRef = useRef(false);
   const pendingIceRef = useRef<unknown[]>([]);
   const endingRef = useRef(false);
+  const disposedRef = useRef(false);
+  const acceptedRef = useRef(false);
   const connectedAtRef = useRef<number | null>(null);
   const [status, setStatus] = useState<WebCallStatus>(mode === "caller" ? "calling" : "connecting");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -91,6 +96,8 @@ export function VoiceCallScreen() {
   const closePeer = useCallback(() => {
     peerRef.current?.close();
     peerRef.current = null;
+    pendingIceRef.current = [];
+    remoteReadyRef.current = false;
   }, []);
   const markActive = useCallback(() => {
     connectedAtRef.current ??= Date.now();
@@ -120,8 +127,24 @@ export function VoiceCallScreen() {
           if (state === "connected" || state === "completed") markActive();
           if (state === "failed") setStatus("failed");
         },
-        { onLocalStream: setLocalStream, onRemoteStream: setRemoteStream, video: isVideo },
+        {
+          onLocalStream: (stream) => {
+            if (disposedRef.current || endingRef.current) {
+              stream.getTracks().forEach((track) => track.stop());
+              return;
+            }
+            setLocalStream(stream);
+          },
+          onRemoteStream: (stream) => {
+            if (!disposedRef.current && !endingRef.current) setRemoteStream(stream);
+          },
+          video: isVideo,
+        },
       );
+      if (disposedRef.current || endingRef.current) {
+        peer.close();
+        throw new Error("Cuộc gọi đã kết thúc.");
+      }
       peer.setMicrophoneEnabled(true);
       peer.setCameraEnabled(isVideo);
       peerRef.current = peer;
@@ -155,7 +178,7 @@ export function VoiceCallScreen() {
     setStatus("ending");
     try {
       if (mode === "caller" && !offerStateRef.current.sent) await cancelVoiceCall(callId);
-      else if (mode === "receiver" && !peerRef.current) await rejectVoiceCall(callId);
+      else if (mode === "receiver" && !acceptedRef.current) await rejectVoiceCall(callId);
       else await endVoiceCall(callId);
     } catch { /* The other participant may already have ended the call. */ }
     closePeer();
@@ -163,12 +186,14 @@ export function VoiceCallScreen() {
   }, [backToChat, callId, closePeer, mode]);
 
   useEffect(() => {
+    disposedRef.current = false;
     if (!callId) { backToChat(); return; }
     void (async () => {
       try {
         if (!(await startCallRealtime())) throw new Error("Không thể kết nối máy chủ cuộc gọi.");
         if (mode === "receiver") {
           await acceptVoiceCall(callId);
+          acceptedRef.current = true;
           await createPeer();
           await sendCallAccepted(callId);
         } else if (isVideo) await createPeer();
@@ -176,12 +201,16 @@ export function VoiceCallScreen() {
         Alert.alert(
           "Không thể bắt đầu cuộc gọi",
           error instanceof Error ? error.message : "Vui lòng thử lại.",
-          [{ text: "Đóng", onPress: backToChat }],
+          [{ text: "Đóng" }],
         );
+        await leave();
       }
     })();
-    return closePeer;
-  }, [backToChat, callId, closePeer, createPeer, isVideo, mode]);
+    return () => {
+      disposedRef.current = true;
+      closePeer();
+    };
+  }, [backToChat, callId, closePeer, createPeer, isVideo, leave, mode]);
 
   useEffect(() => {
     const handleAccepted = (payload: unknown) => {
@@ -190,6 +219,13 @@ export function VoiceCallScreen() {
       }
     };
     const offAcceptedNotification = subscribeCallAccepted(handleAccepted);
+    const offLifecycle = subscribeCallLifecycle((event) => {
+      if (event.callId === callId) {
+        endingRef.current = true;
+        closePeer();
+        backToChat();
+      }
+    });
     const offAccepted = onCallRealtime("CallAccepted", (payload) => {
       handleAccepted(payload);
     });
@@ -228,17 +264,50 @@ export function VoiceCallScreen() {
       const event = payload as SignalEvent;
       if (event.callId !== callId || !event.signal) return;
       if (!peerRef.current || !remoteReadyRef.current) pendingIceRef.current.push(event.signal);
-      else void peerRef.current.addIceCandidate(event.signal);
+      else void peerRef.current.addIceCandidate(event.signal).catch((error: unknown) => {
+        console.info(
+          "[Call][Web] remote ICE candidate ignored",
+          error instanceof Error ? error.message : String(error),
+        );
+      });
+    });
+    const offReconnect = onCallRealtime("ReconnectCall", (payload) => {
+      if (mode !== "caller" || getPayloadCallId(payload) !== callId) return;
+      offerStateRef.current = createWebCallOfferState();
+      void retryOffer();
+    });
+    const offRealtimeReconnected = onCallRealtimeReconnected(() => {
+      void (async () => {
+        try {
+          await sendReconnectCall(callId);
+          if (mode === "caller") {
+            offerStateRef.current = createWebCallOfferState();
+            await retryOffer();
+          }
+        } catch (error) {
+          console.info(
+            "[Call][Web] reconnect recovery failed",
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      })();
     });
     const offEnded = onCallRealtime("CallEnded", (payload) => {
-      if ((payload as SignalEvent).callId === callId) { closePeer(); backToChat(); }
+      if ((payload as SignalEvent).callId === callId) {
+        endingRef.current = true;
+        closePeer();
+        backToChat();
+      }
     });
     return () => {
       offAcceptedNotification();
+      offLifecycle();
       offAccepted();
       offOffer();
       offAnswer();
       offIce();
+      offReconnect();
+      offRealtimeReconnected();
       offEnded();
     };
   }, [backToChat, callId, closePeer, createPeer, flushIce, mode, retryOffer]);

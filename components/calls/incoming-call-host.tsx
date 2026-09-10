@@ -86,6 +86,7 @@ export function IncomingCallHost() {
     setIsConnecting(true);
     const nextCall = incomingCall;
     await dismissIncomingCallNotification(nextCall.callId).catch(() => undefined);
+    await clearPendingIncomingCall(nextCall.callId);
     clearIncomingCall(nextCall.callId);
     setIncomingCall(null);
     setIsConnecting(false);
@@ -154,11 +155,17 @@ export function IncomingCallHost() {
   }, [cleanup, incomingCall]);
 
   return (
-    <Modal animationType="fade" presentationStyle="fullScreen" visible={incomingCall !== null}>
-      <View style={styles.modalBackdrop}>
+    <Modal
+      animationType="fade"
+      presentationStyle={isDesktopWeb ? "overFullScreen" : "fullScreen"}
+      transparent={isDesktopWeb}
+      visible={incomingCall !== null}
+    >
+      <View style={[styles.modalBackdrop, isDesktopWeb && styles.desktopModalBackdrop]}>
         <View
           style={[
             styles.screen,
+            isDesktopWeb && styles.desktopScreen,
             getCallSurfaceLayout({ isDesktopWeb }),
             {
               paddingBottom: Math.max(insets.bottom, spacing.xl),
@@ -262,6 +269,22 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 13,
     width: 64,
+  },
+  desktopModalBackdrop: {
+    alignItems: "center",
+    backgroundColor: colors.visuals.rgb_2_7_18_0_72,
+    justifyContent: "center",
+    padding: spacing.xl,
+  },
+  desktopScreen: {
+    borderColor: colors.borderSubtle,
+    borderRadius: 22,
+    borderWidth: 1,
+    flex: 0,
+    height: "90%",
+    maxHeight: 720,
+    minHeight: 560,
+    overflow: "hidden",
   },
   header: {
     alignItems: "center",

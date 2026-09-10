@@ -7,13 +7,14 @@ import {
   ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AppState, View } from "react-native";
+import { AppState, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { ActiveCallBanner } from "@/components/calls/active-call-banner";
 import { AppToastHost } from "@/components/common/app-toast";
 import { IncomingCallHost } from "@/components/calls/incoming-call-host";
+import { PwaStatusHost } from "@/components/pwa/pwa-status-host";
 import { AppLaunchScreen } from "@/components/layout/app-launch-screen";
 import { emitRealtimeSyncRequest } from "@/features/chat/chat-events";
 import {
@@ -125,6 +126,10 @@ function RootLayoutContent() {
         void stopRealtime();
         return;
       }
+
+      // A hidden browser tab can still receive SignalR and must remain a call
+      // endpoint. Native background delivery continues to use FCM.
+      if (state !== "active" && Platform.OS === "web") return;
 
       if (state === "active") {
         console.info("[ChatSync] app resumed", {
@@ -243,6 +248,7 @@ function RootLayoutContent() {
         <Stack.Screen name="reel/[reelId]" />
         <Stack.Screen name="group/[inviteCode]" />
         <Stack.Screen name="call/[callId]" />
+        <Stack.Screen name="incoming-call/[callId]" />
         <Stack.Screen name="group-call/[callId]" />
         <Stack.Screen name="chat/[conversationId]" />
         <Stack.Screen name="chat/group/[groupId]" />
@@ -268,6 +274,7 @@ function RootLayoutContent() {
         />
         <ActiveCallBanner />
         <IncomingCallHost />
+        <PwaStatusHost />
         <AppToastHost />
         {!isAppReady && <AppLaunchScreen />}
       </View>

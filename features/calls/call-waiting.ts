@@ -11,6 +11,7 @@ const CALL_LIFECYCLE_NOTIFICATION_TYPES = new Set([
   "CallRejected",
   "CallCancelled",
   "CallEnded",
+  "CallAnsweredElsewhere",
   "CallMissed",
   "CallTimeout",
   "GroupCallEnded",

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemeModeSheet } from "@/components/profile/theme-mode-sheet";
 import { TmiSponsor } from "@/components/common/tmi-sponsor";
+import { PwaInstallAction } from "@/components/pwa/pwa-install-action";
 import { getThemeDefinition, spacing, type AppTheme, useTheme } from "@/theme";
 
 const SETTINGS = [
@@ -123,6 +124,7 @@ export function ProfileSettingsSheet({
             />
           </Pressable>
         ))}
+        <PwaInstallAction />
         <View style={styles.divider} />
         <Pressable
           accessibilityRole="button"

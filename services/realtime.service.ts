@@ -4,7 +4,7 @@ import {
   HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import { emitRealtimeNotification } from "@/features/notifications/notification-events";
 import {
@@ -34,7 +34,10 @@ import {
 import { showChatRealtimeNotification } from "@/services/chat-foreground-notification.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
-import { clearPendingIncomingCall } from "@/services/pending-incoming-call.service";
+import {
+  clearPendingIncomingCall,
+  savePendingIncomingCall,
+} from "@/services/pending-incoming-call.service";
 import { startWithRetry } from "@/services/realtime-start-retry";
 import { getAccessToken } from "@/stores/session-store";
 
@@ -68,6 +71,16 @@ const handleCallLifecyclePayload = (payload: unknown, eventName: string) => {
     void clearPendingIncomingCall(event.callId);
     void dismissIncomingCallNotification(event.callId).catch(() => undefined);
   }
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+export const isAcceptedOnCurrentRealtimeConnection = (payload: unknown) => {
+  if (!isRecord(payload) || typeof payload.acceptedConnectionId !== "string") {
+    return false;
+  }
+  return payload.acceptedConnectionId === connection?.connectionId;
 };
 
 const getRealtimeConnection = () => {
@@ -154,7 +167,18 @@ const getRealtimeConnection = () => {
       void showChatRealtimeNotification(event);
     });
     connection.on("IncomingCall", (payload) => {
-      emitIncomingCall(payload);
+      const event = emitIncomingCall(payload);
+      if (!event || !isRecord(payload)) return;
+      void savePendingIncomingCall({ ...payload, type: "IncomingCall" });
+      if (
+        Platform.OS !== "web" &&
+        !shouldShowIncomingCallNotification(AppState.currentState)
+      ) return;
+      void scheduleIncomingCallNotification({
+        body: event.callType === 1 ? "Cuộc gọi video đến" : "Cuộc gọi thoại đến",
+        data: { ...payload, type: "IncomingCall" },
+        title: event.caller.displayName,
+      });
     });
     connection.on("GroupCallStarted", (payload) => {
       const invitation =
@@ -181,6 +205,10 @@ const getRealtimeConnection = () => {
     });
     connection.on("CallAccepted", (payload) => {
       emitCallAccepted(payload);
+    });
+    connection.on("CallAnsweredElsewhere", (payload) => {
+      if (isAcceptedOnCurrentRealtimeConnection(payload)) return;
+      handleCallLifecyclePayload(payload, "CallAnsweredElsewhere");
     });
     connection.on("CallRejected", (payload) => {
       handleCallLifecyclePayload(payload, "CallRejected");
@@ -314,6 +342,8 @@ export const restartRealtime = async () => {
   await stopRealtime();
   await startRealtime();
 };
+
+export const getRealtimeConnectionId = () => connection?.connectionId ?? null;
 
 export const joinRealtimeGroup = async (groupName: string) => {
   if (!groupName.trim()) return;

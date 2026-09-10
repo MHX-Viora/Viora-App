@@ -21,6 +21,7 @@ import {
   unregisterDeviceToken,
 } from "@/services/device-token.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import { isAcceptedOnCurrentRealtimeConnection } from "@/services/realtime.service";
 import {
   navigateIncomingCallAnswerData,
   navigateNotificationData,
@@ -456,6 +457,12 @@ export const setupNotificationHandling = () => {
       return;
     }
     if (isCallLifecycleNotificationType(data.type)) {
+      if (
+        data.type === "CallAnsweredElsewhere" &&
+        isAcceptedOnCurrentRealtimeConnection(data)
+      ) {
+        return;
+      }
       const event = emitCallLifecycle(String(data.type), data);
       if (event) {
         await clearPendingIncomingCall(event.callId);

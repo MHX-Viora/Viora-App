@@ -1,4 +1,6 @@
 await import("../features/calls/call-waiting.test.mjs");
+await import("../features/pwa/pwa-installation.test.mjs");
+await import("../features/calls/cross-platform-incoming-call.test.mjs");
 await import("../features/calls/incoming-call-notification-config.test.mjs");
 await import("../features/calls/incoming-call-cold-start.test.mjs");
 await import("../features/calls/incoming-call-answer.test.mjs");

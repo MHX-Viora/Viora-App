@@ -9,6 +9,8 @@ test("incoming calls use the app call visuals inside a responsive web surface", 
   assert.match(source, /CallAvatarHalo/);
   assert.match(source, /getCallSurfaceLayout/);
   assert.match(source, /styles\.modalBackdrop/);
+  assert.match(source, /transparent=\{isDesktopWeb\}/);
+  assert.match(source, /presentationStyle=\{isDesktopWeb \? "overFullScreen" : "fullScreen"\}/);
 });
 
 test("incoming call actions remain labelled for keyboard and screen-reader users", () => {

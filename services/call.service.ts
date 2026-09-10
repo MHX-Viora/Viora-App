@@ -1,4 +1,5 @@
 import { authenticatedFetch } from "@/services/authenticated-fetch";
+import { getRealtimeConnectionId } from "@/services/realtime.service";
 import { CallType, type CallSession, type IceServer } from "@/types/call";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -64,7 +65,11 @@ const mapCallSession = (value: unknown): CallSession => {
 };
 
 const postCallAction = async (callId: string, action: "accept" | "reject" | "cancel" | "end") => {
+  const realtimeConnectionId = action === "accept" ? getRealtimeConnectionId() : null;
   const response = await authenticatedFetch(`${BASE_URL}/api/calls/${callId}/${action}`, {
+    headers: realtimeConnectionId
+      ? { "X-ANKT-Realtime-Connection-Id": realtimeConnectionId }
+      : undefined,
     method: "POST",
   });
   const data = parseResponseText(await response.text());
