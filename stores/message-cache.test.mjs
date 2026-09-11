@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  MAX_MESSAGE_CACHE_ROOMS,
+  MAX_MESSAGES_PER_CONVERSATION,
   MESSAGE_CACHE_TTL_MS,
   clearMessageCache,
   getMessageCache,
@@ -69,6 +71,32 @@ test("message cache freshness uses the bounded TTL", () => {
   setCachedMessagePage("room-a", [message("m1")], 1, 1, 1_000);
   assert.equal(isMessageCacheStale("room-a", 1_000 + MESSAGE_CACHE_TTL_MS - 1), false);
   assert.equal(isMessageCacheStale("room-a", 1_000 + MESSAGE_CACHE_TTL_MS), true);
+});
+
+test("message cache bounds rooms and messages with least-recent eviction", () => {
+  clearMessageCache();
+  const oversized = Array.from(
+    { length: MAX_MESSAGES_PER_CONVERSATION + 1 },
+    (_, index) => message(`message-${index}`),
+  );
+  setCachedMessagePage("room-0", oversized, 1, 1, 1_000);
+  getMessageCache("room-0");
+  for (let index = 1; index <= MAX_MESSAGE_CACHE_ROOMS; index += 1) {
+    setCachedMessagePage(`room-${index}`, [], 1, 1, 1_000 + index);
+  }
+
+  assert.equal(getMessageCache("room-0"), undefined);
+  assert.equal(
+    getMessageCache(`room-${MAX_MESSAGE_CACHE_ROOMS}`)?.messages.length,
+    0,
+  );
+
+  clearMessageCache();
+  setCachedMessagePage("room-a", oversized, 1, 1, 2_000);
+  assert.equal(
+    getMessageCache("room-a")?.messages.length,
+    MAX_MESSAGES_PER_CONVERSATION,
+  );
 });
 
 test("failed optimistic messages keep bounded in-memory retry payloads", () => {

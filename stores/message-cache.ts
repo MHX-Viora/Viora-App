@@ -1,6 +1,8 @@
 import type { ChatMessage, SendMessageAttachment } from "@/types/chat";
 
 export const MESSAGE_CACHE_TTL_MS = 30_000;
+export const MAX_MESSAGE_CACHE_ROOMS = 12;
+export const MAX_MESSAGES_PER_CONVERSATION = 1_000;
 
 export type MessageCacheEntry = {
   initialized: boolean;
@@ -44,11 +46,32 @@ const isPending = (message: ChatMessage) =>
   message.sendStatus === "sending" ||
   message.sendStatus === "failed";
 
-export const getMessageCache = (conversationId: string) =>
-  entries.get(conversationId);
+const storeEntry = (conversationId: string, entry: MessageCacheEntry) => {
+  entries.delete(conversationId);
+  entries.set(conversationId, {
+    ...entry,
+    messages: entry.messages.slice(0, MAX_MESSAGES_PER_CONVERSATION),
+  });
+  while (entries.size > MAX_MESSAGE_CACHE_ROOMS) {
+    const oldestId = entries.keys().next().value as string | undefined;
+    if (oldestId === undefined) break;
+    entries.delete(oldestId);
+    retries.delete(oldestId);
+  }
+  return entries.get(conversationId)!;
+};
+
+export const getMessageCache = (conversationId: string) => {
+  const entry = entries.get(conversationId);
+  if (entry) {
+    entries.delete(conversationId);
+    entries.set(conversationId, entry);
+  }
+  return entry;
+};
 
 export const getCachedMessages = (conversationId: string) =>
-  entries.get(conversationId)?.messages ?? [];
+  getMessageCache(conversationId)?.messages ?? [];
 
 export const setCachedMessages = (
   conversationId: string,
@@ -56,8 +79,7 @@ export const setCachedMessages = (
 ) => {
   const current = entries.get(conversationId) ?? emptyEntry();
   const next = { ...current, messages };
-  entries.set(conversationId, next);
-  return next;
+  return storeEntry(conversationId, next);
 };
 
 export const setCachedMessagePage = (
@@ -82,8 +104,7 @@ export const setCachedMessagePage = (
     page: page === 1 ? Math.max(1, current.page) : Math.max(current.page, page),
     totalPages,
   };
-  entries.set(conversationId, next);
-  return next;
+  return storeEntry(conversationId, next);
 };
 
 export const upsertCachedMessage = (

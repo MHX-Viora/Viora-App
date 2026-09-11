@@ -15,7 +15,7 @@ Chat messages, conversation previews, and stickers now use cache-first stale-whi
 
 ## 3. Implemented changes
 
-- Session memory message cache keyed by conversation, with page metadata, 30-second freshness, ID merge/dedupe, and session cleanup.
+- Session memory message cache keyed by conversation, with page metadata, 30-second freshness, ID merge/dedupe, LRU bounds (12 rooms, 1,000 messages per room), and session cleanup.
 - Cache-first room initialization; stale page 1 revalidates without replacing cached UI with a loader.
 - Room/request identity guards stop A -> B -> A responses from writing into the wrong screen.
 - Shared single-flight requests for message pages, conversation queries, sticker lists, and sticker details.
@@ -43,7 +43,7 @@ Chat messages, conversation previews, and stickers now use cache-first stale-whi
 
 | Resource | Storage | Policy |
 |---|---|---|
-| Messages | Session memory | 30s; keyed by conversation; cleared on logout |
+| Messages | Session memory | 30s; keyed by conversation; max 12 rooms / 1,000 rows each; cleared on logout |
 | Conversation list | Session memory | 30s; manual/reconnect refresh bypasses focus freshness |
 | Sticker list/detail metadata | Memory + AsyncStorage | 60m; max 12 query pages and 48 pack details; cleared on logout |
 | Recent stickers | Existing bounded AsyncStorage | Updated after successful send/retry |

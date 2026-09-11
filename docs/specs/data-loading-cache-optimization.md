@@ -73,7 +73,7 @@ setMessageCache(conversationId, (entry) => ({
 
 | Resource | Cache | TTL / refresh policy |
 |---|---|---|
-| Messages by conversation | Memory, session-scoped | Render immediately; background revalidate page 1 after 30 seconds or explicit resume/reconnect |
+| Messages by conversation | Memory, session-scoped | Render immediately; background revalidate page 1 after 30 seconds; LRU max 12 rooms / 1,000 rows each |
 | Message page requests | In-flight single-flight map | Deduplicate identical conversation/page/pageSize requests until settlement |
 | Conversation list | Existing memory cache | Render immediately; background revalidate page 1 after 30 seconds, manual refresh always allowed |
 | Sticker pack list | Memory + AsyncStorage metadata | 60 minutes |
@@ -112,4 +112,3 @@ setMessageCache(conversationId, (entry) => ({
 
 - Whether product requires message history after a full app restart. If yes, this needs a separate local-database decision; AsyncStorage is intentionally excluded for large histories.
 - Whether a physical/emulated Android device is available for the required manual acceptance run.
-
