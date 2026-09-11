@@ -32,6 +32,7 @@ import {
   getActiveChatConversation,
 } from "@/features/chat/chat-events";
 import { showChatRealtimeNotification } from "@/services/chat-foreground-notification.service";
+import { getRealtimeAccessToken } from "@/services/authenticated-fetch";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { showRealtimeNotification } from "@/services/foreground-notification.service";
 import {
@@ -39,7 +40,7 @@ import {
   savePendingIncomingCall,
 } from "@/services/pending-incoming-call.service";
 import { startWithRetry } from "@/services/realtime-start-retry";
-import { getAccessToken } from "@/stores/session-store";
+import { getUser } from "@/stores/session-store";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 const INITIAL_RECONNECT_DELAYS_MS = [0, 2000, 5000, 10000, 30000] as const;
@@ -88,7 +89,7 @@ const getRealtimeConnection = () => {
     connection = new HubConnectionBuilder()
       .withUrl(`${BASE_URL}/hubs/realtime`, {
         accessTokenFactory: async () => {
-          const token = (await getAccessToken()) ?? "";
+          const token = await getRealtimeAccessToken();
           console.info("[Realtime] access token exists", { exists: !!token });
           return token;
         },
@@ -158,8 +159,9 @@ const getRealtimeConnection = () => {
     connection.on("ConversationCreated", (payload) => {
       emitRealtimeConversation(payload);
     });
-    connection.on("NewMessageNotification", (payload) => {
-      const event = emitRealtimeNewMessageNotification(payload);
+    connection.on("NewMessageNotification", async (payload) => {
+      const currentUser = await getUser().catch(() => null);
+      const event = emitRealtimeNewMessageNotification(payload, currentUser?.id);
       if (!event || getActiveChatConversation() === event.conversationId) {
         return;
       }

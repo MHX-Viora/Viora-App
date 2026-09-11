@@ -1,4 +1,5 @@
 import { refreshToken } from "@/services/auth.service";
+import { isJwtExpiringSoon } from "@/services/jwt-expiry";
 import { createTokenRefreshCoordinator } from "@/services/token-refresh-coordinator";
 import { getAccessToken, setAccessToken } from "@/stores/session-store";
 
@@ -6,14 +7,23 @@ const coordinateTokenRefresh = createTokenRefreshCoordinator(
   async () => {
     const refreshedSession = await refreshToken();
     await setAccessToken(refreshedSession.accessToken);
-    void import("@/services/realtime.service").then(({ restartRealtime }) =>
-      restartRealtime(),
-    );
-
     return refreshedSession.accessToken;
   },
   getAccessToken,
 );
+const refreshRejectedToken = (token: string) => coordinateTokenRefresh(token);
+
+export const getRealtimeAccessToken = async (): Promise<string> => {
+  const token = await getAccessToken();
+  if (!token) return "";
+  if (!isJwtExpiringSoon(token)) return token;
+
+  try {
+    return await refreshRejectedToken(token);
+  } catch {
+    return token;
+  }
+};
 
 export const authenticatedFetch = async (
   url: string,
@@ -39,7 +49,10 @@ export const authenticatedFetch = async (
   }
 
   // 401 Unauthorized: Token hết hạn: refresh token, lưu token mới, rồi gọi lại đúng 1 lần.
-  const refreshedToken = await coordinateTokenRefresh(token);
+  const refreshedToken = await refreshRejectedToken(token);
+  void import("@/services/realtime.service").then(({ restartRealtime }) =>
+    restartRealtime(),
+  );
 
   response = await fetch(url, {
     ...options,
