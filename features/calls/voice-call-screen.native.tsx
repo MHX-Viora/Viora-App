@@ -20,6 +20,7 @@ import {
 } from "@/features/calls/call-events";
 import {
   CALL_ANSWER_TIMEOUT_MS,
+  CALL_CONNECT_TIMEOUT_MS,
   isWaitingForAnswer,
   OUTGOING_RINGBACK_VOLUME,
   shouldNavigateAwayFromCall,
@@ -43,7 +44,10 @@ import {
   sendReconnectCall,
   startCallRealtime,
 } from "@/services/call-realtime.service";
-import { createVoicePeer } from "@/services/webrtc-call.service";
+import {
+  createVoicePeer,
+  requestCallMediaPermissions,
+} from "@/services/webrtc-call.service";
 import { spacing } from "@/theme";
 import { CallStatus, CallType } from "@/types/call";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -222,6 +226,26 @@ export function VoiceCallScreen() {
     }
   }, [cleanup, conversationId]);
 
+  const failCall = useCallback(async (title: string, error: unknown) => {
+    if (!callId || isEndingRef.current) return;
+    isEndingRef.current = true;
+    setStatus("ending");
+    Alert.alert(
+      title,
+      error instanceof Error ? error.message : "Vui lòng thử lại.",
+    );
+    try {
+      await endVoiceCall(callId);
+    } catch (endError) {
+      console.info(
+        "[Call] failed call cleanup was not confirmed",
+        endError instanceof Error ? endError.message : String(endError),
+      );
+    } finally {
+      leaveCall();
+    }
+  }, [callId, leaveCall]);
+
   const minimizeCall = useCallback(() => {
     if (status === "calling" || status === "connecting" || status === "active") rememberCall(status);
     if (router.canGoBack()) {
@@ -256,9 +280,9 @@ export function VoiceCallScreen() {
         (state) => {
           if (state === "connected" || state === "completed") markActive(peerRef.current);
           if (state === "failed" && !isEndingRef.current) {
-            Alert.alert(
+            void failCall(
               "Mất kết nối cuộc gọi",
-              "Không thể thiết lập đường truyền. Vui lòng kiểm tra mạng và thử lại.",
+              new Error("Không thể thiết lập đường truyền. Vui lòng kiểm tra mạng và thử lại."),
             );
           }
         },
@@ -268,6 +292,10 @@ export function VoiceCallScreen() {
           video: isVideoCall,
         },
       );
+      if (isEndingRef.current) {
+        peer.close();
+        throw new Error("Cuộc gọi đã kết thúc.");
+      }
       peerRef.current = peer;
       peer.setMicrophoneEnabled(isMicrophoneEnabled);
       peer.setCameraEnabled(isCameraEnabled);
@@ -282,6 +310,7 @@ export function VoiceCallScreen() {
     }
   }, [
     callId,
+    failCall,
     isCameraEnabled,
     isMicrophoneEnabled,
     isVideoCall,
@@ -370,14 +399,13 @@ export function VoiceCallScreen() {
     });
     if (mode === "caller" && isVideoCall && !peerRef.current) {
       void createPeer().catch((error) => {
-        Alert.alert("Không thể mở camera", error instanceof Error ? error.message : "Vui lòng thử lại.");
-        leaveCall();
+        void failCall("Không thể mở camera", error);
       });
     }
     if (mode === "receiver") {
       void (async () => {
         try {
-          // The caller can send its offer as soon as the REST accept succeeds.
+          await requestCallMediaPermissions(isVideoCall);
           const callConnection = await startCallRealtime();
           if (!callConnection) {
             throw new Error("Không thể kết nối máy chủ cuộc gọi.");
@@ -389,12 +417,11 @@ export function VoiceCallScreen() {
           await sendCallAccepted(callId);
           console.info("[Call][Signal] accepted and ready", { callId });
         } catch (error) {
-          Alert.alert("Không thể nhận cuộc gọi", error instanceof Error ? error.message : "Vui lòng thử lại.");
-          leaveCall();
+          await failCall("Không thể nhận cuộc gọi", error);
         }
       })();
     }
-  }, [activeCall, callId, createPeer, isVideoCall, leaveCall, mode, rememberCall, status]);
+  }, [activeCall, callId, createPeer, failCall, isVideoCall, mode, rememberCall, status]);
 
   useEffect(() => {
     if (!callId) return;
@@ -406,8 +433,7 @@ export function VoiceCallScreen() {
         try {
           await createAndSendOfferOnce();
         } catch (error) {
-          Alert.alert("Không thể kết nối cuộc gọi", error instanceof Error ? error.message : "Vui lòng thử lại.");
-          leaveCall();
+          await failCall("Không thể kết nối cuộc gọi", error);
         }
       }),
       onCallRealtime("CallAccepted", async (payload) => {
@@ -417,8 +443,7 @@ export function VoiceCallScreen() {
         try {
           await createAndSendOfferOnce();
         } catch (error) {
-          Alert.alert("Không thể kết nối cuộc gọi", error instanceof Error ? error.message : "Vui lòng thử lại.");
-          leaveCall();
+          await failCall("Không thể kết nối cuộc gọi", error);
         }
       }),
       onCallRealtime("ReceiveOffer", async (payload) => {
@@ -434,10 +459,7 @@ export function VoiceCallScreen() {
           rememberCall("connecting", peer);
           console.info("[Call][Signal] answer sent", { callId });
         } catch (error) {
-          Alert.alert(
-            "Không thể kết nối cuộc gọi",
-            error instanceof Error ? error.message : "Vui lòng thử lại.",
-          );
+          await failCall("Không thể kết nối cuộc gọi", error);
         }
       }),
       onCallRealtime("ReceiveAnswer", async (payload) => {
@@ -450,10 +472,7 @@ export function VoiceCallScreen() {
           setStatus("connecting");
           rememberCall("connecting");
         } catch (error) {
-          Alert.alert(
-            "Không thể kết nối cuộc gọi",
-            error instanceof Error ? error.message : "Vui lòng thử lại.",
-          );
+          await failCall("Không thể kết nối cuộc gọi", error);
         }
       }),
       onCallRealtime("ReceiveIceCandidate", async (payload) => {
@@ -509,6 +528,7 @@ export function VoiceCallScreen() {
     callId,
     createAndSendOfferOnce,
     createPeer,
+    failCall,
     flushPendingIceCandidates,
     leaveCall,
     mode,
@@ -546,6 +566,17 @@ export function VoiceCallScreen() {
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, [connectedAtMs, status]);
+
+  useEffect(() => {
+    if (!callId || status !== "connecting") return;
+    const timer = setTimeout(() => {
+      void failCall(
+        "Không thể kết nối cuộc gọi",
+        new Error("Kết nối quá thời gian. Vui lòng thử lại."),
+      );
+    }, CALL_CONNECT_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [callId, failCall, status]);
 
   useEffect(() => {
     if (isVideoCall || !isWaitingForAnswer(mode, status)) return;
@@ -690,7 +721,7 @@ export function VoiceCallScreen() {
         >
           <Ionicons
             color={colors.white}
-            name={isSpeakerEnabled ? "volume-high" : "ear-outline"}
+            name={isSpeakerEnabled ? "volume-high" : "volume-mute"}
             size={24}
           />
         </Pressable>

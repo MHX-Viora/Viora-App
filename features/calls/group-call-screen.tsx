@@ -13,6 +13,7 @@ import { Track } from "livekit-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -25,6 +26,8 @@ import { endGroupCall, joinGroupCall } from "@/services/group-call.service";
 import { setCallScreenActive } from "@/services/incoming-call-settings.service";
 import { subscribeCallLifecycle } from "@/features/calls/call-events";
 import { getGroupCallColumnCount } from "@/features/calls/group-call-layout";
+import { shouldEndGroupCallOnLocalExit } from "@/features/calls/group-call-lifecycle";
+import { requestCallMediaPermissions } from "@/services/webrtc-call.service";
 import { getUser } from "@/stores/session-store";
 import { type ThemeColors, useTheme } from "@/theme";
 import { CallType, type GroupCallJoin } from "@/types/call";
@@ -89,7 +92,7 @@ function RoomContent({
   const leave = useCallback(async () => {
     if (hasLeft.current) return;
     hasLeft.current = true;
-    if (room.remoteParticipants.size === 0) {
+    if (shouldEndGroupCallOnLocalExit(room.remoteParticipants.size)) {
       await endGroupCall(callId).catch(() => undefined);
     }
     router.back();
@@ -113,6 +116,16 @@ function RoomContent({
     [callId, leave],
   );
 
+  useEffect(() => {
+    return () => {
+      if (hasLeft.current) return;
+      hasLeft.current = true;
+      if (shouldEndGroupCallOnLocalExit(room.remoteParticipants.size)) {
+        void endGroupCall(callId).catch(() => undefined);
+      }
+    };
+  }, [callId, room]);
+
   const toggleSpeaker = async () => {
     const next = !isSpeaker;
     const outputs = await AudioSession.getAudioOutputs();
@@ -123,11 +136,26 @@ function RoomContent({
 
   const switchCamera = async () => {
     const next = !isFrontCamera;
-    await localParticipant.setCameraEnabled(false);
-    await localParticipant.setCameraEnabled(true, {
-      facingMode: next ? "user" : "environment",
-    });
-    setIsFrontCamera(next);
+    try {
+      const cameraTrack = localParticipant.getTrackPublication(
+        Track.Source.Camera,
+      )?.videoTrack;
+      if (cameraTrack) {
+        await cameraTrack.restartTrack({
+          facingMode: next ? "user" : "environment",
+        });
+      } else {
+        await localParticipant.setCameraEnabled(true, {
+          facingMode: next ? "user" : "environment",
+        });
+      }
+      setIsFrontCamera(next);
+    } catch (error) {
+      Alert.alert(
+        "Không thể đổi camera",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    }
   };
 
   return (
@@ -147,7 +175,7 @@ function RoomContent({
           <View style={styles.tile}>
             {isTrackReference(item) ? (
               <VideoTrack
-                mirror={item.participant.isLocal}
+                mirror={item.participant.isLocal && isFrontCamera}
                 objectFit="cover"
                 style={styles.video}
                 trackRef={item}
@@ -198,7 +226,7 @@ function RoomContent({
         )}
         <Control
           active={isSpeaker}
-          icon={isSpeaker ? "volume-high" : "ear"}
+          icon={isSpeaker ? "volume-high" : "volume-mute"}
           label={isSpeaker ? "Dùng loa thoại" : "Bật loa ngoài"}
           onPress={() => void toggleSpeaker()}
         />
@@ -236,8 +264,12 @@ export function GroupCallScreen() {
     void getUser().then((user) => {
       if (active) setUserId(user?.id ?? "");
     });
-    void joinGroupCall(callId)
-      .then((value) => active && setJoin(value))
+    void requestCallMediaPermissions(false)
+      .then(() => joinGroupCall(callId))
+      .then(async (value) => {
+        await requestCallMediaPermissions(value.call.callType === CallType.Video);
+        if (active) setJoin(value);
+      })
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : "Không thể tham gia.");
       });

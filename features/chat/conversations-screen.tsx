@@ -42,6 +42,10 @@ import {
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { getUser } from "@/stores/session-store";
+import {
+  getConversationListCache,
+  setConversationListCache,
+} from "@/stores/conversation-list-cache";
 import { layout, spacing } from "@/theme";
 import type { Conversation } from "@/types/chat";
 import {
@@ -71,12 +75,12 @@ export function ConversationsScreen({
     conversationId?: string | string[];
     scrollToMessageId?: string | string[];
   }>();
-  const [items, setItems] = useState<Conversation[]>([]);
+  const [items, setItems] = useState<Conversation[]>(getConversationListCache);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [keyword, setKeyword] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(items.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState("");
@@ -94,7 +98,11 @@ export function ConversationsScreen({
   const [actionLoadingIds, setActionLoadingIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const hasLoadedRef = useRef(false);
+  const hasLoadedRef = useRef(items.length > 0);
+
+  useEffect(() => {
+    setConversationListCache(items);
+  }, [items]);
 
   const requestedConversationId = firstParam(params.conversationId);
   const requestedMessageId = firstParam(params.scrollToMessageId);

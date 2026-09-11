@@ -20,6 +20,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -58,6 +59,7 @@ import {
   type ActiveVoiceCall,
 } from "@/features/calls/call-events";
 import {
+  getActiveChatConversation,
   setActiveChatConversation,
   subscribeRealtimeConversationBlockedChanges,
   subscribeRealtimeConversationDissolved,
@@ -65,6 +67,7 @@ import {
   subscribeRealtimeMessageDelivered,
   subscribeRealtimeMessages,
 } from "@/features/chat/chat-events";
+import { canMarkConversationRead } from "@/features/chat/chat-read-visibility";
 import {
   ChatAttachmentUploadError,
   getConversation,
@@ -408,8 +411,6 @@ function VideoAttachment({
   const [videoSize, setVideoSize] = useState(DEFAULT_CHAT_VIDEO_SIZE);
   const player = useVideoPlayer(attachment.url, (nextPlayer) => {
     nextPlayer.muted = true;
-    nextPlayer.loop = true;
-    nextPlayer.play();
   });
   const { videoTrack } = useEvent(player, "videoTrackChange", {
     videoTrack: player.videoTrack,
@@ -992,6 +993,7 @@ export function ChatScreen() {
   const bufferedMineMessagesRef = useRef(new Map<string, ChatMessage>());
   const isAtBottomRef = useRef(true);
   const dissolvedRef = useRef(false);
+  const isConversationFocusedRef = useRef(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -1165,6 +1167,19 @@ export function ChatScreen() {
 
   const markConversationReadSafe = useCallback(() => {
     if (!conversationId || dissolvedRef.current) return;
+    const documentVisibility =
+      Platform.OS === "web" && typeof document !== "undefined"
+        ? document.visibilityState
+        : undefined;
+    if (
+      !canMarkConversationRead({
+        appState: AppState.currentState,
+        documentVisibility,
+        isFocused: isConversationFocusedRef.current,
+      })
+    ) {
+      return;
+    }
     void markConversationRead(conversationId)
       .then(() => {
         console.info("[ChatSync] conversation marked read", {
@@ -1177,6 +1192,59 @@ export function ChatScreen() {
       })
       .catch(handleRoomApiError);
   }, [conversationId, handleRoomApiError]);
+
+  const syncConversationReadVisibility = useCallback(
+    (appState = AppState.currentState) => {
+      const documentVisibility =
+        Platform.OS === "web" && typeof document !== "undefined"
+          ? document.visibilityState
+          : undefined;
+      const isVisible = canMarkConversationRead({
+        appState,
+        documentVisibility,
+        isFocused: isConversationFocusedRef.current,
+      });
+      if (isVisible) {
+        setActiveChatConversation(conversationId || null);
+        markConversationReadSafe();
+      } else if (getActiveChatConversation() === conversationId) {
+        setActiveChatConversation(null);
+      }
+    },
+    [conversationId, markConversationReadSafe],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      isConversationFocusedRef.current = true;
+      syncConversationReadVisibility();
+
+      return () => {
+        isConversationFocusedRef.current = false;
+        if (getActiveChatConversation() === conversationId) {
+          setActiveChatConversation(null);
+        }
+      };
+    }, [conversationId, syncConversationReadVisibility]),
+  );
+
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      syncConversationReadVisibility,
+    );
+    const handleVisibilityChange = () => syncConversationReadVisibility();
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+
+    return () => {
+      appStateSubscription.remove();
+      if (Platform.OS === "web" && typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+    };
+  }, [syncConversationReadVisibility]);
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
@@ -1320,7 +1388,6 @@ export function ChatScreen() {
 
   useEffect(() => {
     dissolvedRef.current = false;
-    setActiveChatConversation(conversationId || null);
     setMessagePermissions(null);
     setConversationDetails(initialConversationDetails);
     if (conversationId) {
@@ -1334,7 +1401,6 @@ export function ChatScreen() {
       );
     }
     return () => {
-      setActiveChatConversation(null);
       if (conversationId) {
         void leaveRealtimeGroup(getRealtimeConversationGroupName(conversationId)).catch(
           (error) => {

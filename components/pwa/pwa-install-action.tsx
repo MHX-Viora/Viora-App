@@ -11,7 +11,7 @@ import { spacing, useTheme } from "@/theme";
 
 export function PwaInstallAction() {
   const { theme } = useTheme();
-  const [showIosHelp, setShowIosHelp] = useState(false);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
   const snapshot = useSyncExternalStore(
     subscribePwa,
     getPwaSnapshot,
@@ -26,9 +26,10 @@ export function PwaInstallAction() {
   }
 
   const installing = snapshot.installState === "installing";
+  const isBrowserManual = snapshot.installMethod === "browser-manual";
   const install = async () => {
     const result = await requestPwaInstall();
-    if (result === "manual") setShowIosHelp(true);
+    if (result === "manual") setShowInstallHelp(true);
   };
 
   return (
@@ -37,7 +38,9 @@ export function PwaInstallAction() {
         accessibilityHint={
           snapshot.installMethod === "ios-manual"
             ? "Hiển thị hướng dẫn thêm ANKT vào Màn hình chính"
-            : "Mở hộp thoại cài đặt của trình duyệt"
+            : isBrowserManual
+              ? "Hiển thị hướng dẫn cài ANKT từ menu trình duyệt"
+              : "Mở hộp thoại cài đặt của trình duyệt"
         }
         accessibilityLabel="Cài đặt ANKT"
         accessibilityRole="button"
@@ -61,21 +64,25 @@ export function PwaInstallAction() {
               ? "Đang mở trình cài đặt…"
               : snapshot.installMethod === "ios-manual"
                 ? "Thêm ANKT vào Màn hình chính"
-                : "Mở ANKT như một ứng dụng độc lập"}
+                : isBrowserManual
+                  ? "Xem hướng dẫn cài từ trình duyệt"
+                  : "Mở ANKT như một ứng dụng độc lập"}
           </Text>
         </View>
         {!installing && (
           <Ionicons color={theme.colors.textMuted} name="chevron-forward" size={19} />
         )}
       </Pressable>
-      {showIosHelp && (
+      {showInstallHelp && (
         <View
           accessibilityLiveRegion="polite"
           style={[styles.help, { backgroundColor: theme.colors.primarySoft }]}
         >
           <Ionicons color={theme.colors.primary} name="share-outline" size={20} />
           <Text style={[styles.helpText, { color: theme.colors.text }]}>
-            Trong Safari, chọn Chia sẻ → Thêm vào Màn hình chính.
+            {snapshot.installMethod === "ios-manual"
+              ? "Mở menu Chia sẻ, rồi chọn Thêm vào Màn hình chính."
+              : "Mở menu trình duyệt (⋮), rồi chọn Cài đặt ANKT hoặc Cài đặt ứng dụng."}
           </Text>
         </View>
       )}

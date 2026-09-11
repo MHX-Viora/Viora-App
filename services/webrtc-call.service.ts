@@ -1,5 +1,6 @@
 import type { IceServer } from "@/types/call";
-import { PermissionsAndroid, Platform } from "react-native";
+import { requestRecordingPermissionsAsync } from "expo-audio";
+import { Camera } from "expo-camera";
 
 type MediaTrackLike = {
   enabled: boolean;
@@ -117,6 +118,20 @@ const loadWebRtc = async (): Promise<WebRtcModule> => {
   }
 };
 
+export const requestCallMediaPermissions = async (video: boolean) => {
+  const microphonePermission = await requestRecordingPermissionsAsync();
+  if (!microphonePermission.granted) {
+    throw new Error("Bạn cần cấp quyền micro để nghe gọi.");
+  }
+
+  if (video) {
+    const cameraPermission = await Camera.requestCameraPermissionsAsync();
+    if (!cameraPermission.granted) {
+      throw new Error("Bạn cần cấp quyền camera để gọi video.");
+    }
+  }
+};
+
 export const createVoicePeer = async (
   iceServers: IceServer[],
   onIceCandidate: (candidate: unknown) => void,
@@ -128,24 +143,7 @@ export const createVoicePeer = async (
     video?: boolean;
   },
 ) => {
-  if (Platform.OS === "android") {
-    const permissions = [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
-    if (options?.video) permissions.push(PermissionsAndroid.PERMISSIONS.CAMERA);
-    const result = await PermissionsAndroid.requestMultiple(permissions);
-    if (
-      result[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] !==
-      PermissionsAndroid.RESULTS.GRANTED
-    ) {
-      throw new Error("Bạn cần cấp quyền micro để nghe gọi.");
-    }
-    if (
-      options?.video &&
-      result[PermissionsAndroid.PERMISSIONS.CAMERA] !==
-        PermissionsAndroid.RESULTS.GRANTED
-    ) {
-      throw new Error("Bạn cần cấp quyền camera để gọi video.");
-    }
-  }
+  await requestCallMediaPermissions(Boolean(options?.video));
 
   const { MediaStream, RTCPeerConnection, mediaDevices } = await loadWebRtc();
   let stream = await mediaDevices.getUserMedia({

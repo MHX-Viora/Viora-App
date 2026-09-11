@@ -1,4 +1,5 @@
 import {
+  getInitialInstallMethod,
   getInitialInstallState,
   isIosSafariInstallCandidate,
   isStandaloneDisplay,
@@ -114,7 +115,10 @@ export const initializePwa = () => {
   const initialStandalone = isStandalone();
   const initialIosSafari = isIosSafari();
   emit({
-    installMethod: initialIosSafari && !initialStandalone ? "ios-manual" : null,
+    installMethod: getInitialInstallMethod({
+      isIosSafari: initialIosSafari,
+      isStandalone: initialStandalone,
+    }),
     installState: getInitialInstallState({
       isIosSafari: initialIosSafari,
       isStandalone: initialStandalone,
@@ -154,7 +158,12 @@ export const initializePwa = () => {
 
 export const requestPwaInstall = async (): Promise<PwaInstallResult> => {
   if (snapshot.installState !== "installable") return "unavailable";
-  if (snapshot.installMethod === "ios-manual") return "manual";
+  if (
+    snapshot.installMethod === "ios-manual" ||
+    snapshot.installMethod === "browser-manual"
+  ) {
+    return "manual";
+  }
   const prompt = deferredPrompt;
   if (!prompt) return "unavailable";
 
@@ -163,8 +172,8 @@ export const requestPwaInstall = async (): Promise<PwaInstallResult> => {
   const { outcome } = await prompt.userChoice;
   deferredPrompt = null;
   emit({
-    installMethod: null,
-    installState: outcome === "accepted" ? "installed" : "unavailable",
+    installMethod: outcome === "accepted" ? null : "browser-manual",
+    installState: outcome === "accepted" ? "installed" : "installable",
   });
   return outcome;
 };

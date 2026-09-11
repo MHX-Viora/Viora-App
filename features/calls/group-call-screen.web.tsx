@@ -5,22 +5,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { endGroupCall, joinGroupCall } from "@/services/group-call.service";
+import { shouldEndGroupCallOnLocalExit } from "@/features/calls/group-call-lifecycle";
 import { getUser } from "@/stores/session-store";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
 import { CallType } from "@/types/call";
 
-type VideoPublication = TrackPublication & { participantName: string; isLocal?: boolean };
+type VideoPublication = {
+  isLocal: boolean;
+  participantName: string;
+  publication: TrackPublication;
+};
 
-function VideoTile({ publication, styles }: { publication: VideoPublication; styles: ReturnType<typeof createStyles> }) {
+function VideoTile({ item, styles }: { item: VideoPublication; styles: ReturnType<typeof createStyles> }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
-    const track = publication.track;
+    const track = item.publication.track;
     const element = ref.current;
     if (!track || !element) return;
     track.attach(element);
     return () => { track.detach(element); };
-  }, [publication]);
-  return <View style={styles.tile}><video autoPlay muted={publication.isLocal} playsInline ref={ref} style={styles.video as never} /><Text numberOfLines={1} style={styles.tileName}>{publication.participantName}{publication.isLocal ? " (Bạn)" : ""}</Text></View>;
+  }, [item.publication]);
+  return <View style={styles.tile}><video autoPlay muted={item.isLocal} playsInline ref={ref} style={styles.video as never} /><Text numberOfLines={1} style={styles.tileName}>{item.participantName}{item.isLocal ? " (Bạn)" : ""}</Text></View>;
 }
 
 function AudioTrack({ publication }: { publication: TrackPublication }) {
@@ -55,7 +60,9 @@ export function GroupCallScreen() {
     const entries: VideoPublication[] = [];
     const audio: TrackPublication[] = [];
     const append = (publication: TrackPublication, participantName: string, isLocal = false) => {
-      if (publication.source === Track.Source.Camera && publication.track) entries.push(Object.assign(publication, { participantName, isLocal }));
+      if (publication.source === Track.Source.Camera && publication.track) {
+        entries.push({ isLocal, participantName, publication });
+      }
       if (publication.source === Track.Source.Microphone && publication.track && !isLocal) audio.push(publication);
     };
     next.remoteParticipants.forEach((participant) => participant.trackPublications.forEach((publication) => append(publication, participant.name || participant.identity)));
@@ -66,7 +73,7 @@ export function GroupCallScreen() {
   const leave = useCallback(async (endForEveryone = false) => {
     if (leftRef.current) return;
     leftRef.current = true;
-    if (endForEveryone || roomRef.current?.remoteParticipants.size === 0) await endGroupCall(callId).catch(() => undefined);
+    if (endForEveryone || shouldEndGroupCallOnLocalExit(roomRef.current?.remoteParticipants.size ?? 0)) await endGroupCall(callId).catch(() => undefined);
     roomRef.current?.disconnect(); roomRef.current = null; back();
   }, [back, callId]);
 
@@ -83,7 +90,11 @@ export function GroupCallScreen() {
         next.on(RoomEvent.ParticipantDisconnected, () => syncVideos(next));
         next.on(RoomEvent.LocalTrackPublished, () => syncVideos(next));
         next.on(RoomEvent.LocalTrackUnpublished, () => syncVideos(next));
-        next.on(RoomEvent.Disconnected, () => { if (!leftRef.current) back(); });
+        next.on(RoomEvent.Disconnected, () => {
+          if (leftRef.current) return;
+          leftRef.current = true;
+          back();
+        });
         await next.connect(join.liveKitUrl, join.token);
         await next.localParticipant.setMicrophoneEnabled(true);
         if (join.call.callType === CallType.Video) await next.localParticipant.setCameraEnabled(true);
@@ -94,7 +105,20 @@ export function GroupCallScreen() {
         if (mounted) setError(reason instanceof Error ? reason.message : "Không thể tham gia cuộc gọi nhóm.");
       }
     })();
-    return () => { mounted = false; roomRef.current?.disconnect(); roomRef.current = null; };
+    return () => {
+      mounted = false;
+      const activeRoom = roomRef.current;
+      if (
+        !leftRef.current &&
+        activeRoom &&
+        shouldEndGroupCallOnLocalExit(activeRoom.remoteParticipants.size)
+      ) {
+        void endGroupCall(callId).catch(() => undefined);
+      }
+      leftRef.current = true;
+      activeRoom?.disconnect();
+      roomRef.current = null;
+    };
   }, [back, callId, syncVideos]);
 
   const toggleMic = async () => { if (!room) return; const next = !micOn; await room.localParticipant.setMicrophoneEnabled(next); setMicOn(next); };
@@ -104,7 +128,7 @@ export function GroupCallScreen() {
   return <View style={styles.screen}>
     <View style={styles.header}><Text style={styles.title}>Cuộc gọi nhóm</Text><Text style={styles.subtitle}>{room.remoteParticipants.size + 1} người tham gia</Text></View>
     {audioTracks.map((publication) => <AudioTrack key={publication.trackSid} publication={publication} />)}
-    <View style={styles.grid}>{videos.length ? videos.map((publication) => <VideoTile key={`${publication.participantName}-${publication.trackSid}`} publication={publication} styles={styles} />) : <Text style={styles.loading}>Đang chờ người tham gia…</Text>}</View>
+    <View style={styles.grid}>{videos.length ? videos.map((item) => <VideoTile key={`${item.participantName}-${item.publication.trackSid}`} item={item} styles={styles} />) : <Text style={styles.loading}>Đang chờ người tham gia…</Text>}</View>
     <View style={styles.controls}>
       <Pressable accessibilityLabel="Bật/tắt mic" style={styles.control} onPress={() => void toggleMic()}><Ionicons color={colors.text} name={micOn ? "mic" : "mic-off"} size={24} /></Pressable>
       <Pressable accessibilityLabel="Bật/tắt camera" style={styles.control} onPress={() => void toggleCamera()}><Ionicons color={colors.text} name={cameraOn ? "videocam" : "videocam-off"} size={24} /></Pressable>

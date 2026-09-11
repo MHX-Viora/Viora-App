@@ -4,7 +4,11 @@ export type PwaInstallState =
   | "installing"
   | "installed";
 
-export type PwaInstallMethod = "prompt" | "ios-manual" | null;
+export type PwaInstallMethod =
+  | "prompt"
+  | "ios-manual"
+  | "browser-manual"
+  | null;
 export type PwaSnapshot = {
   installMethod: PwaInstallMethod;
   installState: PwaInstallState;
@@ -33,12 +37,22 @@ export const isIosSafariInstallCandidate = (
 };
 
 export const getInitialInstallState = ({
-  isIosSafari,
   isStandalone,
 }: {
   isIosSafari: boolean;
   isStandalone: boolean;
 }): PwaInstallState => {
   if (isStandalone) return "installed";
-  return isIosSafari ? "installable" : "unavailable";
+  return "installable";
+};
+
+export const getInitialInstallMethod = ({
+  isIosSafari,
+  isStandalone,
+}: {
+  isIosSafari: boolean;
+  isStandalone: boolean;
+}): PwaInstallMethod => {
+  if (isStandalone) return null;
+  return isIosSafari ? "ios-manual" : "browser-manual";
 };

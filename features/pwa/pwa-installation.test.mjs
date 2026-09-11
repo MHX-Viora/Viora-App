@@ -4,6 +4,7 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 
 import {
+  getInitialInstallMethod,
   getInitialInstallState,
   isIosSafariInstallCandidate,
   isStandaloneDisplay,
@@ -28,10 +29,13 @@ test("manual install fallback is limited to iOS Safari", () => {
   assert.equal(isIosSafariInstallCandidate(safari, "Win32", 0), false);
 });
 
-test("initial state prioritizes installed mode and exposes iOS manual install", () => {
+test("initial state exposes installation on every supported web browser", () => {
   assert.equal(getInitialInstallState({ isIosSafari: true, isStandalone: true }), "installed");
   assert.equal(getInitialInstallState({ isIosSafari: true, isStandalone: false }), "installable");
-  assert.equal(getInitialInstallState({ isIosSafari: false, isStandalone: false }), "unavailable");
+  assert.equal(getInitialInstallState({ isIosSafari: false, isStandalone: false }), "installable");
+  assert.equal(getInitialInstallMethod({ isIosSafari: true, isStandalone: false }), "ios-manual");
+  assert.equal(getInitialInstallMethod({ isIosSafari: false, isStandalone: false }), "browser-manual");
+  assert.equal(getInitialInstallMethod({ isIosSafari: false, isStandalone: true }), null);
 });
 
 test("manifest carries ANKT standalone identity and exact official icon sizes", () => {
@@ -135,8 +139,11 @@ test("SPA template links install metadata without a hard-coded host", () => {
 
 test("profile settings owns the install action and root owns status UI", () => {
   const settings = read("../../components/profile/profile-settings-sheet.tsx");
+  const action = read("../../components/pwa/pwa-install-action.tsx");
   const root = read("../../app/_layout.tsx");
   assert.match(settings, /PwaInstallAction/);
+  assert.match(action, /snapshot\.installMethod === "browser-manual"/);
+  assert.match(action, /Mở menu trình duyệt/);
   assert.match(root, /PwaStatusHost/);
 });
 
