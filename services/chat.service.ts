@@ -9,6 +9,7 @@ import {
   mapSharedLinksPage,
 } from "@/features/chat/chat.mapper";
 import { authenticatedFetch } from "@/services/authenticated-fetch";
+import { createSingleFlight } from "@/services/single-flight";
 import type { CreateGroupInput } from "@/types/chat-group";
 import type {
   ChatMessage,
@@ -27,6 +28,8 @@ import type {
 } from "@/types/chat";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+const messageRequests = createSingleFlight();
+const conversationRequests = createSingleFlight();
 
 const parseResponseText = (text: string): unknown => {
   if (!text) return null;
@@ -138,19 +141,25 @@ export const getConversations = async (query: {
   pageSize: number;
   keyword?: string;
 }): Promise<ConversationsPage> => {
-  const params = new URLSearchParams({
-    page: String(query.page),
-    pageSize: String(query.pageSize),
-  });
-  if (query.keyword?.trim()) params.set("keyword", query.keyword.trim());
+  const keyword = query.keyword?.trim() ?? "";
+  return conversationRequests.run(
+    `${keyword}:${query.page}:${query.pageSize}`,
+    async () => {
+      const params = new URLSearchParams({
+        page: String(query.page),
+        pageSize: String(query.pageSize),
+      });
+      if (keyword) params.set("keyword", keyword);
 
-  const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/conversations?${params.toString()}`,
+      const response = await authenticatedFetch(
+        `${BASE_URL}/api/chat/conversations?${params.toString()}`,
+      );
+      const data = parseResponseText(await response.text());
+      if (!response.ok)
+        throwChatApiError(response, data, "Không thể tải cuộc trò chuyện.");
+      return mapConversationsPage(data);
+    },
   );
-  const data = parseResponseText(await response.text());
-  if (!response.ok)
-    throwChatApiError(response, data, "Không thể tải cuộc trò chuyện.");
-  return mapConversationsPage(data);
 };
 
 export const getChatUnreadSummary = async (): Promise<ChatUnreadSummary> => {
@@ -176,20 +185,31 @@ export const getChatUnreadSummary = async (): Promise<ChatUnreadSummary> => {
 
 export const getConversationMessages = async (
   conversationId: string,
-  query: { page: number; pageSize: number },
-): Promise<MessagesPage> => {
-  const params = new URLSearchParams({
-    page: String(query.page),
-    pageSize: String(query.pageSize),
-  });
-  const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/conversations/${conversationId}/messages?${params.toString()}`,
+  query: {
+    afterMessageId?: string;
+    beforeMessageId?: string;
+    page: number;
+    pageSize: number;
+  },
+): Promise<MessagesPage> =>
+  messageRequests.run(
+    `${conversationId}:${query.page}:${query.pageSize}:${query.afterMessageId ?? ""}:${query.beforeMessageId ?? ""}`,
+    async () => {
+      const params = new URLSearchParams({
+        page: String(query.page),
+        pageSize: String(query.pageSize),
+      });
+      if (query.afterMessageId) params.set("afterMessageId", query.afterMessageId);
+      if (query.beforeMessageId) params.set("beforeMessageId", query.beforeMessageId);
+      const response = await authenticatedFetch(
+        `${BASE_URL}/api/chat/conversations/${conversationId}/messages?${params.toString()}`,
+      );
+      const data = parseResponseText(await response.text());
+      if (!response.ok)
+        throwChatApiError(response, data, "Không thể tải tin nhắn.");
+      return mapMessagesPage(data);
+    },
   );
-  const data = parseResponseText(await response.text());
-  if (!response.ok)
-    throwChatApiError(response, data, "Không thể tải tin nhắn.");
-  return mapMessagesPage(data);
-};
 
 export const getConversation = async (
   conversationId: string,

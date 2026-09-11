@@ -11,7 +11,7 @@ test("outgoing send status appears after the timestamp with a compact separator"
     chatScreen,
     /styles\.messageMeta[\s\S]{0,500}formatChatTime\(message\.createdAt\)[\s\S]{0,500}<MessageSendStatus/,
   );
-  assert.match(chatScreen, /displayedStatus === "sending" \? "· Đang gửi" : "· Gửi lỗi"/);
+  assert.match(chatScreen, /displayedStatus === "sending" \? "· Đang gửi" : "· Gửi lỗi · Thử lại"/);
   assert.doesNotMatch(chatScreen, /Đang gửi…/);
   assert.match(chatScreen, /sendStatus: \{[\s\S]{0,120}fontSize: 10/);
 });
@@ -40,4 +40,12 @@ test("own realtime confirmation waits for its optimistic message instead of rend
     chatScreen.match(/finishPendingOutgoing\(optimisticId, sentMessage\.id\)/g)?.length,
     3,
   );
+});
+
+test("failed optimistic messages remain visible and expose retry", () => {
+  assert.match(chatScreen, /accessibilityLabel="Gửi lại tin nhắn"/);
+  assert.match(chatScreen, /const retryMessage = useCallback/);
+  assert.match(chatScreen, /setMessageRetry\(/);
+  assert.match(chatScreen, /getMessageRetry\(/);
+  assert.doesNotMatch(chatScreen, /current\.filter\(\(item\) => item\.id !== optimisticId\)/);
 });

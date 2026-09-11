@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEvent } from "expo";
+import { Image as ExpoImage } from "expo-image";
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -15,7 +16,14 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -36,6 +44,7 @@ import {
   type TextInputContentSizeChangeEventData,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useStore } from "zustand";
 
 import { AddMembersModal } from "@/components/chat/add-members-modal";
 import { ChatComposerNotice } from "@/components/chat/chat-composer-notice";
@@ -85,10 +94,31 @@ import {
 } from "@/services/group-call.service";
 import { startCallRealtime } from "@/services/call-realtime.service";
 import { downloadChatAttachment } from "@/services/chat-attachment-download.service";
+import {
+  persistLocalMessageChanges,
+  persistLocalMessages,
+  readOlderLocalMessages,
+  readRecentLocalMessages,
+} from "@/services/chat-local-cache.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { searchMentionUsers } from "@/services/mention.service";
 import { joinRealtimeGroup, leaveRealtimeGroup } from "@/services/realtime.service";
 import { getUser } from "@/stores/session-store";
+import {
+  clearMessageCache,
+  deleteMessageRetry,
+  getCachedMessages,
+  getMessageCache,
+  getMessageRetry,
+  isMessageCacheStale,
+  MAX_MESSAGES_PER_CONVERSATION,
+  messageCacheStore,
+  setCachedMessagePage,
+  setCachedMessageHasNoMore,
+  setCachedMessages,
+  setMessageLoadingState,
+  setMessageRetry,
+} from "@/stores/message-cache";
 import { spacing } from "@/theme";
 import { CallType } from "@/types/call";
 import { MessageType } from "@/types/chat";
@@ -114,7 +144,6 @@ import {
   getRealtimeConversationGroupName,
   isConversationGoneError,
   markMessageRecalled,
-  mergeOlder,
   pendingAttachmentToViewerAttachment,
   toNewestFirstMessages,
 } from "@/utils/chat-message";
@@ -581,10 +610,12 @@ function SystemMessage({ message }: { message: ChatMessage }) {
 
 function MessageSendStatus({
   isMedia,
+  onRetry,
   status,
   styles,
 }: {
   isMedia: boolean;
+  onRetry: () => void;
   status?: ChatMessage["sendStatus"];
   styles: ReturnType<typeof createStyles>;
 }) {
@@ -642,7 +673,7 @@ function MessageSendStatus({
 
   if (!displayedStatus) return null;
 
-  return (
+  const label = (
     <Animated.Text
       accessibilityLiveRegion="polite"
       style={[
@@ -652,16 +683,26 @@ function MessageSendStatus({
         { opacity, transform: [{ translateX }] },
       ]}
     >
-      {displayedStatus === "sending" ? "· Đang gửi" : "· Gửi lỗi"}
+      {displayedStatus === "sending" ? "· Đang gửi" : "· Gửi lỗi · Thử lại"}
     </Animated.Text>
   );
+
+  return displayedStatus === "failed" ? (
+    <Pressable
+      accessibilityLabel="Gửi lại tin nhắn"
+      accessibilityRole="button"
+      onPress={onRetry}
+    >
+      {label}
+    </Pressable>
+  ) : label;
 }
 
 function StickerMessage({ message, onLongPress }: { message: ChatMessage; onLongPress: () => void }) {
   if (!message.sticker?.imageUrl) return null;
   return (
     <Pressable accessibilityLabel={`Nhãn dán ${message.sticker.name}`} onLongPress={onLongPress}>
-      <Image resizeMode="contain" source={{ uri: message.sticker.imageUrl }} style={stickerMessageStyles.image} />
+      <ExpoImage cachePolicy="memory-disk" contentFit="contain" source={{ uri: message.sticker.imageUrl }} style={stickerMessageStyles.image} />
     </Pressable>
   );
 }
@@ -685,6 +726,7 @@ function MessageRow({
   onReply,
   onReplyPress,
   onOpenAttachment,
+  onRetry,
 }: {
   actionAttachment: ChatAttachment | null;
   downloadingAttachmentId: string | null;
@@ -702,6 +744,7 @@ function MessageRow({
   onReply: (message: ChatMessage) => void;
   onReplyPress: (messageId: string) => void;
   onOpenAttachment: (attachment: ChatAttachment) => void;
+  onRetry: (message: ChatMessage) => void;
 }) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -907,6 +950,7 @@ function MessageRow({
           {message.isMine ? (
             <MessageSendStatus
               isMedia={!hasBubbleBackground}
+              onRetry={() => onRetry(message)}
               status={message.sendStatus}
               styles={styles}
             />
@@ -995,10 +1039,25 @@ export function ChatScreen() {
   const isAtBottomRef = useRef(true);
   const dissolvedRef = useRef(false);
   const isConversationFocusedRef = useRef(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const activeConversationIdRef = useRef(conversationId);
+  activeConversationIdRef.current = conversationId;
+  const [messages, setMessageState] = useState<ChatMessage[]>(() =>
+    getCachedMessages(conversationId),
+  );
+  const zustandRoomEntry = useStore(
+    messageCacheStore,
+    (state) => state.entries.get(conversationId),
+  );
+  const [page, setPage] = useState(
+    () => getMessageCache(conversationId)?.page ?? 1,
+  );
+  const [totalPages, setTotalPages] = useState(
+    () => getMessageCache(conversationId)?.totalPages ?? 1,
+  );
+  const [isLoading, setIsLoading] = useState(
+    () => !getMessageCache(conversationId)?.initialized,
+  );
+  const [, setIsBackgroundRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [content, setContent] = useState("");
   const [messageInputHeight, setMessageInputHeight] = useState(
@@ -1040,6 +1099,35 @@ export function ChatScreen() {
   } | null>(null);
   const isGroupConversation =
     (conversationDetails?.conversationType ?? params.conversationType) === "Group";
+
+  useEffect(() => {
+    if (!zustandRoomEntry) return;
+    setMessageState(zustandRoomEntry.messages);
+    setPage(zustandRoomEntry.page);
+    setTotalPages(zustandRoomEntry.totalPages);
+  }, [zustandRoomEntry]);
+
+  const setMessages = useCallback(
+    (update: SetStateAction<ChatMessage[]>) => {
+      const apply = (current: ChatMessage[]) =>
+        typeof update === "function" ? update(current) : update;
+
+      if (activeConversationIdRef.current !== conversationId) {
+        const previous = getCachedMessages(conversationId);
+        const next = apply(previous);
+        setCachedMessages(conversationId, next);
+        void persistLocalMessageChanges(previous, next);
+        return;
+      }
+
+      const previous = getCachedMessages(conversationId);
+      const next = apply(previous);
+      const cached = setCachedMessages(conversationId, next);
+      void persistLocalMessageChanges(previous, cached.messages);
+      setMessageState(cached.messages);
+    },
+    [conversationId],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -1103,7 +1191,7 @@ export function ChatScreen() {
         ...current,
       ];
     });
-  }, []);
+  }, [setMessages]);
 
   const finishPendingOutgoing = useCallback(
     (optimisticId: string, confirmedId?: string) => {
@@ -1149,6 +1237,7 @@ export function ChatScreen() {
   const handleConversationDissolved = useCallback(() => {
     if (dissolvedRef.current) return;
     dissolvedRef.current = true;
+    clearMessageCache(conversationId);
     setActiveChatConversation(null);
     void leaveRealtimeGroup(getRealtimeConversationGroupName(conversationId)).catch(() => undefined);
     showAppToast({ message: "Nhóm đã bị giải tán.", type: "success" });
@@ -1263,21 +1352,99 @@ export function ChatScreen() {
   );
 
   const load = useCallback(
-    async (nextPage: number, mode: "initial" | "more") => {
+    async (nextPage: number, mode: "initial" | "background" | "more") => {
       if (!conversationId) return;
       if (dissolvedRef.current) return;
+      const requestedConversationId = conversationId;
       if (mode === "initial") {
         setIsLoading(true);
+        setMessageLoadingState(requestedConversationId, { initialLoading: true });
       }
-      if (mode === "more") setIsLoadingMore(true);
+      if (mode === "background") {
+        setIsBackgroundRefreshing(true);
+        setMessageLoadingState(requestedConversationId, { backgroundRefreshing: true });
+      }
+      if (mode === "more") {
+        setIsLoadingMore(true);
+        setMessageLoadingState(requestedConversationId, { loadingMore: true });
+      }
       try {
-        const result = await getConversationMessages(conversationId, {
+        if (mode === "more") {
+          const current = getCachedMessages(requestedConversationId);
+          if (current.length >= MAX_MESSAGES_PER_CONVERSATION) {
+            const capped = setCachedMessageHasNoMore(requestedConversationId);
+            setTotalPages(capped.totalPages);
+            return;
+          }
+          const oldest = current.at(-1);
+          if (oldest) {
+            const localItems = await readOlderLocalMessages(
+              requestedConversationId,
+              oldest,
+              CHAT_PAGE_SIZE,
+            );
+            if (localItems.length > 0) {
+              const currentEntry = getMessageCache(requestedConversationId);
+              const cached = setCachedMessagePage(
+                requestedConversationId,
+                localItems,
+                nextPage,
+                Math.max(currentEntry?.totalPages ?? 1, nextPage + (localItems.length === CHAT_PAGE_SIZE ? 1 : 0)),
+                currentEntry?.lastFetchedAt ?? 0,
+              );
+              if (activeConversationIdRef.current !== requestedConversationId) return;
+              setMessageState(cached.messages);
+              setPage(cached.page);
+              setTotalPages(cached.totalPages);
+              if (localItems.length === CHAT_PAGE_SIZE) return;
+            }
+          }
+        }
+        const currentMessages = getCachedMessages(requestedConversationId);
+        const newestConfirmed = currentMessages.find((message) =>
+          !message.id.startsWith("pending-") && message.sendStatus !== "sending" && message.sendStatus !== "failed",
+        );
+        const oldestConfirmed = [...currentMessages].reverse().find((message) =>
+          !message.id.startsWith("pending-") && message.sendStatus !== "sending" && message.sendStatus !== "failed",
+        );
+        let result = await getConversationMessages(requestedConversationId, {
+          afterMessageId: mode === "background" ? newestConfirmed?.id : undefined,
+          beforeMessageId: mode === "more" ? oldestConfirmed?.id : undefined,
           page: nextPage,
           pageSize: CHAT_PAGE_SIZE,
         });
+        const resultItems = [...result.items];
+        let deltaBatches = 1;
+        while (
+          mode === "background" &&
+          result.items.length === CHAT_PAGE_SIZE &&
+          deltaBatches < 10
+        ) {
+          const nextCursor = result.items.at(-1)?.id;
+          if (!nextCursor) break;
+          result = await getConversationMessages(requestedConversationId, {
+            afterMessageId: nextCursor,
+            page: 1,
+            pageSize: CHAT_PAGE_SIZE,
+          });
+          resultItems.push(...result.items);
+          deltaBatches += 1;
+        }
         const nextItems = toNewestFirstMessages(
-          result.items.map(normalizeMessage),
+          resultItems.map(normalizeMessage),
         );
+        const cached = setCachedMessagePage(
+          requestedConversationId,
+          nextItems,
+          mode === "more" ? nextPage : result.page,
+          mode === "more"
+            ? nextPage + (nextItems.length === CHAT_PAGE_SIZE ? 1 : 0)
+            : mode === "background"
+              ? getMessageCache(requestedConversationId)?.totalPages ?? result.totalPages
+              : result.totalPages,
+        );
+        void persistLocalMessages(nextItems);
+        if (activeConversationIdRef.current !== requestedConversationId) return;
         if (result.conversation) {
           setMessagePermissions((current) => ({
             canSendMessage:
@@ -1309,21 +1476,32 @@ export function ChatScreen() {
           setIsBlocked(result.conversation.isBlocked === true);
           setBlockedBy(result.conversation.blockedBy ?? null);
         }
-        setMessages((current) =>
-          nextPage === 1 ? nextItems : mergeOlder(current, nextItems),
-        );
-        setPage(result.page);
-        setTotalPages(result.totalPages);
+        setMessageState(cached.messages);
+        setPage(cached.page);
+        setTotalPages(cached.totalPages);
         if (nextPage === 1) markConversationReadSafe();
       } catch (error) {
+        if (activeConversationIdRef.current !== requestedConversationId) return;
         if (handleRoomApiError(error)) return;
+        if (mode === "background" && getCachedMessages(requestedConversationId).length > 0) {
+          if (__DEV__) console.info("[CHAT SYNC] background refresh failed", error);
+          return;
+        }
         Alert.alert(
           "Không thể tải tin nhắn",
           error instanceof Error ? error.message : "Vui lòng thử lại.",
         );
       } finally {
-        setIsLoading(false);
-        setIsLoadingMore(false);
+        if (activeConversationIdRef.current === requestedConversationId) {
+          setIsLoading(false);
+          setIsBackgroundRefreshing(false);
+          setIsLoadingMore(false);
+          setMessageLoadingState(requestedConversationId, {
+            backgroundRefreshing: false,
+            initialLoading: false,
+            loadingMore: false,
+          });
+        }
       }
     },
     [conversationId, handleRoomApiError, markConversationReadSafe, normalizeMessage],
@@ -1338,21 +1516,28 @@ export function ChatScreen() {
       }
 
       const nextPage = page + 1;
+      const requestedConversationId = conversationId;
       setIsLoadingMore(true);
       try {
-        const result = await getConversationMessages(conversationId, {
+        const result = await getConversationMessages(requestedConversationId, {
           page: nextPage,
           pageSize: CHAT_PAGE_SIZE,
         });
         const olderMessages = toNewestFirstMessages(
           result.items.map(normalizeMessage),
         );
-        const nextMessages = mergeOlder(messages, olderMessages);
-        setMessages(nextMessages);
-        setPage(result.page);
-        setTotalPages(result.totalPages);
+        const cached = setCachedMessagePage(
+          requestedConversationId,
+          olderMessages,
+          result.page,
+          result.totalPages,
+        );
+        if (activeConversationIdRef.current !== requestedConversationId) return;
+        setMessageState(cached.messages);
+        setPage(cached.page);
+        setTotalPages(cached.totalPages);
 
-        const nextIndex = nextMessages.findIndex((item) => item.id === messageId);
+        const nextIndex = cached.messages.findIndex((item) => item.id === messageId);
         if (nextIndex >= 0) {
           requestAnimationFrame(() =>
             listRef.current?.scrollToIndex({
@@ -1366,20 +1551,22 @@ export function ChatScreen() {
 
         Alert.alert("Không tìm thấy tin nhắn", "Hãy kéo lên tải thêm tin cũ rồi thử lại.");
       } catch (error) {
+        if (activeConversationIdRef.current !== requestedConversationId) return;
         if (handleRoomApiError(error)) return;
         Alert.alert(
           "Không thể tải tin nhắn gốc",
           error instanceof Error ? error.message : "Vui lòng thử lại.",
         );
       } finally {
-        setIsLoadingMore(false);
+        if (activeConversationIdRef.current === requestedConversationId) {
+          setIsLoadingMore(false);
+        }
       }
     },
     [
       conversationId,
       handleRoomApiError,
       isLoadingMore,
-      messages,
       normalizeMessage,
       page,
       scrollToMessage,
@@ -1420,8 +1607,43 @@ export function ChatScreen() {
   }, []);
 
   useEffect(() => {
-    load(1, "initial");
-  }, [load]);
+    let active = true;
+    const cached = getMessageCache(conversationId);
+    setMessageState(cached?.messages ?? []);
+    setPage(cached?.page ?? 1);
+    setTotalPages(cached?.totalPages ?? 1);
+    setIsLoading(!cached?.initialized);
+    setIsLoadingMore(false);
+    setIsBackgroundRefreshing(false);
+
+    void (async () => {
+      let hydrated = cached;
+      if (!cached?.initialized) {
+        const localMessages = await readRecentLocalMessages(conversationId, CHAT_PAGE_SIZE);
+        if (!active || activeConversationIdRef.current !== conversationId) return;
+        if (localMessages.length > 0) {
+          hydrated = setCachedMessagePage(
+            conversationId,
+            localMessages,
+            1,
+            localMessages.length === CHAT_PAGE_SIZE ? 2 : 1,
+            0,
+          );
+          setMessageState(hydrated.messages);
+          setPage(hydrated.page);
+          setTotalPages(hydrated.totalPages);
+          setIsLoading(false);
+        }
+      }
+
+      if (isMessageCacheStale(conversationId)) {
+        void load(1, hydrated?.initialized ? "background" : "initial");
+      } else {
+        markConversationReadSafe();
+      }
+    })();
+    return () => { active = false; };
+  }, [conversationId, load, markConversationReadSafe]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -1464,7 +1686,16 @@ export function ChatScreen() {
         }
         setMessages((current) =>
           current.some((item) => item.id === nextMessage.id)
-            ? current
+            ? current.map((item) =>
+                item.id === nextMessage.id
+                  ? {
+                      ...item,
+                      ...nextMessage,
+                      clientRenderId: item.clientRenderId,
+                      sendStatus: nextMessage.sendStatus ?? item.sendStatus,
+                    }
+                  : item,
+              )
             : [nextMessage, ...current],
         );
         if (!nextMessage.isMine) markConversationReadSafe();
@@ -1474,7 +1705,7 @@ export function ChatScreen() {
           setHasNewMessage(true);
         }
       }),
-    [conversationId, currentUserId, markConversationReadSafe, normalizeMessage, scrollToEndAfterLayout],
+    [conversationId, currentUserId, markConversationReadSafe, normalizeMessage, scrollToEndAfterLayout, setMessages],
   );
 
   useEffect(
@@ -1496,7 +1727,7 @@ export function ChatScreen() {
           ),
         );
       }),
-    [conversationId],
+    [conversationId, setMessages],
   );
 
   useEffect(
@@ -1511,7 +1742,7 @@ export function ChatScreen() {
           ),
         );
       }),
-    [conversationId],
+    [conversationId, setMessages],
   );
 
   useEffect(
@@ -1834,6 +2065,11 @@ export function ChatScreen() {
       };
 
       pendingOutgoingIdsRef.current.add(optimisticId);
+      setMessageRetry(conversationId, optimisticId, {
+        attachments: [],
+        content: url,
+        conversationId,
+      });
       setMessages((current) => [optimisticMessage, ...current]);
       scrollToEndAfterLayout(true);
 
@@ -1862,6 +2098,7 @@ export function ChatScreen() {
             item.id === optimisticId ? sentMessage : item,
           );
       });
+      deleteMessageRetry(conversationId, optimisticId);
       finishPendingOutgoing(optimisticId, sentMessage.id);
       scrollToEndAfterLayout(true);
     } catch (error) {
@@ -1878,7 +2115,7 @@ export function ChatScreen() {
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
-  }, [canSendInConversation, conversationId, finishPendingOutgoing, normalizeMessage, scrollToEndAfterLayout]);
+  }, [canSendInConversation, conversationId, finishPendingOutgoing, normalizeMessage, scrollToEndAfterLayout, setMessages]);
 
   const recallMessage = useCallback(
     async (message: ChatMessage) => {
@@ -1912,7 +2149,7 @@ export function ChatScreen() {
         );
       }
     },
-    [handleRoomApiError],
+    [handleRoomApiError, setMessages],
   );
 
   const closeMessageActions = useCallback(() => {
@@ -2015,6 +2252,15 @@ export function ChatScreen() {
     pendingMessages.forEach(({ optimisticId }) =>
       pendingOutgoingIdsRef.current.add(optimisticId),
     );
+    pendingMessages.forEach(({ optimisticId, unit, unitIndex }) =>
+      setMessageRetry(conversationId, optimisticId, {
+        attachments: unit.attachments,
+        content: unit.content,
+        conversationId,
+        mentionUserIds: unit.content ? mentionUserIds : undefined,
+        replyToMessageId: unitIndex === 0 ? draftReply?.id : undefined,
+      }),
+    );
     setMessages((current) => [
       ...pendingMessages.map(({ optimisticMessage }) => optimisticMessage).reverse(),
       ...current,
@@ -2056,6 +2302,7 @@ export function ChatScreen() {
               item.id === optimisticId ? sentMessage : item,
             );
         });
+        deleteMessageRetry(conversationId, optimisticId);
         finishPendingOutgoing(optimisticId, sentMessage.id);
       } catch (error) {
         finishPendingOutgoing(optimisticId);
@@ -2065,6 +2312,9 @@ export function ChatScreen() {
           );
           const pendingIds = new Set(
             pendingMessages.map(({ optimisticId: pendingId }) => pendingId),
+          );
+          pendingIds.forEach((pendingId) =>
+            deleteMessageRetry(conversationId, pendingId),
           );
           setMessages((current) =>
             current.filter((item) => !pendingIds.has(item.id)),
@@ -2083,7 +2333,7 @@ export function ChatScreen() {
       }
     }
     scrollToEndAfterLayout(true);
-  }, [attachments, canSendInConversation, content, conversationId, draftMentions, finishPendingOutgoing, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
+  }, [attachments, canSendInConversation, content, conversationId, draftMentions, finishPendingOutgoing, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout, setMessages]);
 
   const sendSticker = useCallback(async (sticker: Sticker) => {
     if (!canSendInConversation || dissolvedRef.current) return;
@@ -2104,6 +2354,12 @@ export function ChatScreen() {
       sticker,
     };
     pendingOutgoingIdsRef.current.add(optimisticId);
+    setMessageRetry(conversationId, optimisticId, {
+      attachments: [],
+      content: "",
+      conversationId,
+      stickerId: sticker.id,
+    });
     setMessages((current) => [optimisticMessage, ...current]);
     scrollToEndAfterLayout(true);
     try {
@@ -2112,17 +2368,60 @@ export function ChatScreen() {
       setMessages((current) => current
         .filter((item) => item.id === optimisticId || item.id !== sentMessage.id)
         .map((item) => item.id === optimisticId ? sentMessage : item));
+      deleteMessageRetry(conversationId, optimisticId);
       finishPendingOutgoing(optimisticId, sentMessage.id);
       await rememberSticker(sticker);
       scrollToEndAfterLayout(true);
     } catch (error) {
       finishPendingOutgoing(optimisticId);
-      setMessages((current) => current.filter((item) => item.id !== optimisticId));
+      setMessages((current) => current.map((item) =>
+        item.id === optimisticId ? { ...item, sendStatus: "failed" } : item,
+      ));
       if (!handleRoomApiError(error)) {
         Alert.alert("Không thể gửi nhãn dán", error instanceof Error ? error.message : "Vui lòng thử lại.");
       }
     }
-  }, [canSendInConversation, conversationId, finishPendingOutgoing, handleRoomApiError, normalizeMessage, scrollToEndAfterLayout]);
+  }, [canSendInConversation, conversationId, finishPendingOutgoing, handleRoomApiError, normalizeMessage, scrollToEndAfterLayout, setMessages]);
+
+  const retryMessage = useCallback(async (failedMessage: ChatMessage) => {
+    const retry = getMessageRetry(conversationId, failedMessage.id);
+    if (!retry || failedMessage.sendStatus !== "failed") return;
+
+    pendingOutgoingIdsRef.current.add(failedMessage.id);
+    setMessages((current) => current.map((item) =>
+      item.id === failedMessage.id ? { ...item, sendStatus: "sending" } : item,
+    ));
+
+    try {
+      const message = await sendChatMessage(retry);
+      const sentMessage = {
+        ...normalizeMessage(message),
+        clientRenderId: failedMessage.id,
+        isMine: true,
+        sendStatus: "sent" as const,
+      };
+      setMessages((current) => current
+        .filter((item) => item.id === failedMessage.id || item.id !== sentMessage.id)
+        .map((item) => item.id === failedMessage.id ? sentMessage : item));
+      deleteMessageRetry(conversationId, failedMessage.id);
+      finishPendingOutgoing(failedMessage.id, sentMessage.id);
+      if (failedMessage.sticker) {
+        await rememberSticker({ ...failedMessage.sticker, sortOrder: 0 });
+      }
+      scrollToEndAfterLayout(true);
+    } catch (error) {
+      finishPendingOutgoing(failedMessage.id);
+      setMessages((current) => current.map((item) =>
+        item.id === failedMessage.id ? { ...item, sendStatus: "failed" } : item,
+      ));
+      if (!handleRoomApiError(error)) {
+        Alert.alert(
+          "Không thể gửi lại tin nhắn",
+          error instanceof Error ? error.message : "Vui lòng thử lại.",
+        );
+      }
+    }
+  }, [conversationId, finishPendingOutgoing, handleRoomApiError, normalizeMessage, scrollToEndAfterLayout, setMessages]);
 
   const startCall = useCallback(async (callType: CallType) => {
     if (!conversationDetails || isStartingCall) return;
@@ -2394,6 +2693,7 @@ export function ChatScreen() {
                 onRecall={(message) => void recallMessage(message)}
                 onReply={setReplyTo}
                 onReplyPress={scrollToReplyMessage}
+                onRetry={(message) => void retryMessage(message)}
                 showAvatar={showAvatar}
               />
             );

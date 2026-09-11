@@ -23,6 +23,7 @@ import {
 } from "@/features/notifications/notification-response-navigation";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { getNotifications } from "@/services/notification.service";
+import { ensureFreshSession } from "@/services/authenticated-fetch";
 import { setupIncomingCallNotifeeEvents } from "@/services/incoming-call-notifee-events";
 import {
   registerPushNotifications,
@@ -31,7 +32,7 @@ import {
   setupPushTokenRefreshHandling,
 } from "@/services/push-notification.service";
 import { startRealtime, stopRealtime } from "@/services/realtime.service";
-import { getSession } from "@/stores/session-store";
+import { subscribeSessionInvalidation } from "@/stores/session-store";
 import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
 import { ThemeProvider, useTheme } from "@/theme";
 
@@ -109,6 +110,15 @@ function RootLayoutContent() {
   const hasRegisteredPushNotifications = useRef(false);
   const hasHydratedAuthenticatedState = useRef(false);
   const [isAppReady, setIsAppReady] = useState(false);
+  const [sessionRevision, setSessionRevision] = useState(0);
+
+  useEffect(
+    () =>
+      subscribeSessionInvalidation(() =>
+        setSessionRevision((value) => value + 1),
+      ),
+    [],
+  );
 
   useEffect(() => {
     setupNotificationHandling();
@@ -119,7 +129,7 @@ function RootLayoutContent() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", async (state) => {
-      const session = await getSession();
+      const session = await ensureFreshSession();
       if (state !== AppState.currentState) return;
 
       if (!session?.accessToken || session.user === null) {
@@ -156,7 +166,7 @@ function RootLayoutContent() {
 
   useEffect(() => {
     const checkLoginStatus = async () => {
-      const session = await getSession();
+      const session = await ensureFreshSession();
       const currentRoute = segments[0];
 
       const isAuthRoute =
@@ -228,7 +238,7 @@ function RootLayoutContent() {
         router.replace("/login");
       })
       .finally(() => setIsAppReady(true));
-  }, [segments]);
+  }, [segments, sessionRevision]);
 
   return (
     <NavigationThemeProvider value={navigationTheme}>

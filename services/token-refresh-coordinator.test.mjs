@@ -17,16 +17,14 @@ test("concurrent unauthorized requests share one token refresh", async () => {
     async () => "expired-token",
   );
 
-  const first = coordinateRefresh("expired-token");
-  const second = coordinateRefresh("expired-token");
+  const requests = Array.from({ length: 5 }, () =>
+    coordinateRefresh("expired-token"),
+  );
 
   await Promise.resolve();
   assert.equal(refreshCalls, 1);
   resolveRefresh({ accessToken: "fresh-token" });
-  assert.deepEqual(await Promise.all([first, second]), [
-    "fresh-token",
-    "fresh-token",
-  ]);
+  assert.deepEqual(await Promise.all(requests), Array(5).fill("fresh-token"));
 });
 
 test("a late 401 reuses the token refreshed by an earlier request", async () => {
