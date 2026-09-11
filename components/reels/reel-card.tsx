@@ -59,6 +59,7 @@ export function ReelCard({
   reel,
   safeBottomInset = 0,
   videoTopOffset = REEL_VIDEO_TOP_OFFSET,
+  videoVerticalShift = REEL_VIDEO_VERTICAL_SHIFT,
 }: {
   active: boolean;
   height: number;
@@ -72,6 +73,7 @@ export function ReelCard({
   reel: Reel;
   safeBottomInset?: number;
   videoTopOffset?: number;
+  videoVerticalShift?: number;
 }) {
   const { theme } = useTheme();
   const colors = theme.reels;
@@ -224,9 +226,9 @@ export function ReelCard({
         videoWidth: videoSourceSize.width,
       })
     : null;
-  const videoVerticalShift = getReelVideoVerticalShift({
+  const resolvedVideoVerticalShift = getReelVideoVerticalShift({
     isDesktopWeb,
-    nativeShift: REEL_VIDEO_VERTICAL_SHIFT,
+    nativeShift: videoVerticalShift,
   });
   const desktopCopyWidth = isDesktopWeb && containedVideoSize
     ? getReelDesktopCopyWidth({
@@ -414,7 +416,7 @@ export function ReelCard({
           styles.videoLayer,
           {
             top: videoTopOffset,
-            transform: [{ translateY: videoVerticalShift }],
+            transform: [{ translateY: resolvedVideoVerticalShift }],
           },
         ]}
       >
@@ -453,7 +455,7 @@ export function ReelCard({
           styles.videoGestureArea,
           {
             top: videoTopOffset,
-            transform: [{ translateY: videoVerticalShift }],
+            transform: [{ translateY: resolvedVideoVerticalShift }],
           },
         ]}
       />

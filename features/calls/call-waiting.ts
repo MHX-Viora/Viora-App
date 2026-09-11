@@ -1,4 +1,5 @@
 export const CALL_ANSWER_TIMEOUT_MS = 30_000;
+export const CALL_CONNECT_TIMEOUT_MS = 30_000;
 export const INCOMING_CALL_RINGTONE_ANDROID = "nhac_chuong";
 export const INCOMING_CALL_RINGTONE_FILE = "nhac_chuong.mp3";
 // Android channel sounds are immutable after creation.
@@ -11,6 +12,7 @@ const CALL_LIFECYCLE_NOTIFICATION_TYPES = new Set([
   "CallRejected",
   "CallCancelled",
   "CallEnded",
+  "CallAnsweredElsewhere",
   "CallMissed",
   "CallTimeout",
   "GroupCallEnded",

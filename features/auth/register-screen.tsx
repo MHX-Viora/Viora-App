@@ -151,7 +151,7 @@ export function RegisterScreen() {
                   ]}
                 >
                   {termsAccepted && (
-                    <Ionicons color={colors.white} name="checkmark" size={14} />
+                    <Ionicons color={colors.primaryContrast} name="checkmark" size={14} />
                   )}
                 </Pressable>
                 <Text style={styles.termsText}>

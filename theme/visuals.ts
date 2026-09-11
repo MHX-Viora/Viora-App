@@ -307,3 +307,25 @@ export const classicVisuals: ThemeVisuals = Object.fromEntries(
       value,
   ]),
 ) as ThemeVisuals;
+
+const premiumOceanValueReplacements: Record<string, string> = {
+  "#0068FF": "#168FE5",
+  "#0868D9": "#159FE3",
+  "#1239A6": "#168FE5",
+  "#1877F2": "#159FE3",
+  "#2568B8": "#13B9D0",
+  "#30d5c8": "#19D8C4",
+  "#4773A8": "#159FE3",
+  "#4D83C6": "#159FE3",
+  "#8BC7FF": "#71DDF2",
+};
+
+export const premiumOceanVisuals: ThemeVisuals = Object.fromEntries(
+  Object.entries(modernVisuals).map(([key, value]) => [
+    key,
+    premiumOceanValueReplacements[value] ??
+      value
+        .replaceAll("36, 221, 228", "19, 200, 197")
+        .replaceAll("152, 80, 232", "21, 159, 227"),
+  ]),
+) as ThemeVisuals;

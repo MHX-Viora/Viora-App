@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   desktopNavigationItems,
@@ -26,9 +26,6 @@ type DesktopHeaderProps = {
   chatBadge?: number | string;
   notificationBadge?: number | string;
 };
-
-const GOOGLE_PLAY_URL =
-  "https://play.google.com/store/apps/details?id=com.ankt.app";
 
 function HeaderTab({
   active,
@@ -111,8 +108,6 @@ export function DesktopHeader({
     return undefined;
   };
 
-  const openGooglePlay = () => void Linking.openURL(GOOGLE_PLAY_URL);
-
   return (
     <View accessibilityRole="header" style={styles.header}>
       <View style={styles.inner}>
@@ -144,27 +139,6 @@ export function DesktopHeader({
         </View>
 
         <View style={styles.rightActions}>
-          <Pressable
-            accessibilityHint="Mở trang ANKT trên Google Play"
-            accessibilityLabel="Tải ANKT trên Google Play"
-            accessibilityRole="link"
-            onPress={openGooglePlay}
-            style={({ pressed }) => [
-              styles.playStoreButton,
-              pressed && styles.brandPressed,
-            ]}
-          >
-            <Ionicons
-              color={theme.colors.primaryContrast}
-              name="logo-google-playstore"
-              size={26}
-            />
-            <View style={styles.playStoreCopy}>
-              <Text style={styles.playStoreEyebrow}>TẢI XUỐNG TỪ</Text>
-              <Text style={styles.playStoreText}>Google Play</Text>
-            </View>
-          </Pressable>
-
           <Pressable
             accessibilityLabel="Mở hồ sơ"
             accessibilityRole="button"
@@ -270,29 +244,6 @@ const createStyles = (theme: AppTheme) =>
       position: "absolute",
       top: -2,
       width: 38,
-    },
-    playStoreButton: {
-      alignItems: "center",
-      backgroundColor: theme.colors.primary,
-      borderRadius: 12,
-      flexDirection: "row",
-      gap: spacing.sm,
-      height: 46,
-      paddingHorizontal: spacing.md,
-    },
-    playStoreCopy: { justifyContent: "center" },
-    playStoreEyebrow: {
-      color: theme.colors.primaryContrast,
-      fontSize: 8,
-      fontWeight: "900",
-      letterSpacing: 1,
-      lineHeight: 10,
-    },
-    playStoreText: {
-      color: theme.colors.primaryContrast,
-      fontSize: 17,
-      fontWeight: "900",
-      lineHeight: 20,
     },
     navigation: {
       alignItems: "stretch",

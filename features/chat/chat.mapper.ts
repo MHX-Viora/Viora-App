@@ -243,6 +243,16 @@ export const mapMessage = (value: unknown): ChatMessage | null => {
     isEdited: asBoolean(payload.isEdited),
     isMine: asBoolean(payload.isMine),
     messageType,
+    sticker: isRecord(payload.sticker)
+      ? {
+          format: asNumber(payload.sticker.format),
+          id: asString(payload.sticker.id),
+          imageUrl: asString(payload.sticker.imageUrl),
+          name: asString(payload.sticker.name),
+          stickerPackId: asString(payload.sticker.stickerPackId),
+          thumbnailUrl: asString(payload.sticker.thumbnailUrl, "") || null,
+        }
+      : null,
     mentions: asArray(payload.mentions)
       .map((item) =>
         isRecord(item)

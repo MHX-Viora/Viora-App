@@ -4,6 +4,7 @@ import type {
   ApiPost,
   CreatePostInput,
   FeedPost,
+  PostFeedSort,
   PostsResponse,
 } from "@/types/feed";
 import { formatPostTime } from "@/utils/post-format";
@@ -111,11 +112,15 @@ export const getPosts = async ({
   keyword = "",
   page,
   pageSize,
+  postType,
+  sort,
   userId,
 }: {
   keyword?: string;
   page: number;
   pageSize: number;
+  postType?: number;
+  sort?: PostFeedSort;
   userId?: string;
 }): Promise<{ posts: FeedPost[]; totalPages: number }> => {
   const params = new URLSearchParams({
@@ -124,9 +129,17 @@ export const getPosts = async ({
   });
 
   if (keyword.trim()) params.append("keyword", keyword.trim());
+  if (sort !== "recommended" && postType !== undefined) {
+    params.append("postType", String(postType));
+  }
+  if (sort && sort !== "recommended") params.append("sort", sort);
   if (userId?.trim()) params.append("userId", userId.trim());
 
-  const response = await authenticatedFetch(`${BASE_URL}/api/feed?${params}`);
+  const endpoint =
+    sort === "recommended"
+      ? `${BASE_URL}/api/articles/recommended?${params}`
+      : `${BASE_URL}/api/feed?${params}`;
+  const response = await authenticatedFetch(endpoint);
   const text = await response.text();
   const data = parseResponseText(text);
 

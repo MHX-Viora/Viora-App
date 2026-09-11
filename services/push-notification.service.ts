@@ -14,6 +14,7 @@ import {
   type FirebaseMessagingTypes,
 } from "@react-native-firebase/messaging";
 import { Platform } from "react-native";
+import { getUser } from "@/stores/session-store";
 
 import {
   DeviceTokenRegistrationError,
@@ -21,12 +22,14 @@ import {
   unregisterDeviceToken,
 } from "@/services/device-token.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import { isAcceptedOnCurrentRealtimeConnection } from "@/services/realtime.service";
 import {
   navigateIncomingCallAnswerData,
   navigateNotificationData,
 } from "@/features/notifications/notification-response-navigation";
 import { mapNotification } from "@/features/notifications/notification.mapper";
 import { getActiveChatConversation } from "@/features/chat/chat-events";
+import { isMessageFromCurrentUser } from "@/features/chat/chat-realtime-policy";
 import {
   emitCallLifecycle,
   emitIncomingCall,
@@ -81,10 +84,14 @@ const claimNotificationResponse = (key: string) => {
   return now - lastHandledAt >= NOTIFICATION_RESPONSE_DEDUPE_MS;
 };
 
-const shouldSuppressForegroundNotification = (
+const shouldSuppressForegroundNotification = async (
   data: Record<string, unknown>,
 ) => {
   if (data.type !== "chat") return false;
+
+  const currentUser = await getUser().catch(() => null);
+  const senderId = typeof data.senderId === "string" ? data.senderId : "";
+  if (isMessageFromCurrentUser(senderId, currentUser?.id)) return true;
 
   const conversationId =
     typeof data.conversationId === "string" ? data.conversationId : "";
@@ -456,6 +463,12 @@ export const setupNotificationHandling = () => {
       return;
     }
     if (isCallLifecycleNotificationType(data.type)) {
+      if (
+        data.type === "CallAnsweredElsewhere" &&
+        isAcceptedOnCurrentRealtimeConnection(data)
+      ) {
+        return;
+      }
       const event = emitCallLifecycle(String(data.type), data);
       if (event) {
         await clearPendingIncomingCall(event.callId);
@@ -490,7 +503,7 @@ export const setupNotificationHandling = () => {
       } else if (data.type === "MissedCall") {
         emitCallLifecycle("CallMissed", data);
       }
-      const shouldSuppress = shouldSuppressForegroundNotification(data);
+      const shouldSuppress = await shouldSuppressForegroundNotification(data);
       const isDelegatedIncomingCall =
         isIncomingCallNotification(data.type) &&
         data.deliverySource !== INCOMING_CALL_LOCAL_SOURCE;

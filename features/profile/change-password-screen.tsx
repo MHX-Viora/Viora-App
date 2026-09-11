@@ -127,7 +127,7 @@ export function ChangePasswordScreen() {
             style={[styles.submitButton, !canSubmit && styles.disabledButton]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={colors.primaryContrast} />
             ) : (
               <Text style={styles.submitText}>Cập nhật mật khẩu</Text>
             )}
@@ -243,5 +243,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "center",
     minHeight: 48,
   },
-  submitText: { color: colors.white, fontSize: 16, fontWeight: "800" },
+  submitText: { color: colors.primaryContrast, fontSize: 16, fontWeight: "800" },
 });

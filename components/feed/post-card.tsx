@@ -155,10 +155,12 @@ type Props = {
   onOpenAuthor?: (userId: string) => void;
   onOpenPost?: (postId: string) => void;
   onOpenArticle?: (articleId: string) => void;
+  onNotInterested?: (postId: string) => void;
   onReact?: (postId: string, reactionType: number) => void;
   onSave?: (postId: string) => void;
   onShare?: (postId: string) => void;
   post: FeedPost;
+  variant?: "default" | "news";
 };
 
 export function PostCard({
@@ -167,10 +169,12 @@ export function PostCard({
   onOpenAuthor,
   onOpenPost,
   onOpenArticle,
+  onNotInterested,
   onReact,
   onSave,
   onShare,
   post,
+  variant = "default",
 }: Props) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -239,6 +243,8 @@ export function PostCard({
   };
 
   const activeReaction = post.isReacted ? currentReaction : undefined;
+  const isNewsLayout =
+    variant === "news" && post.postType === 2 && !!post.article;
 
   useEffect(() => {
     setIsBodyExpanded(false);
@@ -327,9 +333,9 @@ export function PostCard({
     <Pressable
       accessibilityRole={onOpenPost ? "button" : undefined}
       onPress={onOpenPost ? () => onOpenPost(post.id) : undefined}
-      style={styles.card}
+      style={[styles.card, isNewsLayout && styles.newsCard]}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, isNewsLayout && styles.newsHiddenHeader]}>
         <Pressable
           accessibilityRole="button"
           disabled={!post.authorId || !onOpenAuthor}
@@ -392,12 +398,125 @@ export function PostCard({
       </View>
 
       {post.postType === 2 && post.article ? (
-        <Pressable accessibilityLabel={`Đọc ${post.article.title}`} accessibilityRole="button" onPress={() => onOpenArticle?.(post.id)} style={styles.articleCard}>
-          {post.article.thumbnailUrl ? <Image contentFit="cover" source={{ uri: post.article.thumbnailUrl }} style={styles.articleThumbnail} transition={180} /> : null}
-          <View style={styles.articleContent}>
-            <Text numberOfLines={2} style={styles.articleTitle}>{post.article.title}</Text>
-            {post.article.preview ? <Text numberOfLines={3} style={styles.articlePreview}>{post.article.preview}</Text> : null}
-            <View style={styles.articleMetaRow}><Text style={styles.articleMeta}>{post.article.readingTimeMinutes} phút đọc · {post.viewCount} lượt xem</Text><Text style={styles.readMore}>Đọc tiếp</Text></View>
+        <Pressable
+          accessibilityLabel={`Đọc ${post.article.title}`}
+          accessibilityRole="button"
+          onPress={() => onOpenArticle?.(post.id)}
+          style={[styles.articleCard, isNewsLayout && styles.newsArticleCard]}
+        >
+          {post.article.thumbnailUrl ? (
+            <Image
+              contentFit="cover"
+              source={{ uri: post.article.thumbnailUrl }}
+              style={styles.articleThumbnail}
+              transition={180}
+            />
+          ) : null}
+          <View
+            style={[
+              styles.articleContent,
+              isNewsLayout && styles.newsArticleContent,
+            ]}
+          >
+            <Text
+              numberOfLines={2}
+              style={[
+                styles.articleTitle,
+                isNewsLayout && styles.newsArticleTitle,
+              ]}
+            >
+              {post.article.title}
+            </Text>
+            {post.article.preview ? (
+              <Text
+                numberOfLines={2}
+                style={[
+                  styles.articlePreview,
+                  isNewsLayout && styles.newsArticlePreview,
+                ]}
+              >
+                {post.article.preview}
+              </Text>
+            ) : null}
+            {isNewsLayout ? (
+              <View style={styles.newsMetaRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!post.authorId || !onOpenAuthor}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    post.authorId && onOpenAuthor?.(post.authorId);
+                  }}
+                  style={styles.newsAuthor}
+                >
+                  <UserAvatar
+                    displayName={post.author}
+                    imageUrl={post.avatar}
+                    size={28}
+                    style={styles.newsAuthorAvatar}
+                  />
+                  <View style={styles.newsAuthorText}>
+                    <View style={styles.newsAuthorNameRow}>
+                      <Text numberOfLines={1} style={styles.newsAuthorName}>
+                        {post.author}
+                      </Text>
+                      {post.isAuthorVerified ? (
+                        <VerifiedBadge
+                          accessibilityLabel="Tài khoản đã xác minh"
+                          size={14}
+                        />
+                      ) : null}
+                    </View>
+                    <Text numberOfLines={2} style={styles.newsPublicationMeta}>
+                      {post.publishedAt} · {post.article.readingTimeMinutes} phút
+                      đọc · {post.viewCount} lượt đọc
+                    </Text>
+                  </View>
+                </Pressable>
+                <View style={styles.newsToolbar}>
+                  <Pressable
+                    accessibilityLabel="Chia sẻ"
+                    accessibilityRole="button"
+                    hitSlop={8}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      onShare?.(post.id);
+                    }}
+                    style={styles.newsToolbarButton}
+                  >
+                    <Ionicons
+                      color={colors.textMuted}
+                      name="paper-plane-outline"
+                      size={22}
+                    />
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Tùy chọn bài viết"
+                    accessibilityRole="button"
+                    hitSlop={8}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      setOptionsVisible(true);
+                    }}
+                    style={styles.newsToolbarButton}
+                  >
+                    <Ionicons
+                      color={colors.textMuted}
+                      name="ellipsis-vertical"
+                      size={22}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.articleMetaRow}>
+                <Text style={styles.articleMeta}>
+                  {post.article.readingTimeMinutes} phút đọc · {post.viewCount}{" "}
+                  lượt xem
+                </Text>
+                <Text style={styles.readMore}>Đọc tiếp</Text>
+              </View>
+            )}
           </View>
         </Pressable>
       ) : post.body ? (
@@ -524,6 +643,7 @@ export function PostCard({
         </Animated.View>
       )}
 
+      {!isNewsLayout ? (
       <View style={styles.actions}>
         <Pressable
           accessibilityLabel={post.isReacted ? currentReaction?.label : "Like"}
@@ -562,7 +682,6 @@ export function PostCard({
           icon="paper-plane-outline"
           label="Chia sẻ"
           onPress={() => onShare?.(post.id)}
-          // value={post.shares}
         />
         <View style={styles.spacer} />
         <PostAction
@@ -575,6 +694,7 @@ export function PostCard({
           value={post.saveCount}
         />
       </View>
+      ) : null}
       <Modal
         animationType={isDesktopWeb ? "fade" : "slide"}
         onRequestClose={() => setOptionsVisible(false)}
@@ -595,6 +715,18 @@ export function PostCard({
               <Ionicons color={colors.text} name="flag-outline" size={22} />
               <Text style={styles.sheetActionText}>Báo cáo bài viết</Text>
             </Pressable>
+            {isNewsLayout && !post.isMine && onNotInterested ? (
+              <Pressable
+                onPress={() => {
+                  setOptionsVisible(false);
+                  onNotInterested(post.id);
+                }}
+                style={styles.sheetAction}
+              >
+                <Ionicons color={colors.text} name="eye-off-outline" size={22} />
+                <Text style={styles.sheetActionText}>Không quan tâm</Text>
+              </Pressable>
+            ) : null}
             {post.isMine && (
               <Pressable
                 disabled={isDeleting}
@@ -731,6 +863,71 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: spacing.sm,
     overflow: "hidden",
     position: "relative",
+  },
+  newsArticleCard: {
+    borderRadius: 0,
+    borderWidth: 0,
+    marginBottom: 0,
+    marginHorizontal: 0,
+  },
+  newsArticleContent: {
+    gap: spacing.xs,
+    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  newsArticlePreview: {
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  newsArticleTitle: {
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  newsAuthor: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 40,
+  },
+  newsAuthorAvatar: { borderRadius: 14, height: 28, width: 28 },
+  newsAuthorName: {
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  newsAuthorNameRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  newsAuthorText: { flex: 1 },
+  newsCard: {
+    borderRadius: 0,
+    borderWidth: 0,
+    marginBottom: spacing.sm,
+  },
+  newsHiddenHeader: { display: "none" },
+  newsMetaRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  newsPublicationMeta: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  newsToolbar: { alignItems: "center", flexDirection: "row" },
+  newsToolbarButton: {
+    alignItems: "center",
+    height: 40,
+    justifyContent: "center",
+    width: 36,
   },
   dangerText: { color: colors.danger },
   header: {

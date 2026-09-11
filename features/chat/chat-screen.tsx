@@ -1,4 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { useEvent } from "expo";
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -17,6 +19,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  AppState,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -28,6 +32,8 @@ import {
   Text,
   TextInput,
   View,
+  type NativeSyntheticEvent,
+  type TextInputContentSizeChangeEventData,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -39,9 +45,10 @@ import { showAppToast } from "@/components/common/app-toast";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { MentionText } from "@/components/mentions/mention-text";
+import { StickerPanel } from "@/features/stickers/sticker-panel";
+import { rememberSticker } from "@/features/stickers/recent-sticker-storage";
 import {
   CHAT_PAGE_SIZE,
-  CHAT_STICKERS,
   GOOGLE_MAPS_URL_PATTERN,
 } from "@/constants/chat";
 import {
@@ -52,15 +59,18 @@ import {
   type ActiveVoiceCall,
 } from "@/features/calls/call-events";
 import {
+  getActiveChatConversation,
   setActiveChatConversation,
   subscribeRealtimeConversationBlockedChanges,
   subscribeRealtimeConversationDissolved,
   subscribeRealtimeMessageDeleted,
   subscribeRealtimeMessageDelivered,
   subscribeRealtimeMessages,
-  subscribeRealtimeSyncRequests,
 } from "@/features/chat/chat-events";
+import { canMarkConversationRead } from "@/features/chat/chat-read-visibility";
+import { isMessageFromCurrentUser } from "@/features/chat/chat-realtime-policy";
 import {
+  ChatAttachmentUploadError,
   getConversation,
   getConversationMessages,
   getGroupMembers,
@@ -74,6 +84,7 @@ import {
   startGroupCall,
 } from "@/services/group-call.service";
 import { startCallRealtime } from "@/services/call-realtime.service";
+import { downloadChatAttachment } from "@/services/chat-attachment-download.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { searchMentionUsers } from "@/services/mention.service";
 import { joinRealtimeGroup, leaveRealtimeGroup } from "@/services/realtime.service";
@@ -89,8 +100,16 @@ import type {
   SendMessageAttachment,
 } from "@/types/chat";
 import type { MentionReference, MentionUser } from "@/types/mention";
+import type { Sticker } from "@/types/sticker";
 import { activeMentionIds, insertMention } from "@/utils/mention-composer";
+import { toggleChatAudioPlayback } from "@/utils/chat-audio-playback";
+import { createRecordedChatAttachment } from "@/utils/chat-recording";
 import { formatChatTime } from "@/utils/chat-time";
+import { buildChatSendUnits } from "./chat-send-units";
+import {
+  DEFAULT_CHAT_VIDEO_SIZE,
+  getChatVideoSize,
+} from "./chat-media-layout";
 import {
   getRealtimeConversationGroupName,
   isConversationGoneError,
@@ -102,14 +121,34 @@ import {
 import { useKeyboardVisible } from "@/hooks/chat/use-keyboard-visible";
 import { useChatPermissions } from "@/hooks/chat/use-chat-permissions";
 import { type ThemeColors, useTheme } from "@/theme";
+import {
+  getMessageInputHeight,
+  isMessageInputScrollable,
+  MAX_MESSAGE_INPUT_HEIGHT,
+  MIN_MESSAGE_INPUT_HEIGHT,
+} from "./message-composer-layout";
 
+function AttachmentDownloadOverlay() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  return (
+    <View pointerEvents="none" style={styles.attachmentDownloadOverlay}>
+      <ActivityIndicator color={colors.white} size="small" />
+      <Text style={styles.attachmentDownloadText}>Đang tải xuống...</Text>
+    </View>
+  );
+}
 
 function AudioAttachment({
   attachment,
+  isDownloading,
   isMine,
   onLongPress,
 }: {
   attachment: ChatAttachment;
+  isDownloading: boolean;
   isMine: boolean;
   onLongPress: () => void;
 }) {
@@ -130,13 +169,19 @@ function AudioAttachment({
     <Pressable
       accessibilityRole="button"
       onLongPress={onLongPress}
-      onPress={() => {
-        if (status.playing) {
-          player.pause();
-          return;
-        }
-        player.play();
-      }}
+      onPress={() =>
+        void toggleChatAudioPlayback({
+          player,
+          preparePlayback: () =>
+            setAudioModeAsync({
+              allowsRecording: false,
+              playsInSilentMode: true,
+            }),
+          status,
+        }).catch(() =>
+          Alert.alert("Không thể phát âm thanh", "Vui lòng thử lại."),
+        )
+      }
       style={[styles.audioPill, isMine && styles.mineAudioPill]}
     >
       <Ionicons
@@ -171,17 +216,20 @@ function AudioAttachment({
           {durationLabel}
         </Text>
       </View>
+      {isDownloading ? <AttachmentDownloadOverlay /> : null}
     </Pressable>
   );
 }
 
 function ImageAttachment({
   attachment,
+  isDownloading,
   onLayoutReady,
   onLongPress,
   onOpen,
 }: {
   attachment: ChatAttachment;
+  isDownloading: boolean;
   onLayoutReady: () => void;
   onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
@@ -223,7 +271,11 @@ function ImageAttachment({
   }
 
   return (
-    <Pressable onLongPress={onLongPress} onPress={() => onOpen(attachment)}>
+    <Pressable
+      onLongPress={onLongPress}
+      onPress={() => onOpen(attachment)}
+      style={styles.downloadableAttachment}
+    >
       <Image
         onError={() => {
           setHasError(true);
@@ -233,6 +285,7 @@ function ImageAttachment({
         source={{ uri: attachment.url }}
         style={[styles.messageImage, size]}
       />
+      {isDownloading ? <AttachmentDownloadOverlay /> : null}
     </Pressable>
   );
 }
@@ -240,6 +293,7 @@ function ImageAttachment({
 function AttachmentView({
   allowLocalPreview,
   attachment,
+  isDownloading,
   isMine,
   onLayoutReady,
   onLongPress,
@@ -247,6 +301,7 @@ function AttachmentView({
 }: {
   allowLocalPreview: boolean;
   attachment: ChatAttachment;
+  isDownloading: boolean;
   isMine: boolean;
   onLayoutReady: () => void;
   onLongPress: () => void;
@@ -259,6 +314,7 @@ function AttachmentView({
     return (
       <ImageAttachment
         attachment={attachment}
+        isDownloading={isDownloading}
         onLayoutReady={onLayoutReady}
         onLongPress={onLongPress}
         onOpen={onOpen}
@@ -271,6 +327,7 @@ function AttachmentView({
       <VideoAttachment
         allowLocalPreview={allowLocalPreview}
         attachment={attachment}
+        isDownloading={isDownloading}
         onLayoutReady={onLayoutReady}
         onLongPress={onLongPress}
         onOpen={onOpen}
@@ -282,6 +339,7 @@ function AttachmentView({
     return (
       <AudioAttachment
         attachment={attachment}
+        isDownloading={isDownloading}
         isMine={isMine}
         onLongPress={onLongPress}
       />
@@ -326,6 +384,7 @@ function AttachmentView({
         name="open-outline"
         size={18}
       />
+      {isDownloading ? <AttachmentDownloadOverlay /> : null}
     </Pressable>
   );
 }
@@ -333,12 +392,14 @@ function AttachmentView({
 function VideoAttachment({
   allowLocalPreview,
   attachment,
+  isDownloading,
   onLayoutReady,
   onLongPress,
   onOpen,
 }: {
   allowLocalPreview: boolean;
   attachment: ChatAttachment;
+  isDownloading: boolean;
   onLayoutReady: () => void;
   onLongPress: () => void;
   onOpen: (attachment: ChatAttachment) => void;
@@ -347,11 +408,49 @@ function VideoAttachment({
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const isLocalCacheUrl = attachment.url.startsWith("file://");
+  const videoViewRef = useRef<VideoView>(null);
+  const [videoSize, setVideoSize] = useState(DEFAULT_CHAT_VIDEO_SIZE);
   const player = useVideoPlayer(attachment.url, (nextPlayer) => {
     nextPlayer.muted = true;
-    nextPlayer.loop = true;
-    nextPlayer.play();
   });
+  const { videoTrack } = useEvent(player, "videoTrackChange", {
+    videoTrack: player.videoTrack,
+  });
+
+  useEffect(() => {
+    const sourceSize = videoTrack?.size;
+    if (!sourceSize) return;
+    setVideoSize(getChatVideoSize(sourceSize));
+  }, [videoTrack?.size.height, videoTrack?.size.width]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const videoElement = videoViewRef.current?.nativeRef.current as
+      | {
+          addEventListener: (type: string, listener: () => void) => void;
+          removeEventListener: (type: string, listener: () => void) => void;
+          videoHeight: number;
+          videoWidth: number;
+        }
+      | null;
+    if (!videoElement) return;
+
+    const syncVideoSize = () => {
+      if (videoElement.videoWidth <= 0 || videoElement.videoHeight <= 0) return;
+      setVideoSize(
+        getChatVideoSize({
+          height: videoElement.videoHeight,
+          width: videoElement.videoWidth,
+        }),
+      );
+    };
+
+    setVideoSize(DEFAULT_CHAT_VIDEO_SIZE);
+    syncVideoSize();
+    videoElement.addEventListener("loadedmetadata", syncVideoSize);
+    return () =>
+      videoElement.removeEventListener("loadedmetadata", syncVideoSize);
+  }, [attachment.url]);
 
   if (isLocalCacheUrl && !allowLocalPreview) {
     return (
@@ -366,18 +465,20 @@ function VideoAttachment({
     <Pressable
       onLongPress={onLongPress}
       onPress={() => onOpen(attachment)}
-      style={styles.videoThumb}
+      style={[styles.videoThumb, videoSize]}
     >
       <VideoView
         contentFit="contain"
         nativeControls={false}
         onFirstFrameRender={onLayoutReady}
         player={player}
+        ref={videoViewRef}
         style={styles.videoThumbImage}
       />
       <View style={styles.videoPlayOverlay}>
         <Ionicons color={colors.white} name="play" size={28} />
       </View>
+      {isDownloading ? <AttachmentDownloadOverlay /> : null}
     </Pressable>
   );
 }
@@ -478,7 +579,98 @@ function SystemMessage({ message }: { message: ChatMessage }) {
   );
 }
 
+function MessageSendStatus({
+  isMedia,
+  status,
+  styles,
+}: {
+  isMedia: boolean;
+  status?: ChatMessage["sendStatus"];
+  styles: ReturnType<typeof createStyles>;
+}) {
+  const initialStatus = status && status !== "sent" ? status : null;
+  const [displayedStatus, setDisplayedStatus] = useState(initialStatus);
+  const displayedStatusRef = useRef(displayedStatus);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const nextStatus = status && status !== "sent" ? status : null;
+    let animation: Animated.CompositeAnimation | undefined;
+
+    if (nextStatus) {
+      displayedStatusRef.current = nextStatus;
+      setDisplayedStatus(nextStatus);
+      opacity.setValue(0);
+      translateX.setValue(6);
+      animation = Animated.parallel([
+        Animated.timing(opacity, {
+          duration: 180,
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          duration: 180,
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+      ]);
+      animation.start();
+    } else if (displayedStatusRef.current) {
+      animation = Animated.parallel([
+        Animated.timing(opacity, {
+          duration: 180,
+          toValue: 0,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          duration: 180,
+          toValue: -4,
+          useNativeDriver: true,
+        }),
+      ]);
+      animation.start(({ finished }) => {
+        if (finished) {
+          displayedStatusRef.current = null;
+          setDisplayedStatus(null);
+        }
+      });
+    }
+
+    return () => animation?.stop();
+  }, [opacity, status, translateX]);
+
+  if (!displayedStatus) return null;
+
+  return (
+    <Animated.Text
+      accessibilityLiveRegion="polite"
+      style={[
+        styles.sendStatus,
+        isMedia && styles.mediaSendStatus,
+        displayedStatus === "failed" && styles.failedSendStatus,
+        { opacity, transform: [{ translateX }] },
+      ]}
+    >
+      {displayedStatus === "sending" ? "· Đang gửi" : "· Gửi lỗi"}
+    </Animated.Text>
+  );
+}
+
+function StickerMessage({ message, onLongPress }: { message: ChatMessage; onLongPress: () => void }) {
+  if (!message.sticker?.imageUrl) return null;
+  return (
+    <Pressable accessibilityLabel={`Nhãn dán ${message.sticker.name}`} onLongPress={onLongPress}>
+      <Image resizeMode="contain" source={{ uri: message.sticker.imageUrl }} style={stickerMessageStyles.image} />
+    </Pressable>
+  );
+}
+
+const stickerMessageStyles = StyleSheet.create({ image: { aspectRatio: 1, height: 180, maxWidth: 220, width: 180 } });
+
 function MessageRow({
+  actionAttachment,
+  downloadingAttachmentId,
   isActionsOpen,
   isHighlighted,
   message,
@@ -486,6 +678,7 @@ function MessageRow({
   canReply,
   onMediaLayout,
   onCloseActions,
+  onDownloadAttachment,
   onOpenActions,
   onRecall,
   onForward,
@@ -493,6 +686,8 @@ function MessageRow({
   onReplyPress,
   onOpenAttachment,
 }: {
+  actionAttachment: ChatAttachment | null;
+  downloadingAttachmentId: string | null;
   isActionsOpen: boolean;
   isHighlighted: boolean;
   message: ChatMessage;
@@ -500,7 +695,8 @@ function MessageRow({
   canReply: boolean;
   onMediaLayout: () => void;
   onCloseActions: () => void;
-  onOpenActions: (message: ChatMessage) => void;
+  onDownloadAttachment: (attachment: ChatAttachment) => void;
+  onOpenActions: (message: ChatMessage, attachment?: ChatAttachment) => void;
   onRecall: (message: ChatMessage) => void;
   onForward: (message: ChatMessage) => void;
   onReply: (message: ChatMessage) => void;
@@ -526,12 +722,6 @@ function MessageRow({
     Boolean(textContent);
   const canRecall =
     message.isMine && !message.isDeleted && !message.id.startsWith("pending-");
-  const sendStatusLabel =
-    message.isMine && message.sendStatus && message.sendStatus !== "sent"
-      ? message.sendStatus === "sending"
-        ? "Đang gửi..."
-        : "Gửi lỗi"
-      : "";
   const actions = (
     <View
       style={[
@@ -577,6 +767,23 @@ function MessageRow({
           <Ionicons color={colors.primary} name="arrow-redo-outline" size={18} />
         </Pressable>
       ) : null}
+      {actionAttachment && !actionAttachment.url.startsWith("file://") ? (
+        <Pressable
+          accessibilityLabel="Tải tệp đính kèm"
+          disabled={downloadingAttachmentId === actionAttachment.id}
+          onPress={() => {
+            onDownloadAttachment(actionAttachment);
+            onCloseActions();
+          }}
+          style={styles.messageActionButton}
+        >
+          {downloadingAttachmentId === actionAttachment.id ? (
+            <ActivityIndicator color={colors.primary} size="small" />
+          ) : (
+            <Ionicons color={colors.primary} name="download-outline" size={18} />
+          )}
+        </Pressable>
+      ) : null}
     </View>
   );
 
@@ -598,17 +805,6 @@ function MessageRow({
         <View style={styles.avatarSpace} />
       ) : null}
       {message.isMine && isActionsOpen ? actions : null}
-      {sendStatusLabel ? (
-        <Text
-          style={[
-            styles.sendStatus,
-            !hasBubbleBackground && styles.mediaSendStatus,
-            message.sendStatus === "failed" && styles.failedSendStatus,
-          ]}
-        >
-          {sendStatusLabel}
-        </Text>
-      ) : null}
       <View
         style={[
           styles.bubble,
@@ -672,16 +868,20 @@ function MessageRow({
             {textContent}
           </MentionText>
         ) : null}
+        {!message.isDeleted && message.messageType === MessageType.Sticker ? (
+          <StickerMessage message={message} onLongPress={() => onOpenActions(message)} />
+        ) : null}
         {!message.isDeleted && message.attachments.map((attachment) => (
           <AttachmentView
             allowLocalPreview={
               message.sendStatus === "sending" || message.sendStatus === "failed"
             }
             attachment={attachment}
+            isDownloading={downloadingAttachmentId === attachment.id}
             isMine={message.isMine}
             key={attachment.id}
             onLayoutReady={onMediaLayout}
-            onLongPress={() => onOpenActions(message)}
+            onLongPress={() => onOpenActions(message, attachment)}
             onOpen={onOpenAttachment}
           />
         ))}
@@ -694,15 +894,24 @@ function MessageRow({
             ))}
           </View>
         )}
-        <Text
-          style={[
-            styles.messageTime,
-            message.isMine && hasBubbleBackground && styles.mineTime,
-            !hasBubbleBackground && styles.mediaTime,
-          ]}
-        >
-          {formatChatTime(message.createdAt)}
-        </Text>
+        <View style={styles.messageMeta}>
+          <Text
+            style={[
+              styles.messageTime,
+              message.isMine && hasBubbleBackground && styles.mineTime,
+              !hasBubbleBackground && styles.mediaTime,
+            ]}
+          >
+            {formatChatTime(message.createdAt)}
+          </Text>
+          {message.isMine ? (
+            <MessageSendStatus
+              isMedia={!hasBubbleBackground}
+              status={message.sendStatus}
+              styles={styles}
+            />
+          ) : null}
+        </View>
       </View>
       {!message.isMine && isActionsOpen ? actions : null}
     </Pressable>
@@ -714,7 +923,7 @@ export function ChatScreen() {
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const recorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
   const params = useLocalSearchParams<{
     conversationAvatarUrl?: string;
@@ -781,22 +990,35 @@ export function ChatScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const pendingScrollToEndRef = useRef(false);
   const pendingScrollAnimatedRef = useRef(false);
+  const pendingOutgoingIdsRef = useRef(new Set<string>());
+  const bufferedMineMessagesRef = useRef(new Map<string, ChatMessage>());
   const isAtBottomRef = useRef(true);
   const dissolvedRef = useRef(false);
+  const isConversationFocusedRef = useRef(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [content, setContent] = useState("");
+  const [messageInputHeight, setMessageInputHeight] = useState(
+    MIN_MESSAGE_INPUT_HEIGHT,
+  );
+  const [isMessageInputScrollableState, setIsMessageInputScrollableState] =
+    useState(false);
   const [draftMentions, setDraftMentions] = useState<MentionReference[]>([]);
   const [attachments, setAttachments] = useState<SendMessageAttachment[]>([]);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [actionMessageId, setActionMessageId] = useState<string | null>(null);
+  const [actionAttachment, setActionAttachment] = useState<ChatAttachment | null>(null);
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<string | null>(null);
   const [showStickers, setShowStickers] = useState(false);
   const [showChatTools, setShowChatTools] = useState(false);
+  const [hoveredComposerAction, setHoveredComposerAction] = useState<
+    "attachment" | "sticker" | "send" | null
+  >(null);
   const isKeyboardVisible = useKeyboardVisible();
   const [isBlocked, setIsBlocked] = useState(params.isBlocked === "true");
   const [blockedBy, setBlockedBy] = useState<ChatParticipant | null>(null);
@@ -864,6 +1086,34 @@ export function ChatScreen() {
     [],
   );
 
+  const flushBufferedMineMessages = useCallback(() => {
+    if (
+      pendingOutgoingIdsRef.current.size > 0 ||
+      bufferedMineMessagesRef.current.size === 0
+    ) {
+      return;
+    }
+
+    const bufferedMessages = [...bufferedMineMessagesRef.current.values()].reverse();
+    bufferedMineMessagesRef.current.clear();
+    setMessages((current) => {
+      const existingIds = new Set(current.map((item) => item.id));
+      return [
+        ...bufferedMessages.filter((item) => !existingIds.has(item.id)),
+        ...current,
+      ];
+    });
+  }, []);
+
+  const finishPendingOutgoing = useCallback(
+    (optimisticId: string, confirmedId?: string) => {
+      pendingOutgoingIdsRef.current.delete(optimisticId);
+      if (confirmedId) bufferedMineMessagesRef.current.delete(confirmedId);
+      flushBufferedMineMessages();
+    },
+    [flushBufferedMineMessages],
+  );
+
   const searchChatMentionUsers = useCallback(
     async (keyword: string): Promise<MentionUser[]> => {
       if (!isGroupConversation) {
@@ -918,6 +1168,19 @@ export function ChatScreen() {
 
   const markConversationReadSafe = useCallback(() => {
     if (!conversationId || dissolvedRef.current) return;
+    const documentVisibility =
+      Platform.OS === "web" && typeof document !== "undefined"
+        ? document.visibilityState
+        : undefined;
+    if (
+      !canMarkConversationRead({
+        appState: AppState.currentState,
+        documentVisibility,
+        isFocused: isConversationFocusedRef.current,
+      })
+    ) {
+      return;
+    }
     void markConversationRead(conversationId)
       .then(() => {
         console.info("[ChatSync] conversation marked read", {
@@ -930,6 +1193,59 @@ export function ChatScreen() {
       })
       .catch(handleRoomApiError);
   }, [conversationId, handleRoomApiError]);
+
+  const syncConversationReadVisibility = useCallback(
+    (appState = AppState.currentState) => {
+      const documentVisibility =
+        Platform.OS === "web" && typeof document !== "undefined"
+          ? document.visibilityState
+          : undefined;
+      const isVisible = canMarkConversationRead({
+        appState,
+        documentVisibility,
+        isFocused: isConversationFocusedRef.current,
+      });
+      if (isVisible) {
+        setActiveChatConversation(conversationId || null);
+        markConversationReadSafe();
+      } else if (getActiveChatConversation() === conversationId) {
+        setActiveChatConversation(null);
+      }
+    },
+    [conversationId, markConversationReadSafe],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      isConversationFocusedRef.current = true;
+      syncConversationReadVisibility();
+
+      return () => {
+        isConversationFocusedRef.current = false;
+        if (getActiveChatConversation() === conversationId) {
+          setActiveChatConversation(null);
+        }
+      };
+    }, [conversationId, syncConversationReadVisibility]),
+  );
+
+  useEffect(() => {
+    const appStateSubscription = AppState.addEventListener(
+      "change",
+      syncConversationReadVisibility,
+    );
+    const handleVisibilityChange = () => syncConversationReadVisibility();
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+
+    return () => {
+      appStateSubscription.remove();
+      if (Platform.OS === "web" && typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+    };
+  }, [syncConversationReadVisibility]);
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
@@ -1073,7 +1389,6 @@ export function ChatScreen() {
 
   useEffect(() => {
     dissolvedRef.current = false;
-    setActiveChatConversation(conversationId || null);
     setMessagePermissions(null);
     setConversationDetails(initialConversationDetails);
     if (conversationId) {
@@ -1087,7 +1402,6 @@ export function ChatScreen() {
       );
     }
     return () => {
-      setActiveChatConversation(null);
       if (conversationId) {
         void leaveRealtimeGroup(getRealtimeConversationGroupName(conversationId)).catch(
           (error) => {
@@ -1139,7 +1453,15 @@ export function ChatScreen() {
     () =>
       subscribeRealtimeMessages((message) => {
         if (message.conversationId !== conversationId) return;
-        const nextMessage = normalizeMessage(message);
+        const normalizedMessage = normalizeMessage(message);
+        const nextMessage =
+          isMessageFromCurrentUser(normalizedMessage.sender.id, currentUserId)
+            ? { ...normalizedMessage, isMine: true }
+            : normalizedMessage;
+        if (nextMessage.isMine && pendingOutgoingIdsRef.current.size > 0) {
+          bufferedMineMessagesRef.current.set(nextMessage.id, nextMessage);
+          return;
+        }
         setMessages((current) =>
           current.some((item) => item.id === nextMessage.id)
             ? current
@@ -1152,7 +1474,7 @@ export function ChatScreen() {
           setHasNewMessage(true);
         }
       }),
-    [conversationId, markConversationReadSafe, normalizeMessage, scrollToEndAfterLayout],
+    [conversationId, currentUserId, markConversationReadSafe, normalizeMessage, scrollToEndAfterLayout],
   );
 
   useEffect(
@@ -1190,14 +1512,6 @@ export function ChatScreen() {
         );
       }),
     [conversationId],
-  );
-
-  useEffect(
-    () =>
-      subscribeRealtimeSyncRequests(() => {
-        void load(1, "initial");
-      }),
-    [load],
   );
 
   useEffect(
@@ -1350,6 +1664,7 @@ export function ChatScreen() {
         ...current,
         ...assets.map((asset, index) => ({
           id: `${asset.uri}-${Date.now()}-${index}`,
+          file: asset.file,
           kind:
             asset.type === "video" ? ("video" as const) : ("image" as const),
           name: asset.fileName ?? `attachment-${Date.now()}-${index}`,
@@ -1367,11 +1682,11 @@ export function ChatScreen() {
     [],
   );
 
-  const pickMedia = useCallback(async () => {
+  const pickMedia = useCallback(async (mediaTypes: ImagePicker.MediaType[]) => {
     if (!canSendInConversation) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsMultipleSelection: true,
-      mediaTypes: ["images", "videos"],
+      mediaTypes,
       quality: 0.85,
     });
     if (result.canceled) return;
@@ -1405,6 +1720,7 @@ export function ChatScreen() {
       ...current,
       ...result.assets.map((asset, index) => ({
         id: `${asset.uri}-${Date.now()}-${index}`,
+        file: asset.file,
         kind: asset.mimeType?.startsWith("audio/")
           ? ("audio" as const)
           : ("file" as const),
@@ -1420,24 +1736,43 @@ export function ChatScreen() {
     setAttachments((current) => current.filter((item) => item.id !== id));
   }, []);
 
+  const handleMessageInputContentSizeChange = useCallback(
+    (event: NativeSyntheticEvent<TextInputContentSizeChangeEventData>) => {
+      const contentHeight = event.nativeEvent.contentSize.height;
+      setMessageInputHeight(getMessageInputHeight(contentHeight));
+      setIsMessageInputScrollableState(
+        isMessageInputScrollable(contentHeight),
+      );
+    },
+    [],
+  );
+
+  const handleMessageInputChange = useCallback((value: string) => {
+    setContent(value);
+    if (value.length > 0) return;
+    setMessageInputHeight(MIN_MESSAGE_INPUT_HEIGHT);
+    setIsMessageInputScrollableState(false);
+  }, []);
+
+  const dismissComposerPanels = useCallback(() => {
+    setShowChatTools(false);
+    setShowStickers(false);
+  }, []);
+
   const toggleRecording = useCallback(async () => {
     if (!canSendInConversation && !recorderState.isRecording) return;
     try {
       if (recorderState.isRecording) {
+        const durationMillis = recorderState.durationMillis;
         await recorder.stop();
         const uri = recorder.uri;
         if (uri) {
-          setAttachments((current) => [
-            ...current,
-            {
-              id: `${uri}-${Date.now()}`,
-              kind: "audio",
-              name: `voice-${Date.now()}.m4a`,
-              type: Platform.OS === "android" ? "audio/3gpp" : "audio/m4a",
-              duration: Math.round(recorderState.durationMillis / 1000),
-              uri,
-            },
-          ]);
+          const attachment = await createRecordedChatAttachment({
+            durationMillis,
+            platform: Platform.OS,
+            uri,
+          });
+          setAttachments((current) => [...current, attachment]);
         }
         await setAudioModeAsync({ allowsRecording: false });
         return;
@@ -1460,7 +1795,7 @@ export function ChatScreen() {
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
-  }, [canSendInConversation, recorder, recorderState.isRecording]);
+  }, [canSendInConversation, recorder, recorderState.durationMillis, recorderState.isRecording]);
 
   const shareLocation = useCallback(async () => {
     if (!canSendInConversation) return;
@@ -1498,6 +1833,7 @@ export function ChatScreen() {
         },
       };
 
+      pendingOutgoingIdsRef.current.add(optimisticId);
       setMessages((current) => [optimisticMessage, ...current]);
       scrollToEndAfterLayout(true);
 
@@ -1508,19 +1844,29 @@ export function ChatScreen() {
       });
       const sentMessage = {
         ...normalizeMessage(message),
+        clientRenderId: optimisticId,
         isMine: true,
         sendStatus: "sent" as const,
       };
-      setMessages((current) =>
-        current.some((item) => item.id === sentMessage.id)
-          ? current.filter((item) => item.id !== optimisticId)
-          : current.map((item) =>
-              item.id === optimisticId ? sentMessage : item,
-            ),
-      );
+      setMessages((current) => {
+        if (!current.some((item) => item.id === optimisticId)) {
+          return current.some((item) => item.id === sentMessage.id)
+            ? current
+            : [sentMessage, ...current];
+        }
+        return current
+          .filter(
+            (item) => item.id === optimisticId || item.id !== sentMessage.id,
+          )
+          .map((item) =>
+            item.id === optimisticId ? sentMessage : item,
+          );
+      });
+      finishPendingOutgoing(optimisticId, sentMessage.id);
       scrollToEndAfterLayout(true);
     } catch (error) {
       if (pendingLocationId) {
+        finishPendingOutgoing(pendingLocationId);
         setMessages((current) =>
           current.map((item) =>
             item.id === pendingLocationId ? { ...item, sendStatus: "failed" } : item,
@@ -1532,7 +1878,7 @@ export function ChatScreen() {
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     }
-  }, [canSendInConversation, conversationId, normalizeMessage, scrollToEndAfterLayout]);
+  }, [canSendInConversation, conversationId, finishPendingOutgoing, normalizeMessage, scrollToEndAfterLayout]);
 
   const recallMessage = useCallback(
     async (message: ChatMessage) => {
@@ -1569,12 +1915,38 @@ export function ChatScreen() {
     [handleRoomApiError],
   );
 
-  const openMessageActions = useCallback((message: ChatMessage) => {
-    if (message.messageType === MessageType.System) return;
-    setActionMessageId((current) =>
-      current === message.id ? null : message.id,
-    );
+  const closeMessageActions = useCallback(() => {
+    setActionMessageId(null);
+    setActionAttachment(null);
   }, []);
+
+  const openMessageActions = useCallback((
+    message: ChatMessage,
+    attachment?: ChatAttachment,
+  ) => {
+    if (message.messageType === MessageType.System) return;
+    setActionMessageId(message.id);
+    setActionAttachment(attachment ?? null);
+  }, []);
+
+  const downloadAttachment = useCallback(async (attachment: ChatAttachment) => {
+    if (downloadingAttachmentId === attachment.id) return;
+    setDownloadingAttachmentId(attachment.id);
+    try {
+      const result = await downloadChatAttachment(attachment);
+      showAppToast({
+        message: `Đã tải ${result.fileName}`,
+        type: "success",
+      });
+    } catch (error) {
+      showAppToast({
+        message: error instanceof Error ? error.message : "Không thể tải tệp. Vui lòng thử lại.",
+        type: "error",
+      });
+    } finally {
+      setDownloadingAttachmentId(null);
+    }
+  }, [downloadingAttachmentId]);
 
   const forwardMessage = useCallback((message: ChatMessage) => {
     if (
@@ -1597,35 +1969,131 @@ export function ChatScreen() {
     const mentionUserIds = activeMentionIds(content, draftMentions);
     const draftAttachments = attachments;
     const draftReply = replyTo;
-    const optimisticId = `pending-${Date.now()}`;
+    const currentUser = await getUser();
+    const sendUnits = buildChatSendUnits(draftContent, draftAttachments);
+    const pendingMessages = sendUnits.map((unit, index) => {
+      const attachment = unit.attachments[0];
+      const optimisticId = `pending-${Date.now()}-${index}`;
+      const optimisticMessage: ChatMessage = {
+        attachments: unit.attachments.map(pendingAttachmentToViewerAttachment),
+        content: unit.content,
+        conversationId,
+        createdAt: new Date().toISOString(),
+        id: optimisticId,
+        isDeleted: false,
+        isEdited: false,
+        isMine: true,
+        messageType:
+          !attachment
+            ? 0
+            : attachment.kind === "image"
+              ? 1
+              : attachment.kind === "video"
+                ? 2
+                : attachment.kind === "audio"
+                  ? 4
+                  : 3,
+        reactions: [],
+        reply: index === 0 && draftReply
+          ? {
+              content: draftReply.content || "Tệp đính kèm",
+              id: draftReply.id,
+              senderName: draftReply.sender.displayName,
+            }
+          : null,
+        sendStatus: "sending",
+        sender: {
+          avatarUrl: currentUser?.avatarUrl ?? null,
+          displayName: currentUser?.displayName ?? "Bạn",
+          id: currentUser?.id ?? "current-user",
+          isVerified: currentUser?.isVerified,
+        },
+      };
+      return { optimisticId, optimisticMessage, unit, unitIndex: index };
+    });
+
+    pendingMessages.forEach(({ optimisticId }) =>
+      pendingOutgoingIdsRef.current.add(optimisticId),
+    );
+    setMessages((current) => [
+      ...pendingMessages.map(({ optimisticMessage }) => optimisticMessage).reverse(),
+      ...current,
+    ]);
+    setContent("");
+    setMessageInputHeight(MIN_MESSAGE_INPUT_HEIGHT);
+    setIsMessageInputScrollableState(false);
+    setDraftMentions([]);
+    setAttachments([]);
+    setReplyTo(null);
+    scrollToEndAfterLayout(true);
+    let hasShownUploadError = false;
+    for (const { optimisticId, unit, unitIndex } of pendingMessages) {
+      try {
+        const message = await sendChatMessage({
+          attachments: unit.attachments,
+          content: unit.content,
+          conversationId,
+          replyToMessageId: unitIndex === 0 ? draftReply?.id : undefined,
+          mentionUserIds: unit.content ? mentionUserIds : undefined,
+        });
+        const sentMessage = {
+          ...normalizeMessage(message),
+          clientRenderId: optimisticId,
+          isMine: true,
+          sendStatus: "sent" as const,
+        };
+        setMessages((current) => {
+          if (!current.some((item) => item.id === optimisticId)) {
+            return current.some((item) => item.id === sentMessage.id)
+              ? current
+              : [sentMessage, ...current];
+          }
+          return current
+            .filter(
+              (item) => item.id === optimisticId || item.id !== sentMessage.id,
+            )
+            .map((item) =>
+              item.id === optimisticId ? sentMessage : item,
+            );
+        });
+        finishPendingOutgoing(optimisticId, sentMessage.id);
+      } catch (error) {
+        finishPendingOutgoing(optimisticId);
+        if (handleRoomApiError(error)) {
+          pendingMessages.forEach(({ optimisticId: pendingId }) =>
+            finishPendingOutgoing(pendingId),
+          );
+          const pendingIds = new Set(
+            pendingMessages.map(({ optimisticId: pendingId }) => pendingId),
+          );
+          setMessages((current) =>
+            current.filter((item) => !pendingIds.has(item.id)),
+          );
+          return;
+        }
+        setMessages((current) =>
+          current.map((item) =>
+            item.id === optimisticId ? { ...item, sendStatus: "failed" } : item,
+          ),
+        );
+        if (error instanceof ChatAttachmentUploadError && !hasShownUploadError) {
+          hasShownUploadError = true;
+          Alert.alert("Không thể tải tệp đính kèm", error.message);
+        }
+      }
+    }
+    scrollToEndAfterLayout(true);
+  }, [attachments, canSendInConversation, content, conversationId, draftMentions, finishPendingOutgoing, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
+
+  const sendSticker = useCallback(async (sticker: Sticker) => {
+    if (!canSendInConversation || dissolvedRef.current) return;
+    const optimisticId = `pending-sticker-${Date.now()}`;
     const currentUser = await getUser();
     const optimisticMessage: ChatMessage = {
-      attachments: draftAttachments.map(pendingAttachmentToViewerAttachment),
-      content: draftContent,
-      conversationId,
-      createdAt: new Date().toISOString(),
-      id: optimisticId,
-      isDeleted: false,
-      isEdited: false,
-      isMine: true,
-      messageType:
-        draftAttachments.length === 0
-          ? 0
-          : draftAttachments[0].kind === "image"
-            ? 1
-            : draftAttachments[0].kind === "video"
-              ? 2
-              : draftAttachments[0].kind === "audio"
-                ? 4
-                : 3,
-      reactions: [],
-      reply: draftReply
-        ? {
-            content: draftReply.content || "Tệp đính kèm",
-            id: draftReply.id,
-            senderName: draftReply.sender.displayName,
-          }
-        : null,
+      attachments: [], content: "", conversationId,
+      createdAt: new Date().toISOString(), id: optimisticId,
+      isDeleted: false, isEdited: false, isMine: true,
+      messageType: MessageType.Sticker, reactions: [], reply: null,
       sendStatus: "sending",
       sender: {
         avatarUrl: currentUser?.avatarUrl ?? null,
@@ -1633,49 +2101,28 @@ export function ChatScreen() {
         id: currentUser?.id ?? "current-user",
         isVerified: currentUser?.isVerified,
       },
+      sticker,
     };
-
+    pendingOutgoingIdsRef.current.add(optimisticId);
     setMessages((current) => [optimisticMessage, ...current]);
-    setContent("");
-    setDraftMentions([]);
-    setAttachments([]);
-    setReplyTo(null);
     scrollToEndAfterLayout(true);
     try {
-      const message = await sendChatMessage({
-        attachments: draftAttachments,
-        content: draftContent,
-        conversationId,
-        replyToMessageId: draftReply?.id,
-        mentionUserIds,
-      });
-      const sentMessage = {
-        ...normalizeMessage(message),
-        isMine: true,
-        sendStatus: "sent" as const,
-      };
-      setMessages((current) =>
-        current.some((item) => item.id === sentMessage.id)
-          ? current.filter((item) => item.id !== optimisticId)
-          : current.map((item) =>
-              item.id === optimisticId ? sentMessage : item,
-            ),
-      );
+      const message = await sendChatMessage({ attachments: [], content: "", conversationId, stickerId: sticker.id });
+      const sentMessage = { ...normalizeMessage(message), clientRenderId: optimisticId, isMine: true, sendStatus: "sent" as const };
+      setMessages((current) => current
+        .filter((item) => item.id === optimisticId || item.id !== sentMessage.id)
+        .map((item) => item.id === optimisticId ? sentMessage : item));
+      finishPendingOutgoing(optimisticId, sentMessage.id);
+      await rememberSticker(sticker);
       scrollToEndAfterLayout(true);
     } catch (error) {
-      if (handleRoomApiError(error)) {
-        setMessages((current) =>
-          current.filter((item) => item.id !== optimisticId),
-        );
-        return;
+      finishPendingOutgoing(optimisticId);
+      setMessages((current) => current.filter((item) => item.id !== optimisticId));
+      if (!handleRoomApiError(error)) {
+        Alert.alert("Không thể gửi nhãn dán", error instanceof Error ? error.message : "Vui lòng thử lại.");
       }
-      setMessages((current) =>
-        current.map((item) =>
-          item.id === optimisticId ? { ...item, sendStatus: "failed" } : item,
-        ),
-      );
     }
-  }, [attachments, canSendInConversation, content, conversationId, draftMentions, handleRoomApiError, normalizeMessage, replyTo, scrollToEndAfterLayout]);
+  }, [canSendInConversation, conversationId, finishPendingOutgoing, handleRoomApiError, normalizeMessage, scrollToEndAfterLayout]);
 
   const startCall = useCallback(async (callType: CallType) => {
     if (!conversationDetails || isStartingCall) return;
@@ -1856,7 +2303,7 @@ export function ChatScreen() {
           style={styles.activeGroupCall}
         >
           <View style={styles.activeGroupCallIcon}>
-            <Ionicons color={colors.white} name="videocam" size={20} />
+            <Ionicons color={colors.primaryContrast} name="videocam" size={20} />
           </View>
           <View style={styles.activeGroupCallText}>
             <Text style={styles.activeGroupCallTitle}>
@@ -1879,7 +2326,7 @@ export function ChatScreen() {
           contentContainerStyle={styles.messagesContent}
           data={messages}
           inverted
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.clientRenderId ?? item.id}
           ListFooterComponent={
             isLoadingMore ? <ActivityIndicator color={colors.primary} /> : null
           }
@@ -1929,11 +2376,14 @@ export function ChatScreen() {
               !nextOlder || nextOlder.sender.id !== item.sender.id;
             return (
               <MessageRow
+                actionAttachment={actionMessageId === item.id ? actionAttachment : null}
                 canReply={canSendInConversation}
+                downloadingAttachmentId={downloadingAttachmentId}
                 isActionsOpen={actionMessageId === item.id}
                 isHighlighted={highlightedMessageId === item.id}
                 message={item}
-                onCloseActions={() => setActionMessageId(null)}
+                onCloseActions={closeMessageActions}
+                onDownloadAttachment={(attachment) => void downloadAttachment(attachment)}
                 onMediaLayout={() => {
                   if (!pendingScrollToEndRef.current && !isAtBottomRef.current) return;
                   scrollToEndAfterLayout(true);
@@ -1971,6 +2421,13 @@ export function ChatScreen() {
         >
           <Text style={styles.newMessageText}>Có tin nhắn mới</Text>
         </Pressable>
+      )}
+      {(showChatTools || showStickers) && (
+        <Pressable
+          accessible={false}
+          onPress={dismissComposerPanels}
+          style={styles.composerDismissLayer}
+        />
       )}
       {shouldRenderComposer ? (
       <View
@@ -2039,21 +2496,10 @@ export function ChatScreen() {
           ))}
         </ScrollView>
         {showStickers && (
-          <View style={styles.stickerTray}>
-            {CHAT_STICKERS.map((sticker) => (
-              <Pressable
-                accessibilityLabel={`Chọn sticker ${sticker}`}
-                key={sticker}
-                onPress={() => {
-                  setContent((current) => `${current}${sticker}`);
-                  setShowStickers(false);
-                }}
-                style={styles.stickerButton}
-              >
-                <Text style={styles.stickerText}>{sticker}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <StickerPanel
+            onOpenStore={() => router.push("/sticker-store")}
+            onSelect={(sticker) => void sendSticker(sticker)}
+          />
         )}
         {showChatTools && (
         <View style={styles.actionRow}>
@@ -2065,30 +2511,53 @@ export function ChatScreen() {
             }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="camera-outline" size={21} />
+            <View style={styles.toolIcon}>
+              <Ionicons color={colors.primary} name="camera-outline" size={22} />
+            </View>
             <Text style={styles.toolLabel}>Camera</Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Chọn ảnh hoặc video"
+            accessibilityLabel="Chọn ảnh"
             onPress={() => {
               setShowChatTools(false);
-              pickMedia();
+              pickMedia(["images"]);
             }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="image-outline" size={21} />
+            <View style={styles.toolIcon}>
+              <Ionicons color={colors.primary} name="images-outline" size={22} />
+            </View>
             <Text style={styles.toolLabel}>Ảnh</Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Chọn file"
+            accessibilityLabel="Chọn video"
+            onPress={() => {
+              setShowChatTools(false);
+              pickMedia(["videos"]);
+            }}
+            style={styles.toolButton}
+          >
+            <View style={styles.toolIcon}>
+              <Ionicons color={colors.primary} name="videocam-outline" size={22} />
+            </View>
+            <Text style={styles.toolLabel}>Video</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Chọn tài liệu"
             onPress={() => {
               setShowChatTools(false);
               pickFiles();
             }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="document-text-outline" size={21} />
-            <Text style={styles.toolLabel}>Tệp</Text>
+            <View style={styles.toolIcon}>
+              <Ionicons
+                color={colors.primary}
+                name="document-text-outline"
+                size={22}
+              />
+            </View>
+            <Text style={styles.toolLabel}>Tài liệu</Text>
           </Pressable>
           <Pressable
             accessibilityLabel={recorderState.isRecording ? "Dừng ghi âm" : "Ghi âm"}
@@ -2096,16 +2565,24 @@ export function ChatScreen() {
               setShowChatTools(false);
               toggleRecording();
             }}
-            style={[
-              styles.toolButton,
-              recorderState.isRecording && styles.recordingButton,
-            ]}
+            style={styles.toolButton}
           >
-            <Ionicons
-              color={recorderState.isRecording ? colors.white : colors.primary}
-              name={recorderState.isRecording ? "stop" : "mic-outline"}
-              size={21}
-            />
+            <View
+              style={[
+                styles.toolIcon,
+                recorderState.isRecording && styles.recordingButton,
+              ]}
+            >
+              <Ionicons
+                color={
+                  recorderState.isRecording
+                    ? colors.dangerContrast
+                    : colors.primary
+                }
+                name={recorderState.isRecording ? "stop" : "mic-outline"}
+                size={22}
+              />
+            </View>
             <Text
               style={[
                 styles.toolLabel,
@@ -2116,17 +2593,6 @@ export function ChatScreen() {
             </Text>
           </Pressable>
           <Pressable
-            accessibilityLabel="Chọn sticker"
-            onPress={() => {
-              setShowStickers((current) => !current);
-              setShowChatTools(false);
-            }}
-            style={styles.toolButton}
-          >
-            <Ionicons color={colors.primary} name="happy-outline" size={21} />
-            <Text style={styles.toolLabel}>Sticker</Text>
-          </Pressable>
-          <Pressable
             accessibilityLabel="Chia sẻ vị trí hiện tại"
             onPress={() => {
               setShowChatTools(false);
@@ -2134,7 +2600,9 @@ export function ChatScreen() {
             }}
             style={styles.toolButton}
           >
-            <Ionicons color={colors.primary} name="location-outline" size={21} />
+            <View style={styles.toolIcon}>
+              <Ionicons color={colors.primary} name="location-outline" size={22} />
+            </View>
             <Text style={styles.toolLabel}>Vị trí</Text>
           </Pressable>
         </View>
@@ -2160,29 +2628,55 @@ export function ChatScreen() {
         <View style={styles.inputRow}>
           <Pressable
             accessibilityLabel={
-              showChatTools ? "Ẩn chức năng chat" : "Mở chức năng chat"
+              showChatTools ? "Ẩn đính kèm" : "Đính kèm"
             }
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showChatTools }}
+            onHoverIn={() => setHoveredComposerAction("attachment")}
+            onHoverOut={() => setHoveredComposerAction(null)}
             onPress={() => {
-              setShowChatTools((current) => {
-                if (current) setShowStickers(false);
-                return !current;
-              });
+              setShowStickers(false);
+              setShowChatTools((current) => !current);
             }}
-            style={[
-              styles.moreToolButton,
-              showChatTools && styles.moreToolButtonActive,
+            style={({ pressed }) => [
+              styles.composerActionButton,
+              (hoveredComposerAction === "attachment" || pressed) &&
+                styles.composerActionButtonHovered,
+              showChatTools && styles.composerActionButtonActive,
+              pressed && styles.composerActionButtonPressed,
             ]}
+            {...(Platform.OS === "web" ? { title: "Đính kèm" } : {})}
           >
             <Ionicons
-              color={showChatTools ? colors.white : colors.primary}
-              name={showChatTools ? "close" : "add-circle-outline"}
+              color={showChatTools ? colors.primaryContrast : colors.primary}
+              name={showChatTools ? "close" : "add"}
               size={24}
             />
-            <Text
-              style={styles.hidden}
-            >
-              Ghi âm
-            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel={showStickers ? "Ẩn nhãn dán" : "Nhãn dán"}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showStickers }}
+            onHoverIn={() => setHoveredComposerAction("sticker")}
+            onHoverOut={() => setHoveredComposerAction(null)}
+            onPress={() => {
+              setShowChatTools(false);
+              setShowStickers((current) => !current);
+            }}
+            style={({ pressed }) => [
+              styles.composerActionButton,
+              (hoveredComposerAction === "sticker" || pressed) &&
+                styles.composerActionButtonHovered,
+              showStickers && styles.composerActionButtonActive,
+              pressed && styles.composerActionButtonPressed,
+            ]}
+            {...(Platform.OS === "web" ? { title: "Nhãn dán" } : {})}
+          >
+            <MaterialCommunityIcons
+              color={showStickers ? colors.primaryContrast : colors.primary}
+              name="sticker-emoji"
+              size={24}
+            />
           </Pressable>
           {recorderState.isRecording && (
             <Pressable
@@ -2190,27 +2684,39 @@ export function ChatScreen() {
               onPress={toggleRecording}
               style={styles.stopRecordButton}
             >
-              <Ionicons color={colors.white} name="stop" size={18} />
+              <Ionicons color={colors.dangerContrast} name="stop" size={18} />
             </Pressable>
           )}
-          <TextInput
-            multiline
-            onChangeText={setContent}
-            placeholder="Nhập tin nhắn"
-            placeholderTextColor={colors.textMuted}
-            style={styles.input}
-            value={content}
-          />
+          <View style={styles.messageInputShell}>
+            <TextInput
+              multiline
+              onChangeText={handleMessageInputChange}
+              onContentSizeChange={handleMessageInputContentSizeChange}
+              placeholder="Nhập tin nhắn"
+              placeholderTextColor={colors.textMuted}
+              scrollEnabled={isMessageInputScrollableState}
+              style={[styles.input, { height: messageInputHeight }]}
+              textAlignVertical={
+                messageInputHeight > MIN_MESSAGE_INPUT_HEIGHT ? "top" : "center"
+              }
+              value={content}
+            />
+          </View>
           <Pressable
             accessibilityLabel="Gửi tin nhắn"
+            accessibilityRole="button"
             disabled={!content.trim() && attachments.length === 0}
+            onHoverIn={() => setHoveredComposerAction("send")}
+            onHoverOut={() => setHoveredComposerAction(null)}
             onPress={send}
-            style={[
+            style={({ pressed }) => [
               styles.sendButton,
-              !content.trim() &&
-                attachments.length === 0 &&
+              hoveredComposerAction === "send" && styles.sendButtonHovered,
+              !content.trim() && attachments.length === 0 &&
                 styles.sendButtonDisabled,
+              pressed && styles.composerActionButtonPressed,
             ]}
+            {...(Platform.OS === "web" ? { title: "Gửi" } : {})}
           >
             <Ionicons color={colors.primaryContrast} name="send" size={18} />
           </Pressable>
@@ -2259,17 +2765,29 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   activeWaveBar: { backgroundColor: colors.primary },
   actionRow: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.borderSubtle,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
-    justifyContent: "space-between",
     padding: spacing.sm,
   },
   attachmentPreviewList: { gap: spacing.sm, paddingRight: spacing.md },
+  attachmentDownloadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    backgroundColor: colors.visuals.rgb_0_0_0_0_48,
+    borderRadius: 7,
+    gap: spacing.xs,
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  attachmentDownloadText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: "800",
+  },
   audioBody: { flex: 1, gap: 4 },
   audioLabel: {
     color: colors.text,
@@ -2294,6 +2812,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 10,
     gap: spacing.xs,
     maxWidth: "78%",
+    overflow: "hidden",
     padding: spacing.md,
   },
   callHistoryMessage: {
@@ -2319,11 +2838,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
   },
   composer: {
-    backgroundColor: colors.visuals.rgb_10_23_41_0_94,
-    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+    borderTopColor: colors.borderSubtle,
     borderTopWidth: 1,
     gap: spacing.sm,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    position: "relative",
+    zIndex: 2,
+  },
+  composerDismissLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "transparent",
+    zIndex: 1,
   },
   fileIcon: {
     alignItems: "center",
@@ -2345,14 +2872,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: spacing.sm,
     minWidth: 220,
     padding: spacing.sm,
+    position: "relative",
   },
   fileText: { flex: 1 },
   header: {
     alignItems: "center",
     backgroundColor: colors.visuals.rgb_36_221_228_0_16,
     borderBottomColor: colors.visuals.rgb_36_221_228_0_62,
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
     borderBottomWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
@@ -2375,20 +2903,35 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 36,
   },
   disabledIconButton: { opacity: 0.55 },
+  downloadableAttachment: { position: "relative" },
   input: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.border,
-    borderRadius: 18,
-    borderWidth: 1,
     color: colors.text,
     flex: 1,
     fontSize: 15,
-    maxHeight: 112,
-    minHeight: 40,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    lineHeight: 20,
+    maxHeight: MAX_MESSAGE_INPUT_HEIGHT,
+    minHeight: MIN_MESSAGE_INPUT_HEIGHT,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
   },
-  inputRow: { alignItems: "flex-end", flexDirection: "row", gap: spacing.sm },
+  inputRow: {
+    alignItems: "flex-end",
+    backgroundColor: colors.input,
+    borderColor: colors.borderSubtle,
+    borderRadius: 24,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 2,
+    paddingHorizontal: 2,
+  },
+  messageInputShell: {
+    alignItems: "flex-end",
+    flex: 1,
+    flexDirection: "row",
+    maxHeight: MAX_MESSAGE_INPUT_HEIGHT,
+    minHeight: MIN_MESSAGE_INPUT_HEIGHT,
+    overflow: "hidden",
+  },
   hidden: { display: "none" },
   hiddenList: { opacity: 0 },
   highlightedRow: { backgroundColor: colors.visuals.rgb_40_104_215_0_12 },
@@ -2428,10 +2971,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     lineHeight: 22,
   },
   messageTime: {
-    alignSelf: "flex-end",
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: "700",
+  },
+  messageMeta: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    flexDirection: "row",
+    gap: 4,
+    justifyContent: "flex-end",
   },
   messagesContent: {
     backgroundColor: colors.background,
@@ -2459,7 +3008,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: "800",
   },
   mediaTime: {
-    alignSelf: "flex-start",
     backgroundColor: colors.visuals.rgb_102_112_133_0_32,
     borderRadius: 999,
     color: colors.white,
@@ -2469,7 +3017,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 2,
   },
   mediaSendStatus: {
-    alignSelf: "flex-start",
     backgroundColor: colors.visuals.rgb_102_112_133_0_32,
     borderRadius: 999,
     color: colors.white,
@@ -2483,14 +3030,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
   },
   mineActiveWaveBar: { backgroundColor: colors.primary },
-  mineAudioLabel: { color: colors.text },
+  mineAudioLabel: { color: colors.messageMineText },
   mineAudioPill: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.border,
   },
   mineFileIcon: { backgroundColor: colors.surfaceElevated },
-  mineFileMeta: { color: colors.textMuted },
-  mineFileName: { color: colors.text },
+  mineFileMeta: { color: colors.messageMineMuted },
+  mineFileName: { color: colors.messageMineText },
   mineFilePill: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.border,
@@ -2509,11 +3056,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingRight: spacing.sm,
     paddingTop: spacing.xs,
   },
-  mineReplyName: { color: colors.primary },
-  mineReplyText: { color: colors.textMuted },
-  mineRecalledMessageText: { color: colors.textMuted },
-  mineText: { color: colors.text },
-  mineTime: { color: colors.textMuted },
+  mineReplyName: { color: colors.messageMineText },
+  mineReplyText: { color: colors.messageMineMuted },
+  mineRecalledMessageText: { color: colors.messageMineMuted },
+  mineText: { color: colors.messageMineText },
+  mineTime: { color: colors.messageMineMuted },
   newMessageButton: {
     alignSelf: "center",
     backgroundColor: colors.primary,
@@ -2522,22 +3069,27 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: spacing.sm,
     position: "absolute",
   },
-  newMessageText: { color: colors.white, fontSize: 13, fontWeight: "800" },
-  moreToolButton: {
+  newMessageText: {
+    color: colors.primaryContrast,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  composerActionButton: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    height: 40,
+    borderRadius: 22,
+    flexShrink: 0,
+    height: 44,
     justifyContent: "center",
+    minWidth: 44,
     overflow: "hidden",
-    width: 40,
+    width: 44,
   },
-  moreToolButtonActive: {
+  composerActionButtonHovered: { backgroundColor: colors.primarySoft },
+  composerActionButtonActive: {
     backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
+  composerActionButtonPressed: { opacity: 0.82, transform: [{ scale: 0.97 }] },
   locationCard: {
     alignItems: "center",
     backgroundColor: colors.primarySoft,
@@ -2575,14 +3127,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   recallActionButton: { borderColor: colors.visuals.rgb_240_68_56_0_35 },
   recordingButton: {
     backgroundColor: colors.danger,
-    borderColor: colors.danger,
     shadowColor: colors.danger,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
   },
   recordingText: { color: colors.danger, fontSize: 12, fontWeight: "800" },
-  recordingToolLabel: { color: colors.white },
+  recordingToolLabel: { color: colors.danger },
   replyBox: {
     borderLeftColor: colors.primary,
     borderLeftWidth: 3,
@@ -2600,16 +3151,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   replyText: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
   screen: { backgroundColor: colors.background, flex: 1 },
   sendStatus: {
-    backgroundColor: colors.background,
-    borderRadius: 999,
-    bottom: -8,
     color: colors.primary,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "900",
-    paddingHorizontal: spacing.xs,
-    position: "absolute",
-    right: spacing.md,
-    zIndex: 2,
   },
   emptyMessages: {
     alignItems: "center",
@@ -2628,15 +3172,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   sendButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
-    borderRadius: 20,
-    height: 40,
+    borderRadius: 22,
+    height: 44,
     justifyContent: "center",
     shadowColor: colors.primary,
     shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 9,
-    width: 40,
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    width: 44,
   },
+  sendButtonHovered: { backgroundColor: colors.primaryPressed },
   sendButtonDisabled: { opacity: 0.45 },
   permissionComposer: {
     alignItems: "center",
@@ -2712,16 +3257,21 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   toolButton: {
     alignItems: "center",
-    backgroundColor: colors.primarySoft,
-    borderColor: colors.border,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 4,
-    height: 64,
+    gap: 6,
+    minHeight: 68,
     justifyContent: "center",
-    width: "30.5%",
+    overflow: "hidden",
+    width: "33.333%",
   },
   toolLabel: { color: colors.text, fontSize: 11, fontWeight: "800" },
+  toolIcon: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 22,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
   videoPlayOverlay: {
     alignItems: "center",
     backgroundColor: colors.visuals.rgb_0_0_0_0_35,
@@ -2736,10 +3286,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 7,
     borderWidth: 1,
-    height: 180,
     justifyContent: "center",
     overflow: "hidden",
-    width: 240,
   },
   videoThumbImage: {
     height: "100%",

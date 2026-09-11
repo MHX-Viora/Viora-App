@@ -338,7 +338,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     minHeight: 48,
   },
   actionButtonDisabled: { opacity: 0.62 },
-  actionText: { color: colors.white, fontSize: 16, fontWeight: "900" },
+  actionText: { color: colors.primaryContrast, fontSize: 16, fontWeight: "900" },
   backButton: {
     alignItems: "center",
     height: 40,
@@ -466,7 +466,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
   },
-  retryText: { color: colors.white, fontSize: 15, fontWeight: "900" },
+  retryText: { color: colors.primaryContrast, fontSize: 15, fontWeight: "900" },
   screen: { backgroundColor: colors.background, flex: 1 },
   skeleton: { backgroundColor: colors.border, borderRadius: 8 },
   skeletonAvatar: { borderRadius: 56, height: 112, width: 112 },

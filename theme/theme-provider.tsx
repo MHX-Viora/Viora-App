@@ -9,10 +9,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { Animated, StyleSheet } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 
-import { classicTheme } from "./classic";
-import { modernTheme } from "./modern";
+import { getThemeDefinition } from "./theme-catalog";
 import {
   DEFAULT_THEME_MODE,
   normalizeThemeMode,
@@ -30,15 +29,10 @@ type ThemeContextValue = {
   theme: AppTheme;
 };
 
-const themes: Record<ThemeMode, AppTheme> = {
-  classic: classicTheme,
-  modern: modernTheme,
-};
-
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function getTheme(mode: ThemeMode): AppTheme {
-  return themes[mode];
+  return getThemeDefinition(mode).theme;
 }
 
 export function ThemeProvider({ children }: PropsWithChildren) {
@@ -89,6 +83,17 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     () => ({ isHydrated, mode, setMode, theme: getTheme(mode) }),
     [isHydrated, mode, setMode],
   );
+
+  if (!isHydrated) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: getTheme(DEFAULT_THEME_MODE).colors.background },
+        ]}
+      />
+    );
+  }
 
   return (
     <ThemeContext.Provider value={value}>

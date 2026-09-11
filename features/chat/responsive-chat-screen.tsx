@@ -41,6 +41,22 @@ function DesktopChatShell({
   );
 }
 
+function DesktopRoomWithSettings() {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
+
+  return (
+    <View style={styles.settingsLayout}>
+      <View style={styles.roomPane}>
+        <ChatScreen />
+      </View>
+      <View style={styles.settingsPane}>
+        <ConversationSettingsScreen />
+      </View>
+    </View>
+  );
+}
+
 export function ResponsiveChatScreen({
   hasConversation,
   includeDesktopHeader = false,
@@ -50,15 +66,21 @@ export function ResponsiveChatScreen({
 }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
-  const { isDesktopWeb } = useResponsive();
-  const mode = getResponsiveChatMode({ hasConversation, isDesktopWeb });
+  const { isDesktopWeb, isLargeDesktop } = useResponsive();
+  const mode = getResponsiveChatMode({
+    hasConversation,
+    isDesktopWeb,
+    isLargeDesktop,
+  });
 
   if (mode === "list") return <ConversationsScreen />;
   if (mode === "detail") return <ChatScreen />;
 
   return (
     <DesktopChatShell includeDesktopHeader={includeDesktopHeader}>
-      {mode === "split-detail" ? (
+      {mode === "split-detail-settings" ? (
+        <DesktopRoomWithSettings />
+      ) : mode === "split-detail" ? (
         <ChatScreen />
       ) : (
         <View style={styles.empty}>
@@ -93,14 +115,7 @@ export function ResponsiveConversationSettingsScreen() {
   return (
     <DesktopChatShell includeDesktopHeader>
       {mode === "room-settings" ? (
-        <View style={styles.settingsLayout}>
-          <View style={styles.roomPane}>
-            <ChatScreen />
-          </View>
-          <View style={styles.settingsPane}>
-            <ConversationSettingsScreen />
-          </View>
-        </View>
+        <DesktopRoomWithSettings />
       ) : (
         <ConversationSettingsScreen />
       )}

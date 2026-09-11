@@ -20,6 +20,7 @@ import type {
   MessageDeletedEvent,
   NewMessageNotificationEvent,
 } from "@/types/chat";
+import { isMessageFromCurrentUser } from "./chat-realtime-policy";
 
 type MessageListener = (message: ChatMessage) => void;
 type ConversationListener = (conversation: Conversation) => void;
@@ -198,9 +199,13 @@ export const emitRealtimeMessageDeleted = (payload: unknown) => {
   return event;
 };
 
-export const emitRealtimeNewMessageNotification = (payload: unknown) => {
+export const emitRealtimeNewMessageNotification = (
+  payload: unknown,
+  currentUserId?: string | null,
+) => {
   const event = mapNewMessageNotificationEvent(payload);
   if (!event) return null;
+  if (isMessageFromCurrentUser(event.sender?.id, currentUserId)) return null;
   newMessageNotificationListeners.forEach((listener) => listener(event));
   return event;
 };

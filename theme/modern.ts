@@ -4,6 +4,7 @@ import { modernVisuals } from "./visuals";
 const shared = {
   black: "#000000",
   success: "#43A047",
+  successContrast: "#03141B",
   successSoft: "#EAF8F0",
   successText: "#168A51",
   white: "#FFFFFF",
@@ -19,12 +20,15 @@ const communityColors: ThemeColors = {
   borderSubtle: "rgba(139, 166, 198, 0.24)",
   card: "rgba(14, 28, 49, 0.76)",
   danger: "#FF5470",
+  dangerContrast: "#03141B",
   dangerSoft: "#FFF0F3",
   divider: "rgba(67, 220, 229, 0.58)",
   glow: "#9850E8",
   icon: "#F4F9FF",
   input: "rgba(22, 38, 63, 0.68)",
   messageMine: "rgba(36, 221, 228, 0.20)",
+  messageMineMuted: "#9EADC0",
+  messageMineText: "#F4F9FF",
   messageOther: "rgba(152, 80, 232, 0.14)",
   overlay: "rgba(0, 0, 0, 0.42)",
   placeholder: "#9EADC0",
@@ -47,7 +51,10 @@ const communityColors: ThemeColors = {
   toastBackground: "#111111",
   toastText: "#D3D3D3",
   verified: "#1D9BF0",
+  verifiedContrast: "#03141B",
   visuals: modernVisuals,
+  warning: "#FBBF24",
+  warningSoft: "rgba(251, 191, 36, 0.14)",
 };
 
 const reelsColors: ThemeColors = {
@@ -98,6 +105,11 @@ export const modernTheme: AppTheme = {
       shadowOpacity: 0.28,
       shadowRadius: 14,
     },
+  },
+  gradients: {
+    messageMine: [communityColors.messageMine, communityColors.messageMine],
+    premiumBadge: [communityColors.primary, communityColors.primary],
+    primary: [communityColors.primary, communityColors.primary],
   },
   isDark: true,
   mode: "modern",

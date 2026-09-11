@@ -13,12 +13,15 @@ export type ThemeColors = {
   borderSubtle: string;
   card: string;
   danger: string;
+  dangerContrast: string;
   dangerSoft: string;
   divider: string;
   glow: string;
   icon: string;
   input: string;
   messageMine: string;
+  messageMineMuted: string;
+  messageMineText: string;
   messageOther: string;
   overlay: string;
   placeholder: string;
@@ -33,6 +36,7 @@ export type ThemeColors = {
   secondaryBackground: string;
   shadow: string;
   success: string;
+  successContrast: string;
   successSoft: string;
   successText: string;
   surface: string;
@@ -44,8 +48,19 @@ export type ThemeColors = {
   toastBackground: string;
   toastText: string;
   verified: string;
+  verifiedContrast: string;
   visuals: ThemeVisuals;
+  warning: string;
+  warningSoft: string;
   white: string;
+};
+
+export type ThemeGradient = readonly [string, string, ...string[]];
+
+export type ThemeGradients = {
+  messageMine: ThemeGradient;
+  premiumBadge: ThemeGradient;
+  primary: ThemeGradient;
 };
 
 export type ThemeEffects = {
@@ -63,6 +78,7 @@ export type ThemeEffects = {
 export type AppTheme = {
   colors: ThemeColors;
   effects: ThemeEffects;
+  gradients: ThemeGradients;
   isDark: boolean;
   mode: ThemeMode;
   notifications: ThemeColors;

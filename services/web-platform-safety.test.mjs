@@ -29,6 +29,7 @@ test("web notification and call adapters do not import native SDKs", () => {
 
 test("web push adapter preserves the root-layout contract", () => {
   const source = readService("push-notification.service");
+  const pwaSource = readService("pwa.service");
 
   for (const exportName of [
     "registerPushNotifications",
@@ -39,6 +40,26 @@ test("web push adapter preserves the root-layout contract", () => {
   ]) {
     assert.match(source, new RegExp(`export const ${exportName}\\b`));
   }
+
+  assert.match(source, /from "firebase\/messaging"/);
+  assert.match(source, /registerDeviceToken/);
+  assert.match(source, /registerAnktServiceWorker/);
+  assert.match(pwaSource, /firebase-messaging-sw\.js/);
+});
+
+test("Web incoming-call notifications open a validated call route", () => {
+  const notification = readService("incoming-call-notification.service");
+  const worker = readFileSync(
+    new URL("../public/firebase-messaging-sw.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(notification, /new Notification/);
+  assert.match(notification, /document\.title/);
+  assert.match(notification, /notification\.onclose/);
+  assert.match(worker, /messaging\.onBackgroundMessage/);
+  assert.match(worker, /incoming-call/);
+  assert.doesNotMatch(worker, /acceptVoiceCall|\/accept/);
 });
 
 test("web call routes do not import React Native WebRTC or LiveKit Native", () => {

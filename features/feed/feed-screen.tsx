@@ -1,5 +1,5 @@
 ﻿import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Alert,
@@ -11,6 +11,7 @@ import {
   Text,
   View
 } from "react-native";
+import type { ViewToken } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
@@ -19,6 +20,7 @@ import { CreatePostModal } from "@/components/feed/create-post-modal";
 import { FeedSearchModal } from "@/components/feed/feed-search-modal";
 import { PostCard } from "@/components/feed/post-card";
 import { PostComposer } from "@/components/feed/post-composer";
+import type { FeedCategory } from "@/components/feed/feed-category-header";
 import { ResponsiveContent } from "@/components/layout/responsive-content";
 import {
   getFixedTopBarLayout,
@@ -31,6 +33,7 @@ import {
 import { feedPosts as initialPosts } from "@/features/feed/data";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { createPost, getPosts } from "@/services/feed.service";
+import { trackArticleInteraction } from "@/services/article.service";
 import {
   reactPost,
   savePost,
@@ -39,23 +42,47 @@ import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
 import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing } from "@/theme";
-import type { CreatePostInput, FeedPost } from "@/types/feed";
+import type { CreatePostInput, FeedPost, PostFeedSort } from "@/types/feed";
 import { canCreateArticle } from "@/types/account-style";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
 const PAGE_SIZE = 10;
+type FeedContentCategory = Exclude<FeedCategory, "reels">;
 
 export function FeedScreen() {
+  const params = useLocalSearchParams<{ category?: string }>();
+  const initialCategory: FeedContentCategory =
+    params.category === "articles" ? "articles" : "community";
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
-  const { isDesktopWeb, isWeb } = useResponsive();
+  const { isDesktopWeb, isLargeDesktop, isWeb } = useResponsive();
+  const [activeCategory, setActiveCategory] =
+    useState<FeedContentCategory>(initialCategory);
+  const activeCategoryRef = useRef<FeedContentCategory>(initialCategory);
+  const [articleSort, setArticleSort] = useState<PostFeedSort>("recommended");
+  const articleSortRef = useRef<PostFeedSort>("recommended");
+  const viewedArticleIdsRef = useRef(new Set<string>());
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken<FeedPost>[] }) => {
+      if (activeCategoryRef.current !== "articles") return;
+
+      viewableItems.forEach(({ item }) => {
+        if (item.postType !== 2 || viewedArticleIdsRef.current.has(item.id)) return;
+        viewedArticleIdsRef.current.add(item.id);
+        void trackArticleInteraction(item.id, "impression").catch(() => undefined);
+      });
+    },
+  ).current;
+  const loadRequestIdRef = useRef(0);
   const isCompactWeb = isWeb && !isDesktopWeb;
   const feedTopPadding = getFixedTopBarLayout({
+    isArticle: activeCategory === "articles",
     isCompactWeb,
     isDesktopWeb,
+    useDesktopSideRails: isDesktopWeb && isLargeDesktop,
   }).height;
   const feedBottomPadding = getResponsiveBottomPadding({
     desktopPadding: spacing.xl,
@@ -76,7 +103,12 @@ export function FeedScreen() {
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [draftImages, setDraftImages] = useState<string[]>([]);
   const [isCreatingPost, setIsCreatingPost] = useState(false);
-  const loadPosts = async (nextPage: number) => {
+  const loadPosts = async (
+    nextPage: number,
+    category = activeCategoryRef.current,
+    sort = articleSortRef.current,
+  ) => {
+    const requestId = ++loadRequestIdRef.current;
     if (nextPage === 1) {
       setIsLoading(true);
       setErrorMessage("");
@@ -88,20 +120,44 @@ export function FeedScreen() {
       const result = await getPosts({
         page: nextPage,
         pageSize: PAGE_SIZE,
+        postType: category === "community" ? 0 : 2,
+        sort: category === "articles" ? sort : undefined,
       });
 
-      setPosts((current) =>
-        nextPage === 1 ? result.posts : [...current, ...result.posts],
-      );
+      if (
+        loadRequestIdRef.current !== requestId ||
+        activeCategoryRef.current !== category ||
+        (category === "articles" && articleSortRef.current !== sort)
+      ) return;
+
+      setPosts((current) => {
+        if (nextPage === 1) return result.posts;
+        const existingIds = new Set(current.map((post) => post.id));
+        return [
+          ...current,
+          ...result.posts.filter((post) => !existingIds.has(post.id)),
+        ];
+      });
       setPage(nextPage);
       setTotalPages(result.totalPages);
     } catch (error) {
+      if (
+        loadRequestIdRef.current !== requestId ||
+        activeCategoryRef.current !== category ||
+        (category === "articles" && articleSortRef.current !== sort)
+      ) return;
       setErrorMessage(
         error instanceof Error ? error.message : "Không thể tải bài viết.",
       );
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      if (
+        loadRequestIdRef.current === requestId &&
+        activeCategoryRef.current === category &&
+        (category !== "articles" || articleSortRef.current === sort)
+      ) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
   };
 
@@ -118,12 +174,38 @@ export function FeedScreen() {
     };
 
     loadCurrentUser();
-    loadPosts(1);
+    loadPosts(1, initialCategory);
   }, []);
+
+  const selectCategory = (category: FeedContentCategory) => {
+    if (activeCategoryRef.current === category) return;
+    activeCategoryRef.current = category;
+    setActiveCategory(category);
+    setPosts([]);
+    setPage(1);
+    setTotalPages(1);
+    void loadPosts(1, category);
+  };
+
+  useEffect(() => {
+    const requestedCategory: FeedContentCategory =
+      params.category === "articles" ? "articles" : "community";
+    selectCategory(requestedCategory);
+  }, [params.category]);
+
+  const selectArticleSort = (sort: PostFeedSort) => {
+    if (articleSortRef.current === sort) return;
+    articleSortRef.current = sort;
+    setArticleSort(sort);
+    setPosts([]);
+    setPage(1);
+    setTotalPages(1);
+    void loadPosts(1, "articles", sort);
+  };
 
   const loadMorePosts = () => {
     if (isLoading || isLoadingMore || page >= totalPages) return;
-    loadPosts(page + 1);
+    loadPosts(page + 1, activeCategoryRef.current, articleSortRef.current);
   };
 
   const pickImages = async (): Promise<string[] | null> => {
@@ -172,7 +254,13 @@ export function FeedScreen() {
 
     try {
       const newPost = await createPost(payload);
-      setPosts((current) => [newPost, ...current]);
+      if (activeCategoryRef.current === "community") {
+        setPosts((current) => [newPost, ...current]);
+      } else {
+        activeCategoryRef.current = "community";
+        setActiveCategory("community");
+        await loadPosts(1, "community");
+      }
       closeModal();
       showAppToast({
         message: "Bài viết của bạn đã được đăng.",
@@ -257,6 +345,17 @@ export function FeedScreen() {
   const handleDeletedPost = (postId: string) => {
     setPosts((current) => current.filter((post) => post.id !== postId));
   };
+  const handleNotInterested = async (postId: string) => {
+    try {
+      await trackArticleInteraction(postId, "notInterested");
+      setPosts((current) => current.filter((post) => post.id !== postId));
+    } catch (error) {
+      Alert.alert(
+        "Không thể cập nhật đề xuất",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    }
+  };
   const openUserProfile = (userId: string) => {
     void openProfileByUserId(router, userId);
   };
@@ -285,7 +384,10 @@ export function FeedScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>
-                {errorMessage || "Chưa có bài viết"}
+                {errorMessage ||
+                  (activeCategory === "articles"
+                    ? "Chưa có bài báo"
+                    : "Chưa có bài viết")}
               </Text>
               <Text style={styles.emptyText}>
                 Kéo xuống để thử tải lại.
@@ -295,7 +397,10 @@ export function FeedScreen() {
           ListFooterComponent={isLoadingMore ? <PostSkeleton /> : null}
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.35}
-          onRefresh={() => loadPosts(1)}
+          onViewableItemsChanged={onViewableItemsChanged}
+          onRefresh={() =>
+            loadPosts(1, activeCategoryRef.current, articleSortRef.current)
+          }
           refreshing={isLoading}
           renderItem={({ item }) => (
             <PostCard
@@ -303,22 +408,36 @@ export function FeedScreen() {
               onDeleted={handleDeletedPost}
               onOpenAuthor={openUserProfile}
               onOpenArticle={(articleId) => router.push({ pathname: "/article/[id]", params: { id: articleId } })}
+              onNotInterested={articleSort === "recommended" ? handleNotInterested : undefined}
               onReact={handleReactPost}
               onSave={handleSavePost}
               onShare={handleSharePost}
               post={item}
+              variant={activeCategory === "articles" ? "news" : "default"}
             />
           )}
           showsVerticalScrollIndicator={false}
         />
       )}
       <PostComposer
+        activeCategory={activeCategory}
+        articleSort={articleSort}
         avatar={myAvatar}
         canCreateArticle={canPublishArticle}
         displayName={myDisplayName}
         onArticlePress={() => router.push("/article/editor")}
+        onArticleSortChange={selectArticleSort}
+        onArticlesFeedPress={() => {
+          router.setParams({ category: "articles" });
+          selectCategory("articles");
+        }}
+        onCommunityPress={() => {
+          router.setParams({ category: "community" });
+          selectCategory("community");
+        }}
         onCreatePress={() => setModalVisible(true)}
         onImagePress={openWithImagePicker}
+        onReelsPress={() => router.push("/(tabs)/reels")}
         onSearchPress={() => setSearchVisible(true)}
       />
       </ResponsiveContent>
@@ -332,7 +451,19 @@ export function FeedScreen() {
         visible={modalVisible}
       />
       <FeedSearchModal
+        articleSort={articleSort}
+        category={activeCategory}
         onClose={() => setSearchVisible(false)}
+        onOpenArticle={(articleId) => {
+          setSearchVisible(false);
+          router.push({ pathname: "/article/[id]", params: { id: articleId } });
+        }}
+        onOpenAuthor={(userId) => {
+          setSearchVisible(false);
+          openUserProfile(userId);
+        }}
+        onArticleSortChange={selectArticleSort}
+        onShare={handleSharePost}
         visible={searchVisible}
       />
       <CommentsModal

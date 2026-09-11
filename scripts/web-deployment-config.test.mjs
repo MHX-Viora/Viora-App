@@ -17,4 +17,32 @@ test("Web exports as an SPA with a direct-route fallback", async () => {
     vercelConfig.rewrites.some((rewrite) => rewrite.destination === "/"),
     "Vercel must route direct browser URLs through the SPA entry point",
   );
+
+  const fallback = vercelConfig.rewrites.find((rewrite) => rewrite.destination === "/");
+  const fallbackPattern = new RegExp(`^${fallback.source}$`);
+  for (const pwaAsset of [
+    "/manifest.webmanifest",
+    "/firebase-messaging-sw.js",
+    "/pwa-icon-192.png",
+    "/pwa-icon-512.png",
+  ]) {
+    assert.equal(
+      fallbackPattern.test(pwaAsset),
+      false,
+      `${pwaAsset} must be served as a static file instead of the SPA shell`,
+    );
+  }
+
+  const workerHeaders = vercelConfig.headers?.find(
+    (entry) => entry.source === "/firebase-messaging-sw.js",
+  );
+  assert.ok(workerHeaders, "Service Worker must have an explicit revalidation policy");
+  assert.ok(
+    workerHeaders.headers.some(
+      (header) =>
+        header.key.toLowerCase() === "cache-control" &&
+        header.value.includes("no-cache"),
+    ),
+    "Service Worker must revalidate after a deployment",
+  );
 });

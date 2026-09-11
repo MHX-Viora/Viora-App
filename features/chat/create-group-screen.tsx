@@ -89,7 +89,7 @@ function SelectedMember({
             onPress={() => onRemove(friend.id)}
             style={styles.removeSelected}
           >
-            <Ionicons color={colors.white} name="close" size={12} />
+            <Ionicons color={colors.dangerContrast} name="close" size={12} />
           </Pressable>
         ) : null}
       </View>
@@ -139,7 +139,7 @@ const FriendRow = memo(function FriendRow({
       </View>
       <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
         {isSelected ? (
-          <Ionicons color={colors.white} name="checkmark" size={15} />
+          <Ionicons color={colors.primaryContrast} name="checkmark" size={15} />
         ) : null}
       </View>
     </Pressable>
@@ -389,7 +389,7 @@ export function CreateGroupScreen() {
             </View>
           )}
           <View style={styles.cameraBadge}>
-            <Ionicons color={colors.white} name="camera" size={15} />
+            <Ionicons color={colors.primaryContrast} name="camera" size={15} />
           </View>
         </Pressable>
 
