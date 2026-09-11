@@ -7,7 +7,10 @@ import {
   clearMessageCache,
   getMessageCache,
   isMessageCacheStale,
+  deleteMessageRetry,
+  getMessageRetry,
   replaceCachedMessage,
+  setMessageRetry,
   setCachedMessagePage,
   upsertCachedMessage,
 } from "./message-cache.ts";
@@ -66,6 +69,15 @@ test("message cache freshness uses the bounded TTL", () => {
   setCachedMessagePage("room-a", [message("m1")], 1, 1, 1_000);
   assert.equal(isMessageCacheStale("room-a", 1_000 + MESSAGE_CACHE_TTL_MS - 1), false);
   assert.equal(isMessageCacheStale("room-a", 1_000 + MESSAGE_CACHE_TTL_MS), true);
+});
+
+test("failed optimistic messages keep bounded in-memory retry payloads", () => {
+  clearMessageCache();
+  const payload = { attachments: [], content: "retry", conversationId: "room-a" };
+  setMessageRetry("room-a", "pending-1", payload);
+  assert.equal(getMessageRetry("room-a", "pending-1"), payload);
+  deleteMessageRetry("room-a", "pending-1");
+  assert.equal(getMessageRetry("room-a", "pending-1"), undefined);
 });
 
 test("ending the session clears message history cache", () => {

@@ -9,6 +9,7 @@ const realtimeService = readFileSync(
   new URL("../../services/realtime.service.ts", import.meta.url),
   "utf8",
 );
+const chatScreen = readFileSync(new URL("./chat-screen.tsx", import.meta.url), "utf8");
 
 test("new-message event from the current user is ignored", () => {
   assert.equal(isMessageFromCurrentUser("user-1", "user-1"), true);
@@ -27,4 +28,12 @@ test("SignalR filters current-user notifications before publishing them", () => 
     /emitRealtimeNewMessageNotification\(payload, currentUser\?\.id\)/,
   );
   assert.match(chatEvents, /isMessageFromCurrentUser\(event\.sender\?\.id, currentUserId\)/);
+});
+
+test("message edit and update events reuse the incremental message channel", () => {
+  assert.match(realtimeService, /connection\.on\("MessageEdited", \(payload\) => \{\s*emitRealtimeMessage\(payload\);/);
+  assert.match(realtimeService, /connection\.on\("MessageUpdated", \(payload\) => \{\s*emitRealtimeMessage\(payload\);/);
+  assert.match(chatScreen, /item\.id === nextMessage\.id[\s\S]{0,220}\.\.\.nextMessage/);
+  assert.match(realtimeService, /connection\.on\("ReactionAdded", \(payload\) => \{\s*emitRealtimeMessage\(payload\);/);
+  assert.match(realtimeService, /connection\.on\("ReactionRemoved", \(payload\) => \{\s*emitRealtimeMessage\(payload\);/);
 });

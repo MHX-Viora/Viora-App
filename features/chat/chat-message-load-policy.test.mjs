@@ -7,9 +7,18 @@ const chatScreen = readFileSync(new URL("./chat-screen.tsx", import.meta.url), "
 test("chat loads the first message page only when entering or changing rooms", () => {
   assert.match(
     chatScreen,
-    /useEffect\(\(\) => \{\s*load\(1, "initial"\);\s*\}, \[load\]\);/,
+    /getMessageCache\(conversationId\)/,
   );
+  assert.match(chatScreen, /isMessageCacheStale\(conversationId\)/);
+  assert.match(chatScreen, /cached\?\.initialized \? "background" : "initial"/);
+  assert.match(chatScreen, /setCachedMessagePage\(/);
   assert.doesNotMatch(chatScreen, /subscribeRealtimeSyncRequests/);
+});
+
+test("cached messages render without the full-screen loading state", () => {
+  assert.match(chatScreen, /useState<ChatMessage\[\]>\(\(\) =>[\s\S]{0,80}getCachedMessages\(conversationId\)/);
+  assert.match(chatScreen, /useState\([\s\S]{0,80}\(\) => !getMessageCache\(conversationId\)\?\.initialized/);
+  assert.match(chatScreen, /mode: "initial" \| "background" \| "more"/);
 });
 
 test("older messages remain user-driven through list pagination", () => {

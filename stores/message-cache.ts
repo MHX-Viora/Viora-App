@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@/types/chat";
+import type { ChatMessage, SendMessageAttachment } from "@/types/chat";
 
 export const MESSAGE_CACHE_TTL_MS = 30_000;
 
@@ -11,6 +11,16 @@ export type MessageCacheEntry = {
 };
 
 const entries = new Map<string, MessageCacheEntry>();
+const retries = new Map<string, Map<string, MessageRetryPayload>>();
+
+export type MessageRetryPayload = {
+  attachments: SendMessageAttachment[];
+  content: string;
+  conversationId: string;
+  mentionUserIds?: string[];
+  replyToMessageId?: string;
+  stickerId?: string;
+};
 
 const emptyEntry = (): MessageCacheEntry => ({
   initialized: false,
@@ -118,8 +128,34 @@ export const isMessageCacheStale = (
   return !entry?.initialized || now - entry.lastFetchedAt >= MESSAGE_CACHE_TTL_MS;
 };
 
-export const clearMessageCache = (conversationId?: string) => {
-  if (conversationId) entries.delete(conversationId);
-  else entries.clear();
+export const setMessageRetry = (
+  conversationId: string,
+  messageId: string,
+  payload: MessageRetryPayload,
+) => {
+  const conversationRetries = retries.get(conversationId) ?? new Map();
+  conversationRetries.set(messageId, payload);
+  retries.set(conversationId, conversationRetries);
 };
 
+export const getMessageRetry = (conversationId: string, messageId: string) =>
+  retries.get(conversationId)?.get(messageId);
+
+export const deleteMessageRetry = (
+  conversationId: string,
+  messageId: string,
+) => {
+  const conversationRetries = retries.get(conversationId);
+  conversationRetries?.delete(messageId);
+  if (conversationRetries?.size === 0) retries.delete(conversationId);
+};
+
+export const clearMessageCache = (conversationId?: string) => {
+  if (conversationId) {
+    entries.delete(conversationId);
+    retries.delete(conversationId);
+  } else {
+    entries.clear();
+    retries.clear();
+  }
+};

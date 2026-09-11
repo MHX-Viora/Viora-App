@@ -139,8 +139,12 @@ const getRealtimeConnection = () => {
     connection.on("MessageDelivered", (payload) => {
       emitRealtimeMessageDelivered(payload);
     });
-    connection.on("MessageEdited", () => undefined);
-    connection.on("MessageUpdated", () => undefined);
+    connection.on("MessageEdited", (payload) => {
+      emitRealtimeMessage(payload);
+    });
+    connection.on("MessageUpdated", (payload) => {
+      emitRealtimeMessage(payload);
+    });
     connection.on("MessageDeleted", (payload) => {
       emitRealtimeMessageDeleted(payload);
     });
@@ -240,8 +244,12 @@ const getRealtimeConnection = () => {
     connection.on("TypingStopped", () => undefined);
     connection.on("UserOnline", () => undefined);
     connection.on("UserOffline", () => undefined);
-    connection.on("ReactionAdded", () => undefined);
-    connection.on("ReactionRemoved", () => undefined);
+    connection.on("ReactionAdded", (payload) => {
+      emitRealtimeMessage(payload);
+    });
+    connection.on("ReactionRemoved", (payload) => {
+      emitRealtimeMessage(payload);
+    });
     connection.on("ConversationPinned", (payload) => {
       emitRealtimeConversationPinnedChanged(payload);
     });

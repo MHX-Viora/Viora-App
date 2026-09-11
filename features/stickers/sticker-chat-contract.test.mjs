@@ -15,3 +15,8 @@ test("chat sends database sticker ids immediately and renders dedicated sticker 
 test("chat sticker panel no longer reads the legacy hard-coded list", () => {
   assert.doesNotMatch(chat, /CHAT_STICKERS/);
 });
+
+test("sticker messages use the cross-platform memory and disk image cache", () => {
+  assert.match(chat, /Image as ExpoImage/);
+  assert.match(chat, /<ExpoImage cachePolicy="memory-disk"/);
+});
