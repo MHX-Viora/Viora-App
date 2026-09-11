@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useResponsive } from "@/hooks/use-responsive";
+import { chatLocalRepository } from "@/data/chat-local/chat-local-repository";
 import { getStickerPack, getStickerPacks } from "@/services/sticker.service";
+import { getUser } from "@/stores/session-store";
 import {
   getStickerPackDetailCache,
   getStickerPackPageCache,
@@ -46,7 +48,10 @@ export function StickerPanel({ onSelect, onOpenStore }: Props) {
     let active = true;
     void (async () => {
       try {
-        await hydrateStickerCache();
+        const ownerId = (await getUser())?.id;
+        await hydrateStickerCache(chatLocalRepository, ownerId, {
+          pageKeys: [USABLE_PACKS_KEY],
+        });
         const [cached, stored] = [
           getStickerPackPageCache(USABLE_PACKS_KEY),
           await getRecentStickers(),
@@ -80,7 +85,10 @@ export function StickerPanel({ onSelect, onOpenStore }: Props) {
     let active = true;
     void (async () => {
       try {
-        await hydrateStickerCache();
+        const ownerId = (await getUser())?.id;
+        await hydrateStickerCache(chatLocalRepository, ownerId, {
+          detailIds: [selectedPackId],
+        });
         const cached = getStickerPackDetailCache(selectedPackId);
         if (!active) return;
         setDetail(cached?.value ?? null);

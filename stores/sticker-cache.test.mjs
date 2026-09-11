@@ -16,6 +16,7 @@ import {
 } from "./sticker-cache.ts";
 
 const stickerService = readFileSync(new URL("../services/sticker.service.ts", import.meta.url), "utf8");
+const stickerCacheSource = readFileSync(new URL("./sticker-cache.ts", import.meta.url), "utf8");
 
 const pack = { id: "pack-1", name: "Pack", thumbnailUrl: "https://img/pack.png" };
 const detail = { pack, stickers: [{ id: "sticker-1", imageUrl: "https://img/1.png" }] };
@@ -52,4 +53,11 @@ test("sticker metadata cache evicts the oldest entries", () => {
 test("sticker HTTP requests are single-flight by list query and detail ID", () => {
   assert.match(stickerService, /stickerRequests\.run\(`packs:\$\{type\}:\$\{page\}:\$\{pageSize\}`/);
   assert.match(stickerService, /stickerRequests\.run\(`pack:\$\{id\}`/);
+});
+
+test("sticker metadata persistence uses the local repository instead of AsyncStorage", () => {
+  assert.match(stickerCacheSource, /ChatLocalRepository/);
+  assert.match(stickerCacheSource, /getStickerPage/);
+  assert.match(stickerCacheSource, /getStickerDetail/);
+  assert.doesNotMatch(stickerCacheSource, /AsyncStorage/);
 });

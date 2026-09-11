@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useStore } from "zustand";
 
 import { ConversationRow } from "@/components/chat/conversation-row";
 import { showAppToast } from "@/components/common/app-toast";
@@ -40,10 +41,16 @@ import {
   setConversationPinned,
 } from "@/services/chat.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
+import {
+  persistLocalConversations,
+  readLocalConversations,
+  removeLocalConversation,
+} from "@/services/chat-local-cache.service";
 import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { getUser } from "@/stores/session-store";
 import {
   getConversationListCache,
+  conversationCacheStore,
   isConversationListCacheStale,
   setConversationListCache,
 } from "@/stores/conversation-list-cache";
@@ -77,6 +84,10 @@ export function ConversationsScreen({
     scrollToMessageId?: string | string[];
   }>();
   const [items, setItemState] = useState<Conversation[]>(getConversationListCache);
+  const zustandConversations = useStore(
+    conversationCacheStore,
+    (state) => state.conversations,
+  );
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [keyword, setKeyword] = useState("");
@@ -102,12 +113,19 @@ export function ConversationsScreen({
   const activeKeywordRef = useRef(debouncedKeyword);
   const loadRequestIdRef = useRef(0);
   activeKeywordRef.current = debouncedKeyword;
+  useEffect(() => {
+    if (!activeKeywordRef.current) setItemState(zustandConversations);
+  }, [zustandConversations]);
   const setItems = useCallback((update: SetStateAction<Conversation[]>) => {
-    setItemState((current) => {
-      const next = typeof update === "function" ? update(current) : update;
-      if (!activeKeywordRef.current) setConversationListCache(next);
-      return next;
-    });
+    if (activeKeywordRef.current) {
+      setItemState((current) => typeof update === "function" ? update(current) : update);
+      return;
+    }
+    const current = getConversationListCache();
+    const next = typeof update === "function" ? update(current) : update;
+    setConversationListCache(next);
+    void persistLocalConversations(next);
+    setItemState(next);
   }, []);
 
   const requestedConversationId = firstParam(params.conversationId);
@@ -275,9 +293,23 @@ export function ConversationsScreen({
 
   useFocusEffect(
     useCallback(() => {
-      const hasCachedItems = getConversationListCache().length > 0;
-      if (!debouncedKeyword && !isConversationListCacheStale()) return;
-      void load(1, hasCachedItems ? "refresh" : "initial");
+      let active = true;
+      void (async () => {
+        let hasCachedItems = getConversationListCache().length > 0;
+        if (!debouncedKeyword && !hasCachedItems) {
+          const localItems = await readLocalConversations();
+          if (!active) return;
+          if (localItems.length > 0) {
+            setConversationListCache(localItems);
+            setItemState(sortConversations(localItems));
+            setIsLoading(false);
+            hasCachedItems = true;
+          }
+        }
+        if (!debouncedKeyword && !isConversationListCacheStale()) return;
+        void load(1, hasCachedItems ? "refresh" : "initial");
+      })();
+      return () => { active = false; };
     }, [debouncedKeyword, load]),
   );
 
@@ -427,6 +459,7 @@ export function ConversationsScreen({
   useEffect(
     () =>
       subscribeRealtimeConversationDissolved((event) => {
+        void removeLocalConversation(event.conversationId);
         setItems((current) =>
           current.filter((item) => item.id !== event.conversationId),
         );

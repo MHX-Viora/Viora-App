@@ -60,6 +60,8 @@ await import("../stores/refresh-token-storage.web.test.mjs");
 await import("../stores/conversation-list-cache.test.mjs");
 await import("../stores/message-cache.test.mjs");
 await import("../stores/sticker-cache.test.mjs");
+await import("../data/chat-local/chat-local-repository.test.mjs");
+await import("../data/chat-local/chat-local-write-coordinator.test.mjs");
 await import("../services/chat-message-request.test.mjs");
 await import("../theme/breakpoints.test.mjs");
 await import("../theme/premium-ocean.test.mjs");

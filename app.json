@@ -175,7 +175,8 @@
       "@react-native-google-signin/google-signin",
       "@livekit/react-native-expo-plugin",
       "expo-secure-store",
-      "expo-audio"
+      "expo-audio",
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -4,6 +4,8 @@ import { refreshTokenStorage } from "@/stores/refresh-token-storage";
 import { clearConversationListCache } from "@/stores/conversation-list-cache";
 import { clearMessageCache } from "@/stores/message-cache";
 import { clearStickerCache } from "@/stores/sticker-cache";
+import { chatLocalRepository } from "@/data/chat-local/chat-local-repository";
+import { clearAfterLocalMutations } from "@/data/chat-local/chat-local-write-coordinator";
 
 const SESSION_KEY = "viora.session";
 const invalidationListeners = new Set<() => void>();
@@ -38,13 +40,23 @@ export const saveSession = async (session: Session): Promise<void> => {
 };
 
 export const clearSession = async (): Promise<void> => {
-  clearConversationListCache();
-  clearMessageCache();
-  await clearStickerCache();
+  const session = await getSession();
   await Promise.all([
     sessionStorage.deleteItemAsync(SESSION_KEY),
     refreshTokenStorage.deleteAsync(),
   ]);
+  clearConversationListCache();
+  clearMessageCache();
+  await clearStickerCache();
+  if (session?.user?.id) {
+    await clearAfterLocalMutations(async () => {
+      await chatLocalRepository.initialize();
+      await chatLocalRepository.clearOwner(session.user!.id);
+    })
+      .catch((error: unknown) => {
+        if (__DEV__) console.info("[CHAT CACHE] logout cleanup failed", error);
+      });
+  }
   invalidationListeners.forEach((listener) => listener());
 };
 

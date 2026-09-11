@@ -185,15 +185,22 @@ export const getChatUnreadSummary = async (): Promise<ChatUnreadSummary> => {
 
 export const getConversationMessages = async (
   conversationId: string,
-  query: { page: number; pageSize: number },
+  query: {
+    afterMessageId?: string;
+    beforeMessageId?: string;
+    page: number;
+    pageSize: number;
+  },
 ): Promise<MessagesPage> =>
   messageRequests.run(
-    `${conversationId}:${query.page}:${query.pageSize}`,
+    `${conversationId}:${query.page}:${query.pageSize}:${query.afterMessageId ?? ""}:${query.beforeMessageId ?? ""}`,
     async () => {
       const params = new URLSearchParams({
         page: String(query.page),
         pageSize: String(query.pageSize),
       });
+      if (query.afterMessageId) params.set("afterMessageId", query.afterMessageId);
+      if (query.beforeMessageId) params.set("beforeMessageId", query.beforeMessageId);
       const response = await authenticatedFetch(
         `${BASE_URL}/api/chat/conversations/${conversationId}/messages?${params.toString()}`,
       );

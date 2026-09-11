@@ -35,7 +35,10 @@ test("single-flight isolates keys and clears completed requests", async () => {
 });
 
 test("message API uses conversation, page, and page size as its request key", () => {
-  assert.match(chatService, /messageRequests\.run\(\s*`\$\{conversationId\}:\$\{query\.page\}:\$\{query\.pageSize\}`/);
+  assert.match(chatService, /query\.afterMessageId \?\? ""/);
+  assert.match(chatService, /query\.beforeMessageId \?\? ""/);
+  assert.match(chatService, /params\.set\("afterMessageId", query\.afterMessageId\)/);
+  assert.match(chatService, /params\.set\("beforeMessageId", query\.beforeMessageId\)/);
 });
 
 test("conversation list requests deduplicate identical query pages", () => {

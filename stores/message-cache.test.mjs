@@ -18,6 +18,7 @@ import {
 } from "./message-cache.ts";
 
 const sessionStore = readFileSync(new URL("./session-store.ts", import.meta.url), "utf8");
+const messageCacheSource = readFileSync(new URL("./message-cache.ts", import.meta.url), "utf8");
 
 const message = (id, overrides = {}) => ({
   attachments: [],
@@ -110,4 +111,12 @@ test("failed optimistic messages keep bounded in-memory retry payloads", () => {
 
 test("ending the session clears message history cache", () => {
   assert.match(sessionStore, /clearSession[\s\S]*clearMessageCache\(\)/);
+});
+
+test("message memory cache is backed by Zustand and separates loading states per room", () => {
+  assert.match(messageCacheSource, /from "zustand\/vanilla"/);
+  assert.match(messageCacheSource, /createStore<MessageCacheState>/);
+  assert.match(messageCacheSource, /initialLoading: boolean/);
+  assert.match(messageCacheSource, /backgroundRefreshing: boolean/);
+  assert.match(messageCacheSource, /loadingMore: boolean/);
 });

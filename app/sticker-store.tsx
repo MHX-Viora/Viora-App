@@ -6,6 +6,7 @@ import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, 
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
+import { chatLocalRepository } from "@/data/chat-local/chat-local-repository";
 import { useResponsive } from "@/hooks/use-responsive";
 import { getStickerPack, getStickerPacks } from "@/services/sticker.service";
 import {
@@ -18,6 +19,7 @@ import {
   stickerPackPageKey,
 } from "@/stores/sticker-cache";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
+import { getUser } from "@/stores/session-store";
 import { breakpoints } from "@/theme/breakpoints";
 import type { StickerPack, StickerPackDetail } from "@/types/sticker";
 
@@ -48,7 +50,10 @@ export default function StickerStoreScreen() {
     void (async () => {
       const cacheKey = stickerPackPageKey(filter, 1, 50);
       try {
-        await hydrateStickerCache();
+        const ownerId = (await getUser())?.id;
+        await hydrateStickerCache(chatLocalRepository, ownerId, {
+          pageKeys: [cacheKey],
+        });
         const cached = getStickerPackPageCache(cacheKey);
         if (!active) return;
         setPacks(cached?.value.items ?? []);
@@ -72,7 +77,10 @@ export default function StickerStoreScreen() {
 
   const openPreview = async (packId: string) => {
     previewPackIdRef.current = packId;
-    await hydrateStickerCache();
+    const ownerId = (await getUser())?.id;
+    await hydrateStickerCache(chatLocalRepository, ownerId, {
+      detailIds: [packId],
+    });
     if (previewPackIdRef.current !== packId) return;
     const cached = getStickerPackDetailCache(packId);
     if (cached) setPreview(cached.value);

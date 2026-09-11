@@ -1,19 +1,20 @@
 import type { ChatMessage, SendMessageAttachment } from "@/types/chat";
+import { createStore } from "zustand/vanilla";
 
 export const MESSAGE_CACHE_TTL_MS = 30_000;
 export const MAX_MESSAGE_CACHE_ROOMS = 12;
 export const MAX_MESSAGES_PER_CONVERSATION = 1_000;
 
 export type MessageCacheEntry = {
+  backgroundRefreshing: boolean;
   initialized: boolean;
+  initialLoading: boolean;
   lastFetchedAt: number;
+  loadingMore: boolean;
   messages: ChatMessage[];
   page: number;
   totalPages: number;
 };
-
-const entries = new Map<string, MessageCacheEntry>();
-const retries = new Map<string, Map<string, MessageRetryPayload>>();
 
 export type MessageRetryPayload = {
   attachments: SendMessageAttachment[];
@@ -24,9 +25,22 @@ export type MessageRetryPayload = {
   stickerId?: string;
 };
 
+type MessageCacheState = {
+  entries: Map<string, MessageCacheEntry>;
+  retries: Map<string, Map<string, MessageRetryPayload>>;
+};
+
+export const messageCacheStore = createStore<MessageCacheState>(() => ({
+  entries: new Map(),
+  retries: new Map(),
+}));
+
 const emptyEntry = (): MessageCacheEntry => ({
+  backgroundRefreshing: false,
   initialized: false,
+  initialLoading: true,
   lastFetchedAt: 0,
+  loadingMore: false,
   messages: [],
   page: 1,
   totalPages: 1,
@@ -47,6 +61,9 @@ const isPending = (message: ChatMessage) =>
   message.sendStatus === "failed";
 
 const storeEntry = (conversationId: string, entry: MessageCacheEntry) => {
+  const state = messageCacheStore.getState();
+  const entries = new Map(state.entries);
+  const retries = new Map(state.retries);
   entries.delete(conversationId);
   entries.set(conversationId, {
     ...entry,
@@ -58,16 +75,12 @@ const storeEntry = (conversationId: string, entry: MessageCacheEntry) => {
     entries.delete(oldestId);
     retries.delete(oldestId);
   }
+  messageCacheStore.setState({ entries, retries });
   return entries.get(conversationId)!;
 };
 
 export const getMessageCache = (conversationId: string) => {
-  const entry = entries.get(conversationId);
-  if (entry) {
-    entries.delete(conversationId);
-    entries.set(conversationId, entry);
-  }
-  return entry;
+  return messageCacheStore.getState().entries.get(conversationId);
 };
 
 export const getCachedMessages = (conversationId: string) =>
@@ -77,7 +90,7 @@ export const setCachedMessages = (
   conversationId: string,
   messages: ChatMessage[],
 ) => {
-  const current = entries.get(conversationId) ?? emptyEntry();
+  const current = messageCacheStore.getState().entries.get(conversationId) ?? emptyEntry();
   const next = { ...current, messages };
   return storeEntry(conversationId, next);
 };
@@ -89,7 +102,7 @@ export const setCachedMessagePage = (
   totalPages: number,
   fetchedAt = Date.now(),
 ) => {
-  const current = entries.get(conversationId) ?? emptyEntry();
+  const current = messageCacheStore.getState().entries.get(conversationId) ?? emptyEntry();
   const nextMessages =
     page === 1
       ? mergeUnique(
@@ -98,8 +111,11 @@ export const setCachedMessagePage = (
         )
       : mergeUnique(current.messages, messages);
   const next: MessageCacheEntry = {
+    backgroundRefreshing: current.backgroundRefreshing,
     initialized: true,
+    initialLoading: false,
     lastFetchedAt: page === 1 ? fetchedAt : current.lastFetchedAt,
+    loadingMore: current.loadingMore,
     messages: nextMessages,
     page: page === 1 ? Math.max(1, current.page) : Math.max(current.page, page),
     totalPages,
@@ -111,7 +127,7 @@ export const upsertCachedMessage = (
   conversationId: string,
   message: ChatMessage,
 ) => {
-  const current = entries.get(conversationId) ?? emptyEntry();
+  const current = messageCacheStore.getState().entries.get(conversationId) ?? emptyEntry();
   const index = current.messages.findIndex((item) => item.id === message.id);
   const messages = index < 0
     ? [message, ...current.messages]
@@ -124,7 +140,7 @@ export const replaceCachedMessage = (
   optimisticId: string,
   confirmed: ChatMessage,
 ) => {
-  const current = entries.get(conversationId) ?? emptyEntry();
+  const current = messageCacheStore.getState().entries.get(conversationId) ?? emptyEntry();
   const withoutConfirmedDuplicate = current.messages.filter(
     (item) => item.id === optimisticId || item.id !== confirmed.id,
   );
@@ -145,7 +161,7 @@ export const isMessageCacheStale = (
   conversationId: string,
   now = Date.now(),
 ) => {
-  const entry = entries.get(conversationId);
+  const entry = messageCacheStore.getState().entries.get(conversationId);
   return !entry?.initialized || now - entry.lastFetchedAt >= MESSAGE_CACHE_TTL_MS;
 };
 
@@ -154,29 +170,54 @@ export const setMessageRetry = (
   messageId: string,
   payload: MessageRetryPayload,
 ) => {
-  const conversationRetries = retries.get(conversationId) ?? new Map();
+  const state = messageCacheStore.getState();
+  const retries = new Map(state.retries);
+  const conversationRetries = new Map(retries.get(conversationId) ?? new Map());
   conversationRetries.set(messageId, payload);
   retries.set(conversationId, conversationRetries);
+  messageCacheStore.setState({ retries });
 };
 
 export const getMessageRetry = (conversationId: string, messageId: string) =>
-  retries.get(conversationId)?.get(messageId);
+  messageCacheStore.getState().retries.get(conversationId)?.get(messageId);
 
 export const deleteMessageRetry = (
   conversationId: string,
   messageId: string,
 ) => {
+  const retries = new Map(messageCacheStore.getState().retries);
   const conversationRetries = retries.get(conversationId);
-  conversationRetries?.delete(messageId);
-  if (conversationRetries?.size === 0) retries.delete(conversationId);
+  if (conversationRetries) {
+    const nextConversationRetries = new Map(conversationRetries);
+    nextConversationRetries.delete(messageId);
+    if (nextConversationRetries.size === 0) retries.delete(conversationId);
+    else retries.set(conversationId, nextConversationRetries);
+    messageCacheStore.setState({ retries });
+  }
+};
+
+export const setMessageLoadingState = (
+  conversationId: string,
+  patch: Partial<Pick<MessageCacheEntry, "initialLoading" | "backgroundRefreshing" | "loadingMore">>,
+) => {
+  const current = messageCacheStore.getState().entries.get(conversationId) ?? emptyEntry();
+  return storeEntry(conversationId, { ...current, ...patch });
+};
+
+export const setCachedMessageHasNoMore = (conversationId: string) => {
+  const current = messageCacheStore.getState().entries.get(conversationId) ?? emptyEntry();
+  return storeEntry(conversationId, { ...current, totalPages: current.page });
 };
 
 export const clearMessageCache = (conversationId?: string) => {
+  const state = messageCacheStore.getState();
   if (conversationId) {
+    const entries = new Map(state.entries);
+    const retries = new Map(state.retries);
     entries.delete(conversationId);
     retries.delete(conversationId);
+    messageCacheStore.setState({ entries, retries });
   } else {
-    entries.clear();
-    retries.clear();
+    messageCacheStore.setState({ entries: new Map(), retries: new Map() });
   }
 };

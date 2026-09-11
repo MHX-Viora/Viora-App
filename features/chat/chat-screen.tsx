@@ -44,6 +44,7 @@ import {
   type TextInputContentSizeChangeEventData,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useStore } from "zustand";
 
 import { AddMembersModal } from "@/components/chat/add-members-modal";
 import { ChatComposerNotice } from "@/components/chat/chat-composer-notice";
@@ -93,6 +94,12 @@ import {
 } from "@/services/group-call.service";
 import { startCallRealtime } from "@/services/call-realtime.service";
 import { downloadChatAttachment } from "@/services/chat-attachment-download.service";
+import {
+  persistLocalMessageChanges,
+  persistLocalMessages,
+  readOlderLocalMessages,
+  readRecentLocalMessages,
+} from "@/services/chat-local-cache.service";
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { searchMentionUsers } from "@/services/mention.service";
 import { joinRealtimeGroup, leaveRealtimeGroup } from "@/services/realtime.service";
@@ -104,8 +111,12 @@ import {
   getMessageCache,
   getMessageRetry,
   isMessageCacheStale,
+  MAX_MESSAGES_PER_CONVERSATION,
+  messageCacheStore,
   setCachedMessagePage,
+  setCachedMessageHasNoMore,
   setCachedMessages,
+  setMessageLoadingState,
   setMessageRetry,
 } from "@/stores/message-cache";
 import { spacing } from "@/theme";
@@ -1033,6 +1044,10 @@ export function ChatScreen() {
   const [messages, setMessageState] = useState<ChatMessage[]>(() =>
     getCachedMessages(conversationId),
   );
+  const zustandRoomEntry = useStore(
+    messageCacheStore,
+    (state) => state.entries.get(conversationId),
+  );
   const [page, setPage] = useState(
     () => getMessageCache(conversationId)?.page ?? 1,
   );
@@ -1085,22 +1100,31 @@ export function ChatScreen() {
   const isGroupConversation =
     (conversationDetails?.conversationType ?? params.conversationType) === "Group";
 
+  useEffect(() => {
+    if (!zustandRoomEntry) return;
+    setMessageState(zustandRoomEntry.messages);
+    setPage(zustandRoomEntry.page);
+    setTotalPages(zustandRoomEntry.totalPages);
+  }, [zustandRoomEntry]);
+
   const setMessages = useCallback(
     (update: SetStateAction<ChatMessage[]>) => {
       const apply = (current: ChatMessage[]) =>
         typeof update === "function" ? update(current) : update;
 
       if (activeConversationIdRef.current !== conversationId) {
-        const next = apply(getCachedMessages(conversationId));
+        const previous = getCachedMessages(conversationId);
+        const next = apply(previous);
         setCachedMessages(conversationId, next);
+        void persistLocalMessageChanges(previous, next);
         return;
       }
 
-      setMessageState((current) => {
-        const next = apply(current);
-        setCachedMessages(conversationId, next);
-        return next;
-      });
+      const previous = getCachedMessages(conversationId);
+      const next = apply(previous);
+      const cached = setCachedMessages(conversationId, next);
+      void persistLocalMessageChanges(previous, cached.messages);
+      setMessageState(cached.messages);
     },
     [conversationId],
   );
@@ -1334,23 +1358,92 @@ export function ChatScreen() {
       const requestedConversationId = conversationId;
       if (mode === "initial") {
         setIsLoading(true);
+        setMessageLoadingState(requestedConversationId, { initialLoading: true });
       }
-      if (mode === "background") setIsBackgroundRefreshing(true);
-      if (mode === "more") setIsLoadingMore(true);
+      if (mode === "background") {
+        setIsBackgroundRefreshing(true);
+        setMessageLoadingState(requestedConversationId, { backgroundRefreshing: true });
+      }
+      if (mode === "more") {
+        setIsLoadingMore(true);
+        setMessageLoadingState(requestedConversationId, { loadingMore: true });
+      }
       try {
-        const result = await getConversationMessages(requestedConversationId, {
+        if (mode === "more") {
+          const current = getCachedMessages(requestedConversationId);
+          if (current.length >= MAX_MESSAGES_PER_CONVERSATION) {
+            const capped = setCachedMessageHasNoMore(requestedConversationId);
+            setTotalPages(capped.totalPages);
+            return;
+          }
+          const oldest = current.at(-1);
+          if (oldest) {
+            const localItems = await readOlderLocalMessages(
+              requestedConversationId,
+              oldest,
+              CHAT_PAGE_SIZE,
+            );
+            if (localItems.length > 0) {
+              const currentEntry = getMessageCache(requestedConversationId);
+              const cached = setCachedMessagePage(
+                requestedConversationId,
+                localItems,
+                nextPage,
+                Math.max(currentEntry?.totalPages ?? 1, nextPage + (localItems.length === CHAT_PAGE_SIZE ? 1 : 0)),
+                currentEntry?.lastFetchedAt ?? 0,
+              );
+              if (activeConversationIdRef.current !== requestedConversationId) return;
+              setMessageState(cached.messages);
+              setPage(cached.page);
+              setTotalPages(cached.totalPages);
+              if (localItems.length === CHAT_PAGE_SIZE) return;
+            }
+          }
+        }
+        const currentMessages = getCachedMessages(requestedConversationId);
+        const newestConfirmed = currentMessages.find((message) =>
+          !message.id.startsWith("pending-") && message.sendStatus !== "sending" && message.sendStatus !== "failed",
+        );
+        const oldestConfirmed = [...currentMessages].reverse().find((message) =>
+          !message.id.startsWith("pending-") && message.sendStatus !== "sending" && message.sendStatus !== "failed",
+        );
+        let result = await getConversationMessages(requestedConversationId, {
+          afterMessageId: mode === "background" ? newestConfirmed?.id : undefined,
+          beforeMessageId: mode === "more" ? oldestConfirmed?.id : undefined,
           page: nextPage,
           pageSize: CHAT_PAGE_SIZE,
         });
+        const resultItems = [...result.items];
+        let deltaBatches = 1;
+        while (
+          mode === "background" &&
+          result.items.length === CHAT_PAGE_SIZE &&
+          deltaBatches < 10
+        ) {
+          const nextCursor = result.items.at(-1)?.id;
+          if (!nextCursor) break;
+          result = await getConversationMessages(requestedConversationId, {
+            afterMessageId: nextCursor,
+            page: 1,
+            pageSize: CHAT_PAGE_SIZE,
+          });
+          resultItems.push(...result.items);
+          deltaBatches += 1;
+        }
         const nextItems = toNewestFirstMessages(
-          result.items.map(normalizeMessage),
+          resultItems.map(normalizeMessage),
         );
         const cached = setCachedMessagePage(
           requestedConversationId,
           nextItems,
-          result.page,
-          result.totalPages,
+          mode === "more" ? nextPage : result.page,
+          mode === "more"
+            ? nextPage + (nextItems.length === CHAT_PAGE_SIZE ? 1 : 0)
+            : mode === "background"
+              ? getMessageCache(requestedConversationId)?.totalPages ?? result.totalPages
+              : result.totalPages,
         );
+        void persistLocalMessages(nextItems);
         if (activeConversationIdRef.current !== requestedConversationId) return;
         if (result.conversation) {
           setMessagePermissions((current) => ({
@@ -1390,6 +1483,10 @@ export function ChatScreen() {
       } catch (error) {
         if (activeConversationIdRef.current !== requestedConversationId) return;
         if (handleRoomApiError(error)) return;
+        if (mode === "background" && getCachedMessages(requestedConversationId).length > 0) {
+          if (__DEV__) console.info("[CHAT SYNC] background refresh failed", error);
+          return;
+        }
         Alert.alert(
           "Không thể tải tin nhắn",
           error instanceof Error ? error.message : "Vui lòng thử lại.",
@@ -1399,6 +1496,11 @@ export function ChatScreen() {
           setIsLoading(false);
           setIsBackgroundRefreshing(false);
           setIsLoadingMore(false);
+          setMessageLoadingState(requestedConversationId, {
+            backgroundRefreshing: false,
+            initialLoading: false,
+            loadingMore: false,
+          });
         }
       }
     },
@@ -1505,6 +1607,7 @@ export function ChatScreen() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     const cached = getMessageCache(conversationId);
     setMessageState(cached?.messages ?? []);
     setPage(cached?.page ?? 1);
@@ -1513,11 +1616,33 @@ export function ChatScreen() {
     setIsLoadingMore(false);
     setIsBackgroundRefreshing(false);
 
-    if (isMessageCacheStale(conversationId)) {
-      void load(1, cached?.initialized ? "background" : "initial");
-    } else {
-      markConversationReadSafe();
-    }
+    void (async () => {
+      let hydrated = cached;
+      if (!cached?.initialized) {
+        const localMessages = await readRecentLocalMessages(conversationId, CHAT_PAGE_SIZE);
+        if (!active || activeConversationIdRef.current !== conversationId) return;
+        if (localMessages.length > 0) {
+          hydrated = setCachedMessagePage(
+            conversationId,
+            localMessages,
+            1,
+            localMessages.length === CHAT_PAGE_SIZE ? 2 : 1,
+            0,
+          );
+          setMessageState(hydrated.messages);
+          setPage(hydrated.page);
+          setTotalPages(hydrated.totalPages);
+          setIsLoading(false);
+        }
+      }
+
+      if (isMessageCacheStale(conversationId)) {
+        void load(1, hydrated?.initialized ? "background" : "initial");
+      } else {
+        markConversationReadSafe();
+      }
+    })();
+    return () => { active = false; };
   }, [conversationId, load, markConversationReadSafe]);
 
   useEffect(() => {

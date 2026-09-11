@@ -19,7 +19,7 @@ test("web sticker picker uses compact controls and fixed-size sticker cells", ()
 
 test("sticker picker renders cached metadata before background revalidation", () => {
   assert.match(stickerPanel, /getStickerPackPageCache\(USABLE_PACKS_KEY\)/);
-  assert.match(stickerPanel, /hydrateStickerCache\(\)/);
+  assert.match(stickerPanel, /hydrateStickerCache\(chatLocalRepository, ownerId/);
   assert.match(stickerPanel, /isStickerCacheStale\(cached\)/);
   assert.match(stickerPanel, /cachePolicy="memory-disk"/);
   assert.match(stickerPanel, /detailLoading && detail === null/);

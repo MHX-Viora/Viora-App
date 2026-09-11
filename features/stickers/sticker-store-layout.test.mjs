@@ -39,7 +39,7 @@ test("native sticker pack previews reserve a visible scroll area and show three 
 });
 
 test("sticker store reuses persisted metadata and image disk cache", () => {
-  assert.match(stickerStore, /hydrateStickerCache\(\)/);
+  assert.match(stickerStore, /hydrateStickerCache\(chatLocalRepository, ownerId/);
   assert.match(stickerStore, /getStickerPackPageCache\(cacheKey\)/);
   assert.match(stickerStore, /setStickerPackPageCache\(cacheKey, page\)/);
   assert.match(stickerStore, /cachePolicy="memory-disk"/);
