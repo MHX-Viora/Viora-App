@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -44,6 +44,7 @@ import { scanQrFromDeviceImage } from "@/services/qr-image-scanner";
 import { getUser } from "@/stores/session-store";
 import {
   getConversationListCache,
+  isConversationListCacheStale,
   setConversationListCache,
 } from "@/stores/conversation-list-cache";
 import { layout, spacing } from "@/theme";
@@ -75,7 +76,7 @@ export function ConversationsScreen({
     conversationId?: string | string[];
     scrollToMessageId?: string | string[];
   }>();
-  const [items, setItems] = useState<Conversation[]>(getConversationListCache);
+  const [items, setItemState] = useState<Conversation[]>(getConversationListCache);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [keyword, setKeyword] = useState("");
@@ -98,11 +99,16 @@ export function ConversationsScreen({
   const [actionLoadingIds, setActionLoadingIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const hasLoadedRef = useRef(items.length > 0);
-
-  useEffect(() => {
-    setConversationListCache(items);
-  }, [items]);
+  const activeKeywordRef = useRef(debouncedKeyword);
+  const loadRequestIdRef = useRef(0);
+  activeKeywordRef.current = debouncedKeyword;
+  const setItems = useCallback((update: SetStateAction<Conversation[]>) => {
+    setItemState((current) => {
+      const next = typeof update === "function" ? update(current) : update;
+      if (!activeKeywordRef.current) setConversationListCache(next);
+      return next;
+    });
+  }, []);
 
   const requestedConversationId = firstParam(params.conversationId);
   const requestedMessageId = firstParam(params.scrollToMessageId);
@@ -208,15 +214,24 @@ export function ConversationsScreen({
 
   const load = useCallback(
     async (nextPage: number, mode: "initial" | "refresh" | "more") => {
+      const requestId = ++loadRequestIdRef.current;
+      const requestedKeyword = debouncedKeyword;
       if (mode === "initial") setIsLoading(true);
       if (mode === "refresh") setIsRefreshing(true);
       if (mode === "more") setIsLoadingMore(true);
       try {
         const result = await getConversations({
-          keyword: debouncedKeyword,
+          keyword: requestedKeyword,
           page: nextPage,
           pageSize: CONVERSATIONS_PAGE_SIZE,
         });
+        if (
+          loadRequestIdRef.current !== requestId ||
+          activeKeywordRef.current !== requestedKeyword
+        ) return;
+        if (!requestedKeyword && nextPage === 1) {
+          setConversationListCache(result.items, Date.now());
+        }
         setItems((current) =>
           nextPage === 1
             ? sortConversations(result.items)
@@ -235,26 +250,35 @@ export function ConversationsScreen({
           void syncChatUnreadCount("conversation-focus");
         }
       } catch (loadError) {
+        if (
+          loadRequestIdRef.current !== requestId ||
+          activeKeywordRef.current !== requestedKeyword
+        ) return;
         setError(
           loadError instanceof Error
             ? loadError.message
             : "Không thể tải cuộc trò chuyện.",
         );
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
-        setIsLoadingMore(false);
+        if (
+          loadRequestIdRef.current === requestId &&
+          activeKeywordRef.current === requestedKeyword
+        ) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+          setIsLoadingMore(false);
+        }
       }
     },
-    [debouncedKeyword],
+    [debouncedKeyword, setItems],
   );
 
   useFocusEffect(
     useCallback(() => {
-      const mode = hasLoadedRef.current ? "refresh" : "initial";
-      hasLoadedRef.current = true;
-      void load(1, mode);
-    }, [load]),
+      const hasCachedItems = getConversationListCache().length > 0;
+      if (!debouncedKeyword && !isConversationListCacheStale()) return;
+      void load(1, hasCachedItems ? "refresh" : "initial");
+    }, [debouncedKeyword, load]),
   );
 
   useEffect(() => {
@@ -299,6 +323,7 @@ export function ConversationsScreen({
     openConversation,
     openedConversationId,
     requestedConversationId,
+    setItems,
   ]);
 
   useEffect(
@@ -321,7 +346,7 @@ export function ConversationsScreen({
           );
         });
       }),
-    [],
+    [setItems],
   );
 
   useEffect(
@@ -337,7 +362,7 @@ export function ConversationsScreen({
           ),
         );
       }),
-    [],
+    [setItems],
   );
 
   useEffect(
@@ -351,7 +376,7 @@ export function ConversationsScreen({
           ),
         );
       }),
-    [],
+    [setItems],
   );
 
   useEffect(
@@ -366,21 +391,37 @@ export function ConversationsScreen({
           ),
         );
       }),
-    [currentUserId],
+    [currentUserId, setItems],
   );
 
   useEffect(
     () =>
       subscribeRealtimeNewMessageNotifications((event) => {
-        setItems((current) =>
-          current.map((item) =>
-            item.id === event.conversationId
-              ? { ...item, unreadCount: event.unreadCount }
-              : item,
-          ),
-        );
+        setItems((current) => {
+          const existing = current.find((item) => item.id === event.conversationId);
+          const updated: Conversation = {
+            ...(existing ?? {
+              avatarUrl: event.conversationAvatarUrl,
+              conversationType: event.conversationType,
+              id: event.conversationId,
+              isMuted: event.isMuted,
+              isPinned: false,
+              lastMessage: null,
+              name: event.conversationName,
+              otherParticipant:
+                event.conversationType === "Private" ? event.sender : null,
+              unreadCount: 0,
+            }),
+            lastMessage: { ...event.message, isMine: false },
+            unreadCount: event.unreadCount,
+          };
+          return sortConversations([
+            updated,
+            ...current.filter((item) => item.id !== event.conversationId),
+          ]);
+        });
       }),
-    [],
+    [setItems],
   );
 
   useEffect(
@@ -390,7 +431,7 @@ export function ConversationsScreen({
           current.filter((item) => item.id !== event.conversationId),
         );
       }),
-    [],
+    [setItems],
   );
 
   useEffect(
@@ -420,13 +461,13 @@ export function ConversationsScreen({
         ),
       );
     },
-    [],
+    [setItems],
   );
 
   const removeDissolvedConversation = useCallback((conversationId: string) => {
     setItems((current) => current.filter((item) => item.id !== conversationId));
     showAppToast({ message: "Nhóm đã bị giải tán.", type: "success" });
-  }, []);
+  }, [setItems]);
 
   const togglePinConversation = useCallback(
     async (conversation: Conversation) => {

@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   clearConversationListCache,
   getConversationListCache,
+  isConversationListCacheStale,
   setConversationListCache,
 } from "./conversation-list-cache.ts";
 
@@ -27,13 +28,22 @@ test("conversation list cache survives screen remounts until the session ends", 
   assert.deepEqual(getConversationListCache(), []);
 });
 
+test("conversation list cache is fresh for thirty seconds", () => {
+  clearConversationListCache();
+  setConversationListCache([{ id: "room-1" }], 1_000);
+  assert.equal(isConversationListCacheStale(30_999), false);
+  assert.equal(isConversationListCacheStale(31_000), true);
+});
+
 test("conversation sidebar restores cached rows without a full loading state", () => {
   assert.match(
     conversationsScreen,
     /useState<Conversation\[\]>\(getConversationListCache\)/,
   );
   assert.match(conversationsScreen, /useState\(items\.length === 0\)/);
-  assert.match(conversationsScreen, /setConversationListCache\(items\)/);
+  assert.match(conversationsScreen, /isConversationListCacheStale\(\)/);
+  assert.match(conversationsScreen, /setConversationListCache\(result\.items, Date\.now\(\)\)/);
+  assert.match(conversationsScreen, /lastMessage: \{[\s\S]{0,300}\.\.\.event\.message/);
 });
 
 test("ending the session clears cached conversation content", () => {
