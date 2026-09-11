@@ -9,13 +9,13 @@
 
 ## Phase 1: Message cache foundation
 
-- [ ] Task 1: Add message cache state and merge helpers.
+- [x] Task 1: Add message cache state and merge helpers.
   - Acceptance: entries are keyed by conversation ID; IDs dedupe; page metadata and timestamps remain room-local; session clear removes all entries.
   - Verify: focused unit tests fail before implementation and pass after it.
   - Files: `stores/message-cache.ts`, `stores/message-cache.test.mjs`, `stores/session-store.ts`, `scripts/test.mjs`.
   - Dependencies: none.
 
-- [ ] Task 2: Add single-flight message-page loading.
+- [x] Task 2: Add single-flight message-page loading.
   - Acceptance: identical in-flight requests share one promise; different rooms/pages remain independent; settled requests leave the map.
   - Verify: deterministic service tests plus TypeScript.
   - Files: `services/chat.service.ts`, `services/chat-message-request.test.mjs`, `scripts/test.mjs`.
@@ -23,25 +23,25 @@
 
 ### Checkpoint 1
 
-- [ ] Focused tests pass.
-- [ ] TypeScript passes.
-- [ ] No API URL, query, auth, or response mapper changed.
+- [x] Focused tests pass.
+- [x] TypeScript passes.
+- [x] No API URL, query, auth, or response mapper changed.
 
 ## Phase 2: Chat screen integration
 
-- [ ] Task 3: Hydrate and revalidate room messages cache-first.
+- [x] Task 3: Hydrate and revalidate room messages cache-first.
   - Acceptance: cached room content is initial state; only uncached rooms show full loading; stale page 1 refresh is background-only; A -> B -> A cannot overwrite another room.
   - Verify: source-contract and cache behavior tests; manual navigation when runtime is available.
   - Files: `features/chat/chat-screen.tsx`, `features/chat/chat-message-load-policy.test.mjs`, `stores/message-cache.ts`.
   - Dependencies: Tasks 1-2.
 
-- [ ] Task 4: Route realtime and optimistic mutations through the room cache.
+- [x] Task 4: Route realtime and optimistic mutations through the room cache.
   - Acceptance: ReceiveMessage/delivered/deleted update cache without history refetch; optimistic server reconciliation dedupes; failed sticker remains retryable.
   - Verify: existing realtime/send tests plus new mutation tests.
   - Files: `features/chat/chat-screen.tsx`, `stores/message-cache.ts`, related chat tests.
   - Dependencies: Task 3.
 
-- [ ] Task 5: Harden pagination and scroll preservation.
+- [x] Task 5: Harden pagination and scroll preservation.
   - Acceptance: repeated end-reached events do not duplicate requests; older pages merge once; existing inverted-list position behavior does not regress.
   - Verify: focused pagination/dedupe tests and runtime spot check.
   - Files: `features/chat/chat-screen.tsx`, `stores/message-cache.ts`, related tests.
@@ -49,18 +49,18 @@
 
 ### Checkpoint 2
 
-- [ ] Chat tests, full Node suite, TypeScript, and targeted ESLint pass.
-- [ ] Diff confirms no SignalR service/protocol rewrite.
+- [x] Chat tests, full Node suite, TypeScript, and targeted ESLint pass.
+- [x] Diff confirms no SignalR service/protocol rewrite.
 
 ## Phase 3: Sticker cache
 
-- [ ] Task 6: Add persistent, bounded sticker metadata cache.
+- [x] Task 6: Add persistent, bounded sticker metadata cache.
   - Acceptance: pack list/details use a 60-minute TTL, validate stored data, dedupe in-flight requests, and degrade safely on storage failure.
   - Verify: RED/GREEN tests for fresh, stale, malformed, and concurrent cases on web-safe storage.
   - Files: `stores/sticker-cache.ts`, `stores/sticker-cache.test.mjs`, `services/sticker.service.ts`, `scripts/test.mjs`.
   - Dependencies: none.
 
-- [ ] Task 7: Make the sticker panel cache-first and use image caching.
+- [x] Task 7: Make the sticker panel cache-first and use image caching.
   - Acceptance: cached packs/detail never show a blocking loader; background refresh preserves content; `expo-image` handles URL-based memory/disk caching; only visible pack thumbnails/items load.
   - Verify: sticker panel tests, TypeScript, ESLint, web export.
   - Files: `features/stickers/sticker-panel.tsx`, sticker panel tests.
@@ -68,18 +68,18 @@
 
 ### Checkpoint 3
 
-- [ ] Open-close-open sticker scenario is instant from cache.
-- [ ] No binary/base64 payload is stored.
+- [x] Open-close-open sticker scenario is covered by cache-first integration tests.
+- [x] No binary/base64 payload is stored.
 
 ## Phase 4: Conversation list and app-wide audit
 
-- [ ] Task 8: Make conversation revalidation TTL-aware and patch previews from realtime.
+- [x] Task 8: Make conversation revalidation TTL-aware and patch previews from realtime.
   - Acceptance: cached list renders immediately; focus refresh respects 30-second freshness; explicit resume/reconnect remains background; new-message notification patches last message, timestamp/order, and unread count without list GET.
   - Verify: conversation cache and realtime notification tests.
   - Files: `stores/conversation-list-cache.ts`, `features/chat/conversations-screen.tsx`, related tests.
   - Dependencies: none.
 
-- [ ] Task 9: Audit remaining app data flows and apply only proven low-risk fixes.
+- [x] Task 9: Audit remaining app data flows and apply only proven low-risk fixes.
   - Acceptance: Feed/Profile/Notifications/Friends/Search/Articles/Mini Apps are classified; duplicate requests, reset-before-fetch, race guards, and recommended TTLs are documented; any code fix is isolated and tested.
   - Verify: targeted tests for each changed flow; unchanged flows are reported, not broadly rewritten.
   - Files: maximum five files per isolated follow-up slice plus audit documentation.
@@ -87,7 +87,7 @@
 
 ## Phase 5: Verification and handoff
 
-- [ ] Task 10: Run full quality gates and produce the requested report.
+- [x] Task 10: Run full quality gates and produce the requested report.
   - Acceptance: test/typecheck/lint/web export results are recorded; Android status is explicit; modified files, TTLs, deduped calls, realtime mutations, removed calls, persistence, and deferred work are listed.
   - Verify: self-review across correctness, simplicity, architecture, security, and performance.
   - Files: `docs/handoffs/data-loading-cache-optimization.md`.
