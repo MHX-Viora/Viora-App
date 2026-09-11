@@ -172,7 +172,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: "800",
   },
   time: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  title: { color: colors.text, flex: 1, fontSize: 16, fontWeight: "800" },
+  title: {
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: 16,
+    fontWeight: "800",
+  },
   titleLine: { alignItems: "center", flexDirection: "row", gap: 3 },
   unreadPreview: { color: colors.text, fontWeight: "800" },
 });

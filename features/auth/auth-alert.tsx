@@ -168,7 +168,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     minHeight: 46,
     paddingHorizontal: spacing.lg,
   },
-  primaryLabel: { color: colors.white, fontSize: 15, fontWeight: "800" },
+  primaryLabel: { color: colors.primaryContrast, fontSize: 15, fontWeight: "800" },
   secondaryButton: {
     alignItems: "center",
     borderColor: colors.border,

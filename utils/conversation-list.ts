@@ -80,7 +80,9 @@ export const getLastMessageText = (conversation: Conversation) => {
 
   const attachmentType = lastMessage.attachments[0]?.type;
   const mediaText =
-    attachmentType === "image" || lastMessage.messageType === 1
+    lastMessage.messageType === 5
+      ? "Nhãn dán"
+      : attachmentType === "image" || lastMessage.messageType === 1
       ? "Ảnh"
       : attachmentType === "video" || lastMessage.messageType === 2
         ? "Video"

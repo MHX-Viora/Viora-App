@@ -255,7 +255,7 @@ export function CommentsModal({
                     !draftComment.trim() && styles.sendButtonDisabled,
                   ]}
                 >
-                  <Ionicons color={colors.white} name="send" size={18} />
+                  <Ionicons color={colors.primaryContrast} name="send" size={18} />
                 </Pressable>
               </View>
             </View>

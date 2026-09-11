@@ -70,6 +70,10 @@ app-example
 !/android/app/src/main/java/com/ankt/app/
 /android/app/src/main/java/com/ankt/app/*
 !/android/app/src/main/java/com/ankt/app/MainApplication.kt
+!/android/app/src/main/java/com/ankt/app/downloads/
+/android/app/src/main/java/com/ankt/app/downloads/*
+!/android/app/src/main/java/com/ankt/app/downloads/ChatAttachmentDownloadModule.kt
+!/android/app/src/main/java/com/ankt/app/downloads/ChatAttachmentDownloadPackage.kt
 !/android/app/src/main/java/com/ankt/app/calls/
 /android/app/src/main/java/com/ankt/app/calls/*
 !/android/app/src/main/java/com/ankt/app/calls/IncomingCallActionReceiver.kt

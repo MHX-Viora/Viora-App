@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -19,7 +19,12 @@ export function ProfileHeader({
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <View style={styles.header}>
+    <View
+      style={[
+        styles.header,
+        Platform.OS !== "web" && styles.nativeHeader,
+      ]}
+    >
       <View style={styles.leftActions}>
         <Pressable
           accessibilityHint="Mở danh sách bạn bè và tìm bạn mới"
@@ -60,12 +65,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
     borderColor: colors.borderSubtle,
-    borderRadius: 12,
     borderWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
-    marginHorizontal: spacing.md,
-    marginTop: spacing.xs,
     paddingBottom: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
@@ -79,4 +81,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 40,
   },
   leftActions: { flexDirection: "row", gap: spacing.xs },
+  nativeHeader: { paddingTop: spacing.sm + 10 },
 });

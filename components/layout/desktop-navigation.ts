@@ -7,13 +7,6 @@ export const desktopNavigationItems = [
     title: "Trang chủ",
   },
   {
-    href: "/reels" as const,
-    icon: "play-circle-outline" as const,
-    iconActive: "play-circle" as const,
-    route: "reels" as const,
-    title: "Reels",
-  },
-  {
     href: "/chat" as const,
     icon: "chatbubble-outline" as const,
     iconActive: "chatbubble" as const,

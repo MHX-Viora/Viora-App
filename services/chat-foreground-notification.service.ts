@@ -7,6 +7,8 @@ const getMessagePreview = (event: NewMessageNotificationEvent) => {
   const content = event.message.content.trim();
   if (content) return content;
 
+  if (event.message.messageType === 5) return "Đã gửi một nhãn dán";
+
   const attachmentType = event.message.attachments[0]?.type;
   if (attachmentType === "image" || event.message.messageType === 1) {
     return "Đã gửi một ảnh";

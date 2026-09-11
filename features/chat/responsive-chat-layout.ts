@@ -2,7 +2,8 @@ export type ResponsiveChatMode =
   | "list"
   | "detail"
   | "split-empty"
-  | "split-detail";
+  | "split-detail"
+  | "split-detail-settings";
 
 export type ResponsiveConversationSettingsMode =
   | "settings"
@@ -42,12 +43,15 @@ export const getDesktopConversationMenuTop = ({
 export const getResponsiveChatMode = ({
   hasConversation,
   isDesktopWeb,
+  isLargeDesktop,
 }: {
   hasConversation: boolean;
   isDesktopWeb: boolean;
+  isLargeDesktop: boolean;
 }): ResponsiveChatMode => {
   if (!isDesktopWeb) return hasConversation ? "detail" : "list";
-  return hasConversation ? "split-detail" : "split-empty";
+  if (!hasConversation) return "split-empty";
+  return isLargeDesktop ? "split-detail-settings" : "split-detail";
 };
 
 export const shouldAutoOpenConversationRoute = ({

@@ -1,5 +1,6 @@
 import type { Session, User } from "@/types/auth";
 import { sessionStorage } from "@/stores/session-storage";
+import { clearConversationListCache } from "@/stores/conversation-list-cache";
 
 const SESSION_KEY = "viora.session";
 
@@ -33,6 +34,7 @@ export const saveSession = async (session: Session): Promise<void> => {
 };
 
 export const clearSession = async (): Promise<void> => {
+  clearConversationListCache();
   await sessionStorage.deleteItemAsync(SESSION_KEY);
 };
 

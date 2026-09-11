@@ -1,7 +1,27 @@
 {
+  "headers": [
+    {
+      "source": "/firebase-messaging-sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.webmanifest",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/((?!assets|_expo|favicon.ico).*)",
+      "source": "/((?!assets|_expo|favicon.ico|manifest.webmanifest|firebase-messaging-sw.js|pwa-icon-192.png|pwa-icon-512.png).*)",
       "destination": "/"
     }
   ]

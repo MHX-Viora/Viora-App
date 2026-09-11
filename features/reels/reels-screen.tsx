@@ -23,10 +23,15 @@ import {
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { showAppToast } from "@/components/common/app-toast";
+import { FeedCategoryHeader } from "@/components/feed/feed-category-header";
+import { FixedTopBar } from "@/components/layout/fixed-top-bar";
+import { DesktopDownloadPromo } from "@/components/landing/desktop-download-promo";
 import { ResponsiveContent } from "@/components/layout/responsive-content";
 import {
+  getFixedTopBarLayout,
   getReelContentWidth,
   getReelsOverlayLayout,
+  getResponsiveContentLayout,
 } from "@/components/layout/responsive-layout";
 import {
   createFloatingTabBarStyle,
@@ -100,10 +105,20 @@ export function ReelsScreen() {
   const { theme } = useTheme();
   const colors = theme.reels;
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { isDesktopWeb, isWeb } = useResponsive();
+  const { isDesktopWeb, isLargeDesktop, isWeb } = useResponsive();
   const reelsOverlayLayout = getReelsOverlayLayout({
     isCompactWeb: isWeb && !isDesktopWeb,
     isDesktopWeb,
+  });
+  const categoryTopBarLayout = getFixedTopBarLayout({
+    categoryOnly: true,
+    isCompactWeb: isWeb && !isDesktopWeb,
+    isDesktopWeb,
+    useDesktopSideRails: isDesktopWeb && isLargeDesktop,
+  });
+  const categoryHeaderContentLayout = getResponsiveContentLayout({
+    isDesktopWeb,
+    maxWidth: layout.feedMaxWidth,
   });
   const floatingTabBarStyle = useMemo(
     () => createFloatingTabBarStyle(theme),
@@ -425,7 +440,34 @@ export function ReelsScreen() {
 
   return (
     <View style={styles.page}>
-      <ResponsiveContent maxWidth={reelContentWidth}>
+      <FixedTopBar categoryOnly>
+        <View style={categoryHeaderContentLayout}>
+          <FeedCategoryHeader
+            activeCategory="reels"
+            onCommunityPress={() =>
+              router.replace({
+                pathname: "/(tabs)",
+                params: { category: "community" },
+              })
+            }
+            onReelsPress={() => undefined}
+            onArticlesPress={() =>
+              router.replace({
+                pathname: "/(tabs)",
+                params: { category: "articles" },
+              })
+            }
+          />
+          <DesktopDownloadPromo />
+        </View>
+      </FixedTopBar>
+      <ResponsiveContent
+        maxWidth={reelContentWidth}
+        style={{
+          paddingBottom: isDesktopWeb ? 0 : REEL_BOTTOM_INSET,
+          paddingTop: categoryTopBarLayout.height,
+        }}
+      >
       <View onLayout={handleLayout} style={styles.container}>
       {isLoadingReels ? (
         <ReelsLoadingSkeleton height={reelHeight} />
@@ -474,8 +516,8 @@ export function ReelsScreen() {
                 onSave={handleSaveReel}
                 onShare={handleShareReel}
                 reel={item}
-                safeBottomInset={isDesktopWeb ? 0 : REEL_BOTTOM_INSET}
                 videoTopOffset={reelsOverlayLayout.videoTopOffset}
+                videoVerticalShift={0}
               />
             )}
             scrollEnabled={!isInteractionLocked}

@@ -5,6 +5,7 @@ import android.content.res.Configuration
 
 import com.facebook.react.PackageList
 import com.ankt.app.calls.IncomingCallSettingsPackage
+import com.ankt.app.downloads.ChatAttachmentDownloadPackage
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.ReactNativeHost
@@ -27,6 +28,7 @@ class MainApplication : Application(), ReactApplication {
               // Packages that cannot be autolinked yet can be added manually here, for example:
               // add(MyReactNativePackage())
               add(IncomingCallSettingsPackage())
+              add(ChatAttachmentDownloadPackage())
             }
 
           override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"

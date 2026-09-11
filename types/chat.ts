@@ -43,6 +43,15 @@ export enum MessageType {
   System = 100,
 }
 
+export type ChatSticker = {
+  id: string;
+  stickerPackId: string;
+  name: string;
+  imageUrl: string;
+  thumbnailUrl: string | null;
+  format: number;
+};
+
 export type LastMessage = {
   attachments: ChatAttachment[];
   id: string;
@@ -158,6 +167,7 @@ export type ChatSearchResultsPage = {
 
 export type ChatMessage = {
   id: string;
+  clientRenderId?: string;
   conversationId: string;
   sender: ChatParticipant;
   messageType: number | null;
@@ -172,6 +182,7 @@ export type ChatMessage = {
   reactions: ChatReaction[];
   sendStatus?: "sending" | "failed" | "sent";
   mentions?: import("@/types/mention").MentionReference[];
+  sticker?: ChatSticker | null;
 };
 
 export type ConversationReadEvent = {
@@ -258,6 +269,7 @@ export type SendMessageAttachment = {
   uri: string;
   name: string;
   type: string;
+  file?: File;
   kind: "image" | "video" | "audio" | "file";
   size?: number;
   duration?: number;
