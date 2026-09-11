@@ -68,6 +68,7 @@ import {
   subscribeRealtimeMessages,
 } from "@/features/chat/chat-events";
 import { canMarkConversationRead } from "@/features/chat/chat-read-visibility";
+import { isMessageFromCurrentUser } from "@/features/chat/chat-realtime-policy";
 import {
   ChatAttachmentUploadError,
   getConversation,
@@ -1452,7 +1453,11 @@ export function ChatScreen() {
     () =>
       subscribeRealtimeMessages((message) => {
         if (message.conversationId !== conversationId) return;
-        const nextMessage = normalizeMessage(message);
+        const normalizedMessage = normalizeMessage(message);
+        const nextMessage =
+          isMessageFromCurrentUser(normalizedMessage.sender.id, currentUserId)
+            ? { ...normalizedMessage, isMine: true }
+            : normalizedMessage;
         if (nextMessage.isMine && pendingOutgoingIdsRef.current.size > 0) {
           bufferedMineMessagesRef.current.set(nextMessage.id, nextMessage);
           return;
@@ -1469,7 +1474,7 @@ export function ChatScreen() {
           setHasNewMessage(true);
         }
       }),
-    [conversationId, markConversationReadSafe, normalizeMessage, scrollToEndAfterLayout],
+    [conversationId, currentUserId, markConversationReadSafe, normalizeMessage, scrollToEndAfterLayout],
   );
 
   useEffect(
