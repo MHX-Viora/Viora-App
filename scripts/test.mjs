@@ -55,6 +55,8 @@ await import("../services/jwt-expiry.test.mjs");
 await import("../features/chat/chat-realtime-notification.test.mjs");
 await import("../stores/session-storage.web.test.mjs");
 await import("../stores/conversation-list-cache.test.mjs");
+await import("../stores/message-cache.test.mjs");
+await import("../services/chat-message-request.test.mjs");
 await import("../theme/breakpoints.test.mjs");
 await import("../theme/premium-ocean.test.mjs");
 await import("../components/layout/responsive-layout.test.mjs");

@@ -9,6 +9,7 @@ import {
   mapSharedLinksPage,
 } from "@/features/chat/chat.mapper";
 import { authenticatedFetch } from "@/services/authenticated-fetch";
+import { createSingleFlight } from "@/services/single-flight";
 import type { CreateGroupInput } from "@/types/chat-group";
 import type {
   ChatMessage,
@@ -27,6 +28,7 @@ import type {
 } from "@/types/chat";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+const messageRequests = createSingleFlight();
 
 const parseResponseText = (text: string): unknown => {
   if (!text) return null;
@@ -177,19 +179,23 @@ export const getChatUnreadSummary = async (): Promise<ChatUnreadSummary> => {
 export const getConversationMessages = async (
   conversationId: string,
   query: { page: number; pageSize: number },
-): Promise<MessagesPage> => {
-  const params = new URLSearchParams({
-    page: String(query.page),
-    pageSize: String(query.pageSize),
-  });
-  const response = await authenticatedFetch(
-    `${BASE_URL}/api/chat/conversations/${conversationId}/messages?${params.toString()}`,
+): Promise<MessagesPage> =>
+  messageRequests.run(
+    `${conversationId}:${query.page}:${query.pageSize}`,
+    async () => {
+      const params = new URLSearchParams({
+        page: String(query.page),
+        pageSize: String(query.pageSize),
+      });
+      const response = await authenticatedFetch(
+        `${BASE_URL}/api/chat/conversations/${conversationId}/messages?${params.toString()}`,
+      );
+      const data = parseResponseText(await response.text());
+      if (!response.ok)
+        throwChatApiError(response, data, "Không thể tải tin nhắn.");
+      return mapMessagesPage(data);
+    },
   );
-  const data = parseResponseText(await response.text());
-  if (!response.ok)
-    throwChatApiError(response, data, "Không thể tải tin nhắn.");
-  return mapMessagesPage(data);
-};
 
 export const getConversation = async (
   conversationId: string,
