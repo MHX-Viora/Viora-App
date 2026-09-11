@@ -1,7 +1,9 @@
 import { authenticatedFetch } from "@/services/authenticated-fetch";
+import { createSingleFlight } from "@/services/single-flight";
 import type { StickerPackDetail, StickerPackPage } from "@/types/sticker";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+const stickerRequests = createSingleFlight();
 
 const readJson = async <T>(response: Response): Promise<T> => {
   const data = (await response.json()) as T | { detail?: string; title?: string };
@@ -17,10 +19,14 @@ export const getStickerPacks = async (
   page = 1,
   pageSize = 50,
 ) => {
-  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-  if (type !== "all") params.set("type", type);
-  return readJson<StickerPackPage>(await authenticatedFetch(`${BASE_URL}/api/sticker-packs?${params}`));
+  return stickerRequests.run(`packs:${type}:${page}:${pageSize}`, async () => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (type !== "all") params.set("type", type);
+    return readJson<StickerPackPage>(await authenticatedFetch(`${BASE_URL}/api/sticker-packs?${params}`));
+  });
 };
 
 export const getStickerPack = async (id: string) =>
-  readJson<StickerPackDetail>(await authenticatedFetch(`${BASE_URL}/api/sticker-packs/${id}`));
+  stickerRequests.run(`pack:${id}`, async () =>
+    readJson<StickerPackDetail>(await authenticatedFetch(`${BASE_URL}/api/sticker-packs/${id}`)),
+  );

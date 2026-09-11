@@ -37,3 +37,11 @@ test("native sticker pack previews reserve a visible scroll area and show three 
   assert.match(stickerStore, /source=\{\{ uri: sticker\.thumbnailUrl \?\? sticker\.imageUrl \}\}/);
   assert.match(stickerStore, /previewScroll:\s*\{ flexGrow: 0 \}/);
 });
+
+test("sticker store reuses persisted metadata and image disk cache", () => {
+  assert.match(stickerStore, /hydrateStickerCache\(\)/);
+  assert.match(stickerStore, /getStickerPackPageCache\(cacheKey\)/);
+  assert.match(stickerStore, /setStickerPackPageCache\(cacheKey, page\)/);
+  assert.match(stickerStore, /cachePolicy="memory-disk"/);
+  assert.match(stickerStore, /previewPackIdRef\.current !== packId/);
+});

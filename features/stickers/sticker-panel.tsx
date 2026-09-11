@@ -1,9 +1,19 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useResponsive } from "@/hooks/use-responsive";
 import { getStickerPack, getStickerPacks } from "@/services/sticker.service";
+import {
+  getStickerPackDetailCache,
+  getStickerPackPageCache,
+  hydrateStickerCache,
+  isStickerCacheStale,
+  setStickerPackDetailCache,
+  setStickerPackPageCache,
+  stickerPackPageKey,
+} from "@/stores/sticker-cache";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
 import type { Sticker, StickerPack, StickerPackDetail } from "@/types/sticker";
 import { getRecentStickers } from "./recent-sticker-storage";
@@ -13,28 +23,51 @@ type Props = {
   onOpenStore: () => void;
 };
 
+const USABLE_PACKS_KEY = stickerPackPageKey("usable", 1, 50);
+
 export function StickerPanel({ onSelect, onOpenStore }: Props) {
   const { theme } = useTheme();
   const { isWeb } = useResponsive();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
-  const [packs, setPacks] = useState<StickerPack[]>([]);
+  const [packs, setPacks] = useState<StickerPack[]>(
+    () => getStickerPackPageCache(USABLE_PACKS_KEY)?.value.items ?? [],
+  );
   const [selectedPackId, setSelectedPackId] = useState("recent");
   const [detail, setDetail] = useState<StickerPackDetail | null>(null);
   const [recent, setRecent] = useState<Sticker[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [packsLoading, setPacksLoading] = useState(
+    () => !getStickerPackPageCache(USABLE_PACKS_KEY),
+  );
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     let active = true;
-    Promise.all([getStickerPacks("usable"), getRecentStickers()])
-      .then(([page, stored]) => {
+    void (async () => {
+      try {
+        await hydrateStickerCache();
+        const [cached, stored] = [
+          getStickerPackPageCache(USABLE_PACKS_KEY),
+          await getRecentStickers(),
+        ];
         if (!active) return;
-        setPacks(page.items);
+        if (cached) setPacks(cached.value.items);
         setRecent(stored);
-      })
-      .catch((reason: unknown) => active && setError(reason instanceof Error ? reason.message : "Không thể tải nhãn dán."))
-      .finally(() => active && setLoading(false));
+        setPacksLoading(false);
+        if (!isStickerCacheStale(cached)) return;
+
+        const page = await getStickerPacks("usable");
+        setStickerPackPageCache(USABLE_PACKS_KEY, page);
+        if (active) setPacks(page.items);
+      } catch (reason: unknown) {
+        if (active && getStickerPackPageCache(USABLE_PACKS_KEY) === undefined) {
+          setError(reason instanceof Error ? reason.message : "Không thể tải nhãn dán.");
+        }
+      } finally {
+        if (active) setPacksLoading(false);
+      }
+    })();
     return () => { active = false; };
   }, []);
 
@@ -45,16 +78,35 @@ export function StickerPanel({ onSelect, onOpenStore }: Props) {
       return;
     }
     let active = true;
-    setLoading(true);
-    getStickerPack(selectedPackId)
-      .then((value) => active && setDetail(value))
-      .catch((reason: unknown) => active && setError(reason instanceof Error ? reason.message : "Không thể tải bộ nhãn dán."))
-      .finally(() => active && setLoading(false));
+    void (async () => {
+      try {
+        await hydrateStickerCache();
+        const cached = getStickerPackDetailCache(selectedPackId);
+        if (!active) return;
+        setDetail(cached?.value ?? null);
+        setDetailLoading(!cached);
+        setError("");
+        if (!isStickerCacheStale(cached)) return;
+
+        const value = await getStickerPack(selectedPackId);
+        setStickerPackDetailCache(selectedPackId, value);
+        if (active) setDetail(value);
+      } catch (reason: unknown) {
+        if (active && getStickerPackDetailCache(selectedPackId) === undefined) {
+          setError(reason instanceof Error ? reason.message : "Không thể tải bộ nhãn dán.");
+        }
+      } finally {
+        if (active) setDetailLoading(false);
+      }
+    })();
     return () => { active = false; };
   }, [selectedPackId]);
 
   const stickers = (selectedPackId === "recent" ? recent : detail?.stickers ?? [])
     .filter((sticker) => sticker.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const loading = selectedPackId === "recent"
+    ? packsLoading && packs.length === 0 && recent.length === 0
+    : detailLoading && detail === null;
 
   return (
     <View accessibilityLabel="Bảng nhãn dán" style={[styles.panel, isWeb && styles.webPanel]}>
@@ -75,18 +127,18 @@ export function StickerPanel({ onSelect, onOpenStore }: Props) {
         </Pressable>
         {packs.map((pack) => (
           <Pressable accessibilityLabel={pack.name} key={pack.id} onPress={() => setSelectedPackId(pack.id)} style={[styles.tab, isWeb && styles.webTab, selectedPackId === pack.id && styles.activeTab]}>
-            <Image source={{ uri: pack.thumbnailUrl }} style={[styles.packIcon, isWeb && styles.webPackIcon]} />
+            <Image cachePolicy="memory-disk" contentFit="contain" source={{ uri: pack.thumbnailUrl }} style={[styles.packIcon, isWeb && styles.webPackIcon]} />
           </Pressable>
         ))}
         <Pressable accessibilityLabel="Mở cửa hàng nhãn dán" onPress={onOpenStore} style={[styles.tab, isWeb && styles.webTab]}>
           <Ionicons color={theme.colors.primary} name="add" size={isWeb ? 22 : 24} />
         </Pressable>
       </ScrollView>
-      {loading ? <ActivityIndicator color={theme.colors.primary} style={styles.state} /> : error ? <Text style={styles.error}>{error}</Text> : stickers.length === 0 ? <Text style={styles.empty}>Chưa có nhãn dán.</Text> : (
+      {loading ? <ActivityIndicator color={theme.colors.primary} style={styles.state} /> : error && stickers.length === 0 ? <Text style={styles.error}>{error}</Text> : stickers.length === 0 ? <Text style={styles.empty}>Chưa có nhãn dán.</Text> : (
         <ScrollView contentContainerStyle={[styles.grid, isWeb && styles.webGrid]} keyboardShouldPersistTaps="handled">
           {stickers.map((sticker) => (
             <Pressable accessibilityLabel={`Gửi nhãn dán ${sticker.name}`} key={sticker.id} onPress={() => onSelect(sticker)} style={[styles.stickerButton, isWeb && styles.webStickerButton]}>
-              <Image resizeMode="contain" source={{ uri: sticker.thumbnailUrl ?? sticker.imageUrl }} style={[styles.sticker, isWeb && styles.webSticker]} />
+              <Image cachePolicy="memory-disk" contentFit="contain" source={{ uri: sticker.thumbnailUrl ?? sticker.imageUrl }} style={[styles.sticker, isWeb && styles.webSticker]} />
             </Pressable>
           ))}
         </ScrollView>

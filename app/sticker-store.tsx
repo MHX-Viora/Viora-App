@@ -1,12 +1,22 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { useResponsive } from "@/hooks/use-responsive";
 import { getStickerPack, getStickerPacks } from "@/services/sticker.service";
+import {
+  getStickerPackDetailCache,
+  getStickerPackPageCache,
+  hydrateStickerCache,
+  isStickerCacheStale,
+  setStickerPackDetailCache,
+  setStickerPackPageCache,
+  stickerPackPageKey,
+} from "@/stores/sticker-cache";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
 import { breakpoints } from "@/theme/breakpoints";
 import type { StickerPack, StickerPackDetail } from "@/types/sticker";
@@ -31,16 +41,57 @@ export default function StickerStoreScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<StickerPackDetail | null>(null);
+  const previewPackIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    setLoading(true); setError("");
-    getStickerPacks(filter)
-      .then((page) => active && setPacks(page.items))
-      .catch((reason: unknown) => active && setError(reason instanceof Error ? reason.message : "Không thể tải cửa hàng."))
-      .finally(() => active && setLoading(false));
+    void (async () => {
+      const cacheKey = stickerPackPageKey(filter, 1, 50);
+      try {
+        await hydrateStickerCache();
+        const cached = getStickerPackPageCache(cacheKey);
+        if (!active) return;
+        setPacks(cached?.value.items ?? []);
+        setLoading(!cached);
+        setError("");
+        if (!isStickerCacheStale(cached)) return;
+
+        const page = await getStickerPacks(filter);
+        setStickerPackPageCache(cacheKey, page);
+        if (active) setPacks(page.items);
+      } catch (reason: unknown) {
+        if (active && getStickerPackPageCache(cacheKey) === undefined) {
+          setError(reason instanceof Error ? reason.message : "Không thể tải cửa hàng.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
     return () => { active = false; };
   }, [filter]);
+
+  const openPreview = async (packId: string) => {
+    previewPackIdRef.current = packId;
+    await hydrateStickerCache();
+    if (previewPackIdRef.current !== packId) return;
+    const cached = getStickerPackDetailCache(packId);
+    if (cached) setPreview(cached.value);
+    if (!isStickerCacheStale(cached)) return;
+    try {
+      const value = await getStickerPack(packId);
+      setStickerPackDetailCache(packId, value);
+      if (previewPackIdRef.current === packId) setPreview(value);
+    } catch (reason: unknown) {
+      if (!cached && previewPackIdRef.current === packId) {
+        setError(reason instanceof Error ? reason.message : "Không thể tải bộ nhãn dán.");
+      }
+    }
+  };
+
+  const closePreview = () => {
+    previewPackIdRef.current = null;
+    setPreview(null);
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -56,8 +107,8 @@ export default function StickerStoreScreen() {
           numColumns={columnCount}
           renderItem={({ item }) => (
             <View style={[styles.cardCell, { width: cardCellWidth }]}>
-              <Pressable accessibilityLabel={`Xem bộ ${item.name}`} onPress={() => void getStickerPack(item.id).then(setPreview).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Không thể tải bộ nhãn dán."))} style={styles.card}>
-                <Image resizeMode="contain" source={{ uri: item.thumbnailUrl }} style={styles.thumbnail} />
+              <Pressable accessibilityLabel={`Xem bộ ${item.name}`} onPress={() => void openPreview(item.id)} style={styles.card}>
+                <Image cachePolicy="memory-disk" contentFit="contain" source={{ uri: item.thumbnailUrl }} style={styles.thumbnail} />
                 <Text numberOfLines={2} style={styles.packName}>{item.name}</Text>
                 <Text style={styles.meta}>{item.stickerCount} nhãn dán</Text>
                 <Text style={styles.price}>{item.isOwned ? "Đã sở hữu" : item.isFree ? "Miễn phí" : `${item.price.toLocaleString("vi-VN")} xu`}</Text>
@@ -66,18 +117,19 @@ export default function StickerStoreScreen() {
           )}
         />
       )}
-      <Modal animationType="slide" onRequestClose={() => setPreview(null)} transparent visible={preview !== null}>
-        <Pressable onPress={() => setPreview(null)} style={[styles.scrim, dialogLayout.backdrop]}>
+      <Modal animationType="slide" onRequestClose={closePreview} transparent visible={preview !== null}>
+        <Pressable onPress={closePreview} style={[styles.scrim, dialogLayout.backdrop]}>
           <Pressable onPress={() => undefined} style={[styles.preview, dialogLayout.surface]}>
-            <View style={styles.previewHeader}><Text style={styles.title}>{preview?.pack.name}</Text><Pressable accessibilityLabel="Đóng xem trước" onPress={() => setPreview(null)}><Ionicons color={theme.colors.text} name="close" size={24} /></Pressable></View>
+            <View style={styles.previewHeader}><Text style={styles.title}>{preview?.pack.name}</Text><Pressable accessibilityLabel="Đóng xem trước" onPress={closePreview}><Ionicons color={theme.colors.text} name="close" size={24} /></Pressable></View>
             <ScrollView
               contentContainerStyle={[styles.previewGrid, isDesktopWeb && styles.desktopPreviewGrid]}
               style={[styles.previewScroll, { maxHeight: previewGridMaxHeight }]}
             >
               {preview?.stickers.map((sticker) => (
                 <Image
+                  cachePolicy="memory-disk"
+                  contentFit="contain"
                   key={sticker.id}
-                  resizeMode="contain"
                   source={{ uri: sticker.thumbnailUrl ?? sticker.imageUrl }}
                   style={[styles.previewSticker, { height: previewStickerSize, width: previewStickerSize }]}
                 />
