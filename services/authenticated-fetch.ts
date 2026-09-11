@@ -1,13 +1,28 @@
-import { refreshToken } from "@/services/auth.service";
+import {
+  InvalidRefreshTokenError,
+  refreshToken,
+} from "@/services/auth.service";
 import { isJwtExpiringSoon } from "@/services/jwt-expiry";
 import { createTokenRefreshCoordinator } from "@/services/token-refresh-coordinator";
-import { getAccessToken, setAccessToken } from "@/stores/session-store";
+import {
+  clearSession,
+  getAccessToken,
+  getSession,
+  setAuthTokens,
+} from "@/stores/session-store";
 
 const coordinateTokenRefresh = createTokenRefreshCoordinator(
   async () => {
-    const refreshedSession = await refreshToken();
-    await setAccessToken(refreshedSession.accessToken);
-    return refreshedSession.accessToken;
+    try {
+      const refreshedSession = await refreshToken();
+      await setAuthTokens(refreshedSession);
+      return refreshedSession.accessToken;
+    } catch (error) {
+      if (error instanceof InvalidRefreshTokenError) {
+        await clearSession();
+      }
+      throw error;
+    }
   },
   getAccessToken,
 );
@@ -20,8 +35,22 @@ export const getRealtimeAccessToken = async (): Promise<string> => {
 
   try {
     return await refreshRejectedToken(token);
-  } catch {
-    return token;
+  } catch (error) {
+    return error instanceof InvalidRefreshTokenError ? "" : token;
+  }
+};
+
+export const ensureFreshSession = async () => {
+  const session = await getSession();
+  if (!session?.accessToken || !isJwtExpiringSoon(session.accessToken)) {
+    return session;
+  }
+
+  try {
+    await refreshRejectedToken(session.accessToken);
+    return getSession();
+  } catch (error) {
+    return error instanceof InvalidRefreshTokenError ? null : session;
   }
 };
 
@@ -50,9 +79,6 @@ export const authenticatedFetch = async (
 
   // 401 Unauthorized: Token hết hạn: refresh token, lưu token mới, rồi gọi lại đúng 1 lần.
   const refreshedToken = await refreshRejectedToken(token);
-  void import("@/services/realtime.service").then(({ restartRealtime }) =>
-    restartRealtime(),
-  );
 
   response = await fetch(url, {
     ...options,

@@ -64,12 +64,16 @@ export type RegisterResponse = { message: string };
 
 export type LoginResponse = {
   accessToken: string;
+  refreshToken?: string;
+  accessTokenExpiresAt?: string;
+  refreshTokenExpiresAt?: string;
+  sessionId?: string;
   user: User | null;
 };
 
-export type AccessTokenResponse = { accessToken: string };
+export type AccessTokenResponse = Omit<LoginResponse, "user">;
 
-export type Session = LoginResponse;
+export type Session = Omit<LoginResponse, "refreshToken">;
 
 export type StorageAdapter = {
   deleteItemAsync(key: string): Promise<void>;

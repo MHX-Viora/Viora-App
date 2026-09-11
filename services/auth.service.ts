@@ -1,8 +1,10 @@
 import {
   clearSession,
   getAccessToken,
+  getRefreshToken,
   getSession,
   saveSession,
+  setRefreshToken,
 } from "@/stores/session-store";
 import type {
   AccessTokenResponse,
@@ -13,12 +15,18 @@ import type {
   RegisterResponse,
 } from "@/types/auth";
 import { clearGoogleAuthSession } from "@/services/google-auth.service";
+import { refreshTokenTransportHeaders } from "@/services/refresh-token-transport";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 const JSON_HEADERS = {
   Accept: "application/json",
   "Content-Type": "application/json",
+};
+
+const AUTH_JSON_HEADERS = {
+  ...JSON_HEADERS,
+  ...refreshTokenTransportHeaders,
 };
 
 const getAuthRequestError = (error: unknown) => {
@@ -91,7 +99,14 @@ const normalizeLoginResponse = (value: unknown): LoginResponse | null => {
       : null;
   if (user === undefined) return null;
 
-  return { accessToken, user };
+  return {
+    accessToken,
+    refreshToken: asString(payload.refreshToken) || undefined,
+    accessTokenExpiresAt: asString(payload.accessTokenExpiresAt) || undefined,
+    refreshTokenExpiresAt: asString(payload.refreshTokenExpiresAt) || undefined,
+    sessionId: asString(payload.sessionId) || undefined,
+    user,
+  };
 };
 
 const isAccessTokenResponse = (
@@ -191,7 +206,11 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 export const saveAuthSession = async (
   session: LoginResponse,
 ): Promise<void> => {
-  await saveSession(session);
+  if (session.refreshToken) {
+    await setRefreshToken(session.refreshToken);
+  }
+  const { refreshToken: _refreshToken, ...storedSession } = session;
+  await saveSession(storedSession);
 };
 
 export const getStoredAuthSession = async () => {
@@ -205,11 +224,13 @@ export const clearAuthSession = async (): Promise<void> => {
 export const logout = async (): Promise<void> => {
   try {
     const token = await getAccessToken();
+    const storedRefreshToken = await getRefreshToken();
     const response = await fetch(`${BASE_URL}/api/accounts/logout`, {
       method: "POST",
       headers: token
-        ? { Accept: "application/json", Authorization: `Bearer ${token}` }
-        : { Accept: "application/json" },
+        ? { ...AUTH_JSON_HEADERS, Authorization: `Bearer ${token}` }
+        : AUTH_JSON_HEADERS,
+      body: JSON.stringify({ refreshToken: storedRefreshToken }),
       credentials: "include",
     });
 
@@ -269,7 +290,7 @@ export const login = async (payload: Credentials): Promise<LoginResponse> => {
   try {
     response = await fetch(`${BASE_URL}/api/accounts/login`, {
       method: "POST",
-      headers: JSON_HEADERS,
+      headers: AUTH_JSON_HEADERS,
       body: JSON.stringify(payload),
       credentials: "include",
     });
@@ -309,7 +330,7 @@ export const googleLogin = async (
   try {
     response = await fetch(`${BASE_URL}/api/accounts/google-login`, {
       method: "POST",
-      headers: JSON_HEADERS,
+      headers: AUTH_JSON_HEADERS,
       body: JSON.stringify({ firebaseToken }),
       credentials: "include",
     });
@@ -331,11 +352,14 @@ export const googleLogin = async (
   return session;
 };
 
+export class InvalidRefreshTokenError extends Error {}
+
 export const refreshToken = async (): Promise<AccessTokenResponse> => {
-  //  Refresh token dùng cookie nên không cần gửi body.
+  const storedRefreshToken = await getRefreshToken();
   const response = await fetch(`${BASE_URL}/api/accounts/refresh-token`, {
     method: "POST",
-    headers: JSON_HEADERS,
+    headers: AUTH_JSON_HEADERS,
+    body: JSON.stringify({ refreshToken: storedRefreshToken }),
     credentials: "include",
   });
 
@@ -347,6 +371,9 @@ export const refreshToken = async (): Promise<AccessTokenResponse> => {
     const error = data as ApiError;
     const message = getErrorMessage(error, "Làm mới phiên thất bại.");
 
+    if (response.status === 401 || response.status === 403) {
+      throw new InvalidRefreshTokenError(message);
+    }
     throw new Error(message);
   }
 

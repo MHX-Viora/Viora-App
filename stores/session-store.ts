@@ -1,10 +1,12 @@
-import type { Session, User } from "@/types/auth";
+import type { AccessTokenResponse, Session, User } from "@/types/auth";
 import { sessionStorage } from "@/stores/session-storage";
+import { refreshTokenStorage } from "@/stores/refresh-token-storage";
 import { clearConversationListCache } from "@/stores/conversation-list-cache";
 import { clearMessageCache } from "@/stores/message-cache";
 import { clearStickerCache } from "@/stores/sticker-cache";
 
 const SESSION_KEY = "viora.session";
+const invalidationListeners = new Set<() => void>();
 
 // Kiểm tra dữ liệu đọc từ storage có đúng shape session tối thiểu không.
 const isSession = (value: unknown): value is Session => {
@@ -39,7 +41,11 @@ export const clearSession = async (): Promise<void> => {
   clearConversationListCache();
   clearMessageCache();
   await clearStickerCache();
-  await sessionStorage.deleteItemAsync(SESSION_KEY);
+  await Promise.all([
+    sessionStorage.deleteItemAsync(SESSION_KEY),
+    refreshTokenStorage.deleteAsync(),
+  ]);
+  invalidationListeners.forEach((listener) => listener());
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
@@ -56,12 +62,38 @@ export const setAccessToken = async (accessToken: string): Promise<void> => {
 };
 
 export const getRefreshToken = async (): Promise<string | null> => {
-  // Backend đang lưu refresh token bằng cookie, app không đọc được cookie này.
-  return null;
+  return refreshTokenStorage.getAsync();
 };
 
-export const setRefreshToken = async (_refreshToken: string): Promise<void> => {
-  // Backend tự set refresh cookie sau login, nên app không cần lưu refresh token.
+export const setRefreshToken = async (refreshToken: string): Promise<void> => {
+  await refreshTokenStorage.setAsync(refreshToken);
+};
+
+export const setAuthTokens = async (
+  tokens: AccessTokenResponse,
+): Promise<void> => {
+  const session = await getSession();
+  if (!session) throw new Error("Không tìm thấy phiên đăng nhập.");
+
+  if (tokens.refreshToken) {
+    await setRefreshToken(tokens.refreshToken);
+  }
+  await saveSession({
+    ...session,
+    accessToken: tokens.accessToken,
+    accessTokenExpiresAt:
+      tokens.accessTokenExpiresAt ?? session.accessTokenExpiresAt,
+    refreshTokenExpiresAt:
+      tokens.refreshTokenExpiresAt ?? session.refreshTokenExpiresAt,
+    sessionId: tokens.sessionId ?? session.sessionId,
+  });
+};
+
+export const subscribeSessionInvalidation = (listener: () => void) => {
+  invalidationListeners.add(listener);
+  return () => {
+    invalidationListeners.delete(listener);
+  };
 };
 
 export const getUser = async (): Promise<User | null> => {
