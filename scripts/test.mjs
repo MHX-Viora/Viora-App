@@ -42,6 +42,8 @@ await import("../features/chat/chat-media-layout.test.mjs");
 await import("../features/chat/chat-send-units.test.mjs");
 await import("../features/chat/message-composer-layout.test.mjs");
 await import("../features/stickers/recent-stickers.test.mjs");
+await import("../features/stickers/sticker-panel-layout.test.mjs");
+await import("../features/stickers/sticker-store-layout.test.mjs");
 await import("../features/stickers/sticker-chat-contract.test.mjs");
 await import("../services/web-platform-safety.test.mjs");
 await import("../services/call-realtime-delivery.test.mjs");
