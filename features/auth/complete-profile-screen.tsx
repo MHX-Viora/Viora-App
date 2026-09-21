@@ -237,6 +237,7 @@ const createStyles = (theme: AppTheme) => {
   return StyleSheet.create({
   container: { gap: spacing.xl, maxWidth: 430, width: "100%" },
   content: {
+    alignItems: "center",
     flexGrow: 1,
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
