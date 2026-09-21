@@ -24,6 +24,7 @@ export type User = {
   displayName: string;
   avatarUrl: string;
   coverUrl: string;
+  gender: Gender;
   role: number;
   isVerified: boolean;
   verificationStatus: number;
@@ -48,8 +49,8 @@ export type ForgotPasswordMessage = {
 
 export type ProfileInput = {
   displayName: string;
-  avatarUrl: string;
-  coverUrl: string;
+  avatarUrl?: string;
+  coverUrl?: string;
   gender: Gender;
 };
 

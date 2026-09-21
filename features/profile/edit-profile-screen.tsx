@@ -62,6 +62,7 @@ export function EditProfileScreen() {
 
       setUser(session.user);
       setDisplayName(session.user.displayName);
+      setGender(session.user.gender ?? 0);
       setIsLoading(false);
     };
 

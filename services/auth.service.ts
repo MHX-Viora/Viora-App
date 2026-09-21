@@ -67,6 +67,7 @@ const normalizeUser = (value: unknown): LoginResponse["user"] | undefined => {
     avatarUrl: asString(value.avatarUrl ?? value.avatar),
     coverUrl: asString(value.coverUrl ?? value.cover),
     displayName: asString(value.displayName ?? value.name ?? value.fullName, "Người dùng"),
+    gender: value.gender === 1 || value.gender === 2 ? value.gender : 0,
     id,
     isVerified: asBoolean(value.isVerified),
     role: asNumber(value.role),
