@@ -1,16 +1,14 @@
 import { authenticatedFetch } from "@/services/authenticated-fetch";
+import { buildProfileFormData } from "@/services/profile-form";
+import { completeExistingOrCreate } from "@/services/profile-completion";
+import { parseUserResponse } from "@/services/profile-response";
 import type { ProfileInput, UpdateProfileInput, User } from "@/types/auth";
+import { Platform } from "react-native";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
 const FORM_HEADERS = {
   Accept: "application/json",
-};
-
-type ApiError = {
-  message?: unknown;
-  title?: unknown;
-  status?: unknown;
 };
 
 export type UserStatistics = {
@@ -86,78 +84,49 @@ const getErrorMessage = (data: unknown, fallback: string) => {
   return fallback;
 };
 
-const isUser = (value: unknown): value is User => {
-  if (!isRecord(value)) return false;
+class ProfileRequestError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
 
-  return (
-    typeof value.id === "string" &&
-    typeof value.accountId === "string" &&
-    typeof value.displayName === "string" &&
-    typeof value.avatarUrl === "string" &&
-    typeof value.coverUrl === "string" &&
-    typeof value.role === "number" &&
-    typeof value.isVerified === "boolean" &&
-    typeof value.verificationStatus === "number"
-  );
-};
-
-const getFileName = (uri: string, fallbackName: string) => {
-  const fileName = uri.split("/").pop();
-  return fileName && fileName.includes(".") ? fileName : fallbackName;
-};
-
-const getFileType = (fileName: string) => {
-  const extension = fileName.split(".").pop()?.toLowerCase();
-
-  if (extension === "png") return "image/png";
-  if (extension === "webp") return "image/webp";
-  return "image/jpeg";
-};
-
-const appendImage = (formData: FormData, fieldName: string, uri: string) => {
-  const fileName = getFileName(uri, `${fieldName.toLowerCase()}.jpg`);
-
-  formData.append(fieldName, {
-    uri,
-    name: fileName,
-    type: getFileType(fileName),
-  } as unknown as Blob);
-};
-
-export const createProfile = async (payload: ProfileInput): Promise<User> => {
-  const formData = new FormData();
-  formData.append("DisplayName", payload.displayName);
-  formData.append("Gender", String(payload.gender));
-  appendImage(formData, "Avatar", payload.avatarUrl);
-  appendImage(formData, "Cover", payload.coverUrl);
-
+const saveProfile = async (
+  payload: ProfileInput,
+  method: "POST" | "PATCH",
+): Promise<User> => {
+  const formData = await buildProfileFormData(payload, Platform.OS === "web");
   const response = await authenticatedFetch(`${BASE_URL}/api/users/profile`, {
-    method: "POST",
+    method,
     headers: FORM_HEADERS,
     body: formData,
   });
 
   const data = await response.json();
 
-  if (!response.ok || (isRecord(data) && data.status === 0)) {
-    const error = data as ApiError;
-    let message = "Không thể lưu hồ sơ.";
-
-    if (typeof error.message === "string" && error.message.trim()) {
-      message = error.message;
-    } else if (typeof error.title === "string" && error.title.trim()) {
-      message = error.title;
-    }
-
-    throw new Error(message);
+  if (!response.ok) {
+    throw new ProfileRequestError(
+      getErrorMessage(data, method === "POST" ? "Không thể lưu hồ sơ." : "Không thể cập nhật hồ sơ."),
+      response.status,
+    );
   }
 
-  if (!isUser(data)) {
+  const user = parseUserResponse(data);
+  if (!user) {
     throw new Error("Phản hồi hồ sơ không hợp lệ.");
   }
 
-  return data;
+  return user;
 };
+
+export const createProfile = (payload: ProfileInput): Promise<User> =>
+  saveProfile(payload, "POST");
+
+export const completeProfile = (payload: ProfileInput): Promise<User> =>
+  // Google Login ở BE hiện chỉ tạo Account. Tạo User khi PATCH xác nhận chưa có hồ sơ.
+  completeExistingOrCreate(
+    () => saveProfile(payload, "PATCH"),
+    () => saveProfile(payload, "POST"),
+  );
 
 export const getMyStatistics = async (): Promise<UserStatistics> => {
   const response = await authenticatedFetch(`${BASE_URL}/api/users/me/statistics`);
@@ -292,43 +261,4 @@ export const getUserProfile = async (userId: string): Promise<UserProfile> => {
 
 export const updateProfile = async (
   payload: UpdateProfileInput,
-): Promise<User> => {
-  const formData = new FormData();
-  formData.append("DisplayName", payload.displayName);
-  formData.append("Gender", String(payload.gender));
-
-  if (payload.avatarUrl) {
-    appendImage(formData, "Avatar", payload.avatarUrl);
-  }
-
-  if (payload.coverUrl) {
-    appendImage(formData, "Cover", payload.coverUrl);
-  }
-
-  const response = await authenticatedFetch(`${BASE_URL}/api/users/profile`, {
-    method: "PATCH",
-    headers: FORM_HEADERS,
-    body: formData,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok || (isRecord(data) && data.status === 0)) {
-    const error = data as ApiError;
-    let message = "Không thể cập nhật hồ sơ.";
-
-    if (typeof error.message === "string" && error.message.trim()) {
-      message = error.message;
-    } else if (typeof error.title === "string" && error.title.trim()) {
-      message = error.title;
-    }
-
-    throw new Error(message);
-  }
-
-  if (!isUser(data)) {
-    throw new Error("Phản hồi hồ sơ không hợp lệ.");
-  }
-
-  return data;
-};
+): Promise<User> => saveProfile(payload, "PATCH");

@@ -9,7 +9,7 @@ import {
   type DesktopRoute,
 } from "@/components/layout/desktop-navigation";
 import { UserAvatar } from "@/components/common/user-avatar";
-import { getSession } from "@/stores/session-store";
+import { getSession, subscribeSession } from "@/stores/session-store";
 import { breakpoints, layout, spacing, type AppTheme, useTheme } from "@/theme";
 import type { User } from "@/types/auth";
 import {
@@ -89,6 +89,7 @@ export function DesktopHeader({
 
   useEffect(() => {
     void getSession().then((session) => setUser(session?.user ?? null));
+    return subscribeSession((session) => setUser(session?.user ?? null));
   }, []);
 
   useEffect(() => subscribeChatUnreadCount(setLiveChatBadge), []);

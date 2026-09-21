@@ -28,9 +28,9 @@ import { type ThemeColors, useTheme } from "@/theme";
 
 
 const GENDERS: { label: GenderLabel; value: Gender }[] = [
-  { label: "Nam", value: 0 },
-  { label: "Nữ", value: 1 },
-  { label: "Khác", value: 2 },
+  { label: "Nam", value: 1 },
+  { label: "Nữ", value: 2 },
+  { label: "Khác", value: 0 },
 ];
 
 export function EditProfileScreen() {
@@ -62,6 +62,7 @@ export function EditProfileScreen() {
 
       setUser(session.user);
       setDisplayName(session.user.displayName);
+      setGender(session.user.gender ?? 0);
       setIsLoading(false);
     };
 

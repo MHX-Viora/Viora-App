@@ -29,11 +29,12 @@ import {
   getUserShareLink,
 } from "@/services/share-link.service";
 import { getMyStatistics } from "@/services/user.service";
-import { getSession } from "@/stores/session-store";
+import { getSession, subscribeSession } from "@/stores/session-store";
 import { useResponsive } from "@/hooks/use-responsive";
 import type { User } from "@/types/auth";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
+import { applyCurrentUserToFeedPosts } from "@/utils/feed-current-user";
 import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 
 
@@ -79,6 +80,14 @@ export function ProfileScreen() {
   const [showQr, setShowQr] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [profileShareUrl, setProfileShareUrl] = useState("");
+
+  useEffect(() => subscribeSession((session) => {
+    const updatedUser = session?.user ?? null;
+    setUser(updatedUser);
+    if (updatedUser) {
+      setProfilePosts((current) => applyCurrentUserToFeedPosts(current, updatedUser));
+    }
+  }), []);
 
   useEffect(() => {
     const loadUser = async () => {

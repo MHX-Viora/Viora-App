@@ -1,8 +1,19 @@
 import type { Session, User } from "@/types/auth";
 import { sessionStorage } from "@/stores/session-storage";
+import { withUpdatedUser } from "@/stores/session-user";
 import { clearConversationListCache } from "@/stores/conversation-list-cache";
 
 const SESSION_KEY = "viora.session";
+const sessionListeners = new Set<(session: Session | null) => void>();
+
+export const subscribeSession = (listener: (session: Session | null) => void) => {
+  sessionListeners.add(listener);
+  return () => { sessionListeners.delete(listener); };
+};
+
+const notifySession = (session: Session | null) => {
+  sessionListeners.forEach((listener) => listener(session));
+};
 
 // Kiểm tra dữ liệu đọc từ storage có đúng shape session tối thiểu không.
 const isSession = (value: unknown): value is Session => {
@@ -31,11 +42,13 @@ export const getSession = async (): Promise<Session | null> => {
 
 export const saveSession = async (session: Session): Promise<void> => {
   await sessionStorage.setItemAsync(SESSION_KEY, JSON.stringify(session));
+  notifySession(session);
 };
 
 export const clearSession = async (): Promise<void> => {
   clearConversationListCache();
   await sessionStorage.deleteItemAsync(SESSION_KEY);
+  notifySession(null);
 };
 
 export const getAccessToken = async (): Promise<string | null> => {
@@ -69,6 +82,6 @@ export const updateUser = async (user: User): Promise<void> => {
   const session = await getSession();
   if (!session) throw new Error("Không tìm thấy phiên đăng nhập.");
 
-  // Sau khi tạo hồ sơ, thay user null bằng user backend trả về.
-  await saveSession({ ...session, user });
+  // Giữ token và các trường phiên khác khi backend trả về UserResponse mới.
+  await saveSession(withUpdatedUser(session, user));
 };

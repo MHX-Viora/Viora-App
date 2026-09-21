@@ -39,7 +39,8 @@ import {
   savePost,
 } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
-import { getSession } from "@/stores/session-store";
+import { getSession, subscribeSession } from "@/stores/session-store";
+import { applyCurrentUserToFeedPosts } from "@/utils/feed-current-user";
 import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing } from "@/theme";
 import type { CreatePostInput, FeedPost, PostFeedSort } from "@/types/feed";
@@ -98,6 +99,15 @@ export function FeedScreen() {
   const [myAvatar, setMyAvatar] = useState(initialPosts[0].avatar);
   const [myDisplayName, setMyDisplayName] = useState("Bạn");
   const [canPublishArticle, setCanPublishArticle] = useState(false);
+
+  useEffect(() => subscribeSession((session) => {
+    const updatedUser = session?.user;
+    if (!updatedUser) return;
+    setMyAvatar(updatedUser.avatarUrl || initialPosts[0].avatar);
+    setMyDisplayName(updatedUser.displayName);
+    setCanPublishArticle(canCreateArticle(updatedUser.accountStyle));
+    setPosts((current) => applyCurrentUserToFeedPosts(current, updatedUser));
+  }), []);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
