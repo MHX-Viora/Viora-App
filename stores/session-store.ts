@@ -117,6 +117,6 @@ export const updateUser = async (user: User): Promise<void> => {
   const session = await getSession();
   if (!session) throw new Error("Không tìm thấy phiên đăng nhập.");
 
-  // Sau khi tạo hồ sơ, thay user null bằng user backend trả về.
+  // Lưu user mới nhất sau khi tạo hoặc cập nhật hồ sơ.
   await saveSession({ ...session, user });
 };

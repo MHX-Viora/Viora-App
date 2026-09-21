@@ -21,7 +21,7 @@ import { CompleteProfileLogoutDialog } from "@/features/auth/complete-profile-lo
 import { getStoredAuthSession, logout } from "@/services/auth.service";
 import { registerPushNotifications } from "@/services/push-notification.service";
 import { startRealtime, stopRealtime } from "@/services/realtime.service";
-import { createProfile } from "@/services/user.service";
+import { completeProfile } from "@/services/user.service";
 import { updateUser } from "@/stores/session-store";
 import { spacing } from "@/theme";
 import type { Gender, GenderLabel } from "@/types/auth";
@@ -65,10 +65,10 @@ export function CompleteProfileScreen() {
 
   const handleCreateProfile = async () => {
     const normalizedName = displayName.trim();
-    if (!avatarUri || !coverUri || !normalizedName || !gender) {
+    if (!normalizedName || !gender) {
       return showAlert({
         title: "Thiếu thông tin",
-        message: "Chọn ảnh bìa, ảnh đại diện, nhập tên và giới tính.",
+        message: "Nhập tên và giới tính để hoàn thiện hồ sơ.",
       });
     }
 
@@ -87,14 +87,14 @@ export function CompleteProfileScreen() {
       // Backend nhận giới tính dưới dạng số: Nam = 0, Nữ = 1, Khác = 2.
       const genderValue = GENDERS.indexOf(gender) as Gender;
 
-      const user = await createProfile({
+      const user = await completeProfile({
         avatarUrl: avatarUri,
         coverUrl: coverUri,
         displayName: normalizedName,
         gender: genderValue,
       });
 
-      // Thay user null trong phiên bằng user backend vừa trả về.
+      // Lưu UserResponse từ backend vào phiên trước khi vào Home.
       await updateUser(user);
       void startRealtime();
       void registerPushNotifications();
@@ -237,6 +237,7 @@ const createStyles = (theme: AppTheme) => {
   return StyleSheet.create({
   container: { gap: spacing.xl, maxWidth: 430, width: "100%" },
   content: {
+    alignItems: "center",
     flexGrow: 1,
     paddingBottom: spacing.xl,
     paddingHorizontal: spacing.lg,
