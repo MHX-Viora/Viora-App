@@ -114,4 +114,14 @@ export const classicTheme: AppTheme = {
   mode: "classic",
   notifications: classicNotificationColors,
   reels: classicReelsColors,
+  wallet: {
+    accent: "#168BFF", accentContrast: "#FFFFFF", bannerAccent: "#00CDB8",
+    bannerBackground: "#EEFFFA", bannerBorder: "#C9F2E9", cardBackground: "#F4FBFF",
+    cardBorder: "#C7EAF9", coinBackground: "#FFC94A", coinBorder: "#FFE79A",
+    coinText: "#B75C00", glow: "rgba(98, 231, 229, 0.22)", historyBackground: "rgba(255, 255, 255, 0.72)",
+    iconBackground: "#E0F5FF", miniAccent: "#7C4DFF", miniBackground: "#FFF5FF",
+    miniBorder: "#F0DDF5", miniSoft: "#EFE1FF", moreAccent: "#168BFF",
+    moreBackground: "#F4FBFF", moreBorder: "#D8EDF7", moreSoft: "#DFF5FF",
+    muted: "#71839C", skeleton: "#DCEFF8", text: "#07182D", walletBack: "#58DDF1", walletBody: "#168BFF",
+  },
 };

@@ -42,6 +42,8 @@ import { followUser } from "@/services/user.service";
 import { useResponsive } from "@/hooks/use-responsive";
 import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
+import { AdvertisementFeedbackType } from "@/types/advertisement";
+import { advertisementCtaLabel } from "@/utils/advertisement-format";
 import { formatReelTime } from "@/utils/reel-time";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -50,6 +52,9 @@ export function ReelCard({
   active,
   height,
   onComment,
+  onAdvertise,
+  onAdvertisementFeedback,
+  onAdvertisementPress,
   onDelete,
   onOpenAuthor,
   onReact,
@@ -64,6 +69,9 @@ export function ReelCard({
   active: boolean;
   height: number;
   onComment?: (reelId: string) => void;
+  onAdvertise?: (reel: Reel) => void;
+  onAdvertisementFeedback?: (advertisementId: string, type: AdvertisementFeedbackType) => void;
+  onAdvertisementPress?: (reel: Reel) => void;
   onDelete?: (reelId: string) => void;
   onOpenAuthor?: (userId: string) => void;
   onReact?: (reelId: string) => void;
@@ -526,6 +534,7 @@ export function ReelCard({
             <Text ellipsizeMode="tail" numberOfLines={1} style={styles.hashtags}>
               {reel.hashtags}
             </Text>
+            {reel.advertisement ? <Text style={styles.sponsoredText}>Được tài trợ</Text> : null}
             {(reel.caption.length > 70 || reel.hashtags.length > 45) && (
               <Pressable
                 accessibilityLabel="Xem đầy đủ mô tả và hashtag"
@@ -535,6 +544,12 @@ export function ReelCard({
                 <Text style={styles.moreText}>Xem thêm</Text>
               </Pressable>
             )}
+            {reel.advertisement ? (
+              <Pressable accessibilityRole="button" onPress={() => onAdvertisementPress?.(reel)} style={styles.advertisementCta}>
+                <Text style={styles.advertisementCtaText}>{advertisementCtaLabel(reel.advertisement.ctaType)}</Text>
+                <Ionicons color={colors.white} name="chevron-forward" size={17} />
+              </Pressable>
+            ) : null}
           </View>
           <View
             style={[
@@ -629,10 +644,18 @@ export function ReelCard({
             ]}
           >
             <View style={styles.moderationGroup}>
+              {reel.advertisement ? <>
+                <View style={styles.advertisementInfo}><Ionicons color={colors.white} name="information-circle-outline" size={21} /><View style={styles.advertisementInfoCopy}><Text style={styles.moderationText}>Tại sao tôi thấy quảng cáo này?</Text><Text style={styles.advertisementInfoText}>Quảng cáo được phân phối theo đối tượng và ngân sách đã thiết lập.</Text></View></View>
+                <Pressable onPress={() => { setShowControls(false); if (reel.authorId) onOpenAuthor?.(reel.authorId); }} style={styles.moderationAction}><Ionicons color={colors.white} name="business-outline" size={21} /><Text style={styles.moderationText}>Thông tin nhà quảng cáo</Text></Pressable>
+                <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.Hide); }} style={styles.moderationAction}><Ionicons color={colors.white} name="eye-off-outline" size={21} /><Text style={styles.moderationText}>Ẩn quảng cáo</Text></Pressable>
+                <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.NotInterested); }} style={styles.moderationAction}><Ionicons color={colors.white} name="thumbs-down-outline" size={21} /><Text style={styles.moderationText}>Không quan tâm</Text></Pressable>
+                <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.Report); }} style={styles.moderationAction}><Ionicons color={colors.danger} name="flag-outline" size={21} /><Text style={[styles.moderationText, styles.deleteText]}>Báo cáo quảng cáo</Text></Pressable>
+              </> :
               <Pressable onPress={openReport} style={styles.moderationAction}>
                 <Ionicons color={colors.white} name="flag-outline" size={21} />
                 <Text style={styles.moderationText}>Báo cáo video</Text>
               </Pressable>
+              }
               <Pressable
                 onPress={handleDownload}
                 style={styles.moderationAction}
@@ -644,6 +667,12 @@ export function ReelCard({
                 />
                 <Text style={styles.moderationText}>Tải xuống video</Text>
               </Pressable>
+              {reel.isMine && onAdvertise && (
+                <Pressable onPress={() => { setShowControls(false); onAdvertise?.(reel); }} style={styles.moderationAction}>
+                  <Ionicons color={colors.white} name="megaphone-outline" size={21} />
+                  <Text style={styles.moderationText}>Quảng cáo video</Text>
+                </Pressable>
+              )}
               {reel.isMine && (
                 <Pressable
                   disabled={isDeleting}
@@ -840,6 +869,11 @@ export function ReelCard({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  advertisementCta: { alignItems: "center", backgroundColor: colors.primary, borderRadius: 10, flexDirection: "row", gap: spacing.xs, justifyContent: "center", marginTop: spacing.sm, minHeight: 42, paddingHorizontal: spacing.md },
+  advertisementCtaText: { color: colors.white, fontSize: 14, fontWeight: "800" },
+  advertisementInfo: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
+  advertisementInfoCopy: { flex: 1, gap: 3 },
+  advertisementInfoText: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
   author: { color: colors.white, fontSize: 18, fontWeight: "800" },
   authorLine: {
     alignItems: "center",
@@ -1001,6 +1035,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   moderationText: { color: colors.white, fontSize: 15, fontWeight: "800" },
+  sponsoredText: { color: colors.white, fontSize: 12, fontWeight: "800", marginTop: 3, opacity: 0.92 },
   playButton: {
     alignItems: "center",
     alignSelf: "center",

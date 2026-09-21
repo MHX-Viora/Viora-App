@@ -23,6 +23,8 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { deletePost, reportPost } from "@/services/post.service";
 import { spacing, typography } from "@/theme";
 import type { FeedPost } from "@/types/feed";
+import { AdvertisementFeedbackType } from "@/types/advertisement";
+import { advertisementCtaLabel } from "@/utils/advertisement-format";
 import { normalizePostLink } from "@/utils/post-link";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -150,6 +152,9 @@ function ReactionIcon({
 }
 
 type Props = {
+  onAdvertise?: (post: FeedPost) => void;
+  onAdvertisementFeedback?: (advertisementId: string, type: AdvertisementFeedbackType) => void;
+  onAdvertisementPress?: (post: FeedPost) => void;
   onComment?: (postId: string) => void;
   onDeleted?: (postId: string) => void;
   onOpenAuthor?: (userId: string) => void;
@@ -164,6 +169,9 @@ type Props = {
 };
 
 export function PostCard({
+  onAdvertise,
+  onAdvertisementFeedback,
+  onAdvertisementPress,
   onComment,
   onDeleted,
   onOpenAuthor,
@@ -245,6 +253,7 @@ export function PostCard({
   const activeReaction = post.isReacted ? currentReaction : undefined;
   const isNewsLayout =
     variant === "news" && post.postType === 2 && !!post.article;
+  const isAdvertisement = !!post.advertisement;
 
   useEffect(() => {
     setIsBodyExpanded(false);
@@ -368,6 +377,12 @@ export function PostCard({
             )}
           </View>
           <View style={styles.postMetadata}>
+            {isAdvertisement ? (
+              <View style={styles.sponsoredLabel}>
+                <Ionicons color={colors.primary} name="megaphone-outline" size={12} />
+                <Text style={styles.sponsoredText}>Được tài trợ</Text>
+              </View>
+            ) : (
             <View style={styles.visibility}>
               <Ionicons
                 color={colors.textMuted}
@@ -376,6 +391,7 @@ export function PostCard({
               />
               <Text style={styles.visibilityText}>{visibility.label}</Text>
             </View>
+            )}
             <Text style={styles.meta}>
               {post.location
                 ? `${post.publishedAt} · ${post.location}`
@@ -588,6 +604,20 @@ export function PostCard({
         </View>
       )}
 
+      {post.advertisement ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={(event) => {
+            event.stopPropagation();
+            onAdvertisementPress?.(post);
+          }}
+          style={styles.advertisementCta}
+        >
+          <Text style={styles.advertisementCtaText}>{advertisementCtaLabel(post.advertisement.ctaType)}</Text>
+          <Ionicons color={colors.primaryContrast} name="arrow-forward" size={17} />
+        </Pressable>
+      ) : null}
+
       {showReactions && (
         <Pressable
           accessibilityLabel="Đóng chọn cảm xúc"
@@ -711,10 +741,16 @@ export function PostCard({
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Tùy chọn bài viết</Text>
-            <Pressable onPress={openReport} style={styles.sheetAction}>
+            {isAdvertisement ? <>
+              <View style={styles.adInfo}><Ionicons color={colors.primary} name="information-circle-outline" size={22} /><View style={styles.adInfoCopy}><Text style={styles.sheetActionText}>Tại sao tôi thấy quảng cáo này?</Text><Text style={styles.adInfoText}>Quảng cáo được phân phối dựa trên đối tượng và ngân sách do nhà quảng cáo thiết lập.</Text></View></View>
+              <Pressable onPress={() => { setOptionsVisible(false); if (post.authorId) onOpenAuthor?.(post.authorId); }} style={styles.sheetAction}><Ionicons color={colors.text} name="business-outline" size={22} /><Text style={styles.sheetActionText}>Thông tin nhà quảng cáo</Text></Pressable>
+              <Pressable onPress={() => { setOptionsVisible(false); onAdvertisementFeedback?.(post.advertisement!.id, AdvertisementFeedbackType.Hide); }} style={styles.sheetAction}><Ionicons color={colors.text} name="eye-off-outline" size={22} /><Text style={styles.sheetActionText}>Ẩn quảng cáo</Text></Pressable>
+              <Pressable onPress={() => { setOptionsVisible(false); onAdvertisementFeedback?.(post.advertisement!.id, AdvertisementFeedbackType.NotInterested); }} style={styles.sheetAction}><Ionicons color={colors.text} name="thumbs-down-outline" size={22} /><Text style={styles.sheetActionText}>Không quan tâm</Text></Pressable>
+              <Pressable onPress={() => { setOptionsVisible(false); onAdvertisementFeedback?.(post.advertisement!.id, AdvertisementFeedbackType.Report); }} style={styles.sheetAction}><Ionicons color={colors.danger} name="flag-outline" size={22} /><Text style={[styles.sheetActionText, styles.dangerText]}>Báo cáo quảng cáo</Text></Pressable>
+            </> : <Pressable onPress={openReport} style={styles.sheetAction}>
               <Ionicons color={colors.text} name="flag-outline" size={22} />
               <Text style={styles.sheetActionText}>Báo cáo bài viết</Text>
-            </Pressable>
+            </Pressable>}
             {isNewsLayout && !post.isMine && onNotInterested ? (
               <Pressable
                 onPress={() => {
@@ -727,6 +763,15 @@ export function PostCard({
                 <Text style={styles.sheetActionText}>Không quan tâm</Text>
               </Pressable>
             ) : null}
+            {post.isMine && onAdvertise && (
+              <Pressable
+                onPress={() => { setOptionsVisible(false); onAdvertise?.(post); }}
+                style={styles.sheetAction}
+              >
+                <Ionicons color={colors.primary} name="megaphone-outline" size={22} />
+                <Text style={styles.sheetActionText}>{post.postType === 2 ? "Quảng cáo bài báo" : "Quảng cáo bài viết"}</Text>
+              </Pressable>
+            )}
             {post.isMine && (
               <Pressable
                 disabled={isDeleting}
@@ -794,6 +839,11 @@ export function PostCard({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  adInfo: { alignItems: "flex-start", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, paddingVertical: spacing.md },
+  adInfoCopy: { flex: 1, gap: 3 },
+  adInfoText: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+  advertisementCta: { alignItems: "center", backgroundColor: colors.primary, borderRadius: 10, flexDirection: "row", justifyContent: "center", gap: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.sm, minHeight: 44, paddingHorizontal: spacing.md },
+  advertisementCtaText: { color: colors.primaryContrast, fontSize: 14, fontWeight: "800" },
   articleCard: { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderRadius: 12, borderWidth: 1, marginHorizontal: spacing.md, marginBottom: spacing.sm, overflow: "hidden" },
   articleContent: { gap: 7, padding: spacing.md },
   articleMeta: { color: colors.textMuted, fontSize: 12 },
@@ -1033,6 +1083,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     minHeight: 54,
   },
   sheetActionText: { color: colors.text, fontSize: 16, fontWeight: "800" },
+  sponsoredLabel: { alignItems: "center", flexDirection: "row", gap: 4 },
+  sponsoredText: { color: colors.primary, fontSize: 12, fontWeight: "800" },
   sheetBackdrop: {
     backgroundColor: colors.visuals.rgb_0_0_0_0_38,
     flex: 1,

@@ -100,7 +100,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="utilities"
         options={{
-          href: null,
           tabBarAccessibilityLabel: "Tiện ích",
           tabBarIcon: ({ focused }) => (
             <TabIcon

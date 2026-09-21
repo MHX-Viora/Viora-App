@@ -79,12 +79,13 @@ test("home categories use server-side post type filtering and Reels navigation",
   assert.match(feedServiceSource, /params\.append\("postType", String\(postType\)\)/);
 });
 
-test("mobile footer temporarily hides both Reels and Utilities", () => {
+test("mobile footer hides Reels and exposes Utilities", () => {
   const reelsTabSource = getTabScreenSource("reels");
   const utilitiesTabSource = getTabScreenSource("utilities");
 
   assert.match(reelsTabSource, /href: null/);
-  assert.match(utilitiesTabSource, /href: null/);
+  assert.doesNotMatch(utilitiesTabSource, /href: null/);
+  assert.match(utilitiesTabSource, /tabBarAccessibilityLabel: "Tiện ích"/);
 });
 
 test("Reels keeps the Home category header and navigates back to the selected feed", () => {

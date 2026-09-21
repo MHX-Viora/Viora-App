@@ -14,6 +14,7 @@ import {
   Animated,
   Easing,
   FlatList,
+  Linking,
   Platform,
   Share,
   StyleSheet,
@@ -50,12 +51,22 @@ import { reels } from "@/features/reels/data";
 import { reactPost, savePost } from "@/services/post.service";
 import { getReelShareLink } from "@/services/share-link.service";
 import {
+  advertisementToReel,
+  createAdvertisementEventId,
+  getAdvertisementDelivery,
+  sendAdvertisementFeedback,
+  trackAdvertisementClick,
+  trackAdvertisementImpression,
+} from "@/services/advertisement.service";
+import {
   createReel as createReelApi,
   formatReelCount,
   getReels,
 } from "@/services/reel.service";
 import { layout, spacing } from "@/theme";
 import type { Reel, ReelSort } from "@/types/reel";
+import { AdvertisementFeedbackType, AdvertisementPlacement } from "@/types/advertisement";
+import { insertAdvertisements } from "@/utils/advertisement-insertion";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
@@ -127,6 +138,7 @@ export function ReelsScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
   const reelsListRef = useRef<FlatList<Reel>>(null);
+  const viewedAdvertisementIdsRef = useRef(new Set<string>());
   const [reelItems, setReelItems] = useState(reels);
   const [sort, setSort] = useState<ReelSort>("popular");
   const [reelHeight, setReelHeight] = useState(0);
@@ -155,12 +167,15 @@ export function ReelsScreen() {
     setReelsMessage("");
 
     try {
-      const response = await getReels({
-        page: 1,
-        pageSize: PAGE_SIZE,
-        sort: nextSort,
-      });
-      setReelItems(response.reels);
+      const [response, delivery] = await Promise.all([
+        getReels({ page: 1, pageSize: PAGE_SIZE, sort: nextSort }),
+        getAdvertisementDelivery(AdvertisementPlacement.Reels, 3).catch(() => ({ items: [] })),
+      ]);
+      setReelItems(insertAdvertisements(
+        response.reels,
+        delivery.items.map(advertisementToReel),
+        { minimumGap: 8, maximumGap: 12, seed: 3 },
+      ).map((entry) => entry.item));
       setActiveIndex(0);
       requestAnimationFrame(() =>
         reelsListRef.current?.scrollToOffset({ animated: false, offset: 0 }),
@@ -185,6 +200,13 @@ export function ReelsScreen() {
   useEffect(() => {
     loadReels(sort);
   }, [loadReels, sort]);
+
+  useEffect(() => {
+    const advertisement = reelItems[activeIndex]?.advertisement;
+    if (!advertisement || viewedAdvertisementIdsRef.current.has(advertisement.id) || !isFocused || !isAppActive) return;
+    viewedAdvertisementIdsRef.current.add(advertisement.id);
+    void trackAdvertisementImpression(advertisement.id, createAdvertisementEventId("impression", advertisement.id)).catch(() => undefined);
+  }, [activeIndex, isAppActive, isFocused, reelItems]);
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -219,6 +241,23 @@ export function ReelsScreen() {
 
   const handleInteractionLockChange = useCallback((locked: boolean) => {
     setIsInteractionLocked(locked);
+  }, []);
+  const openAdvertisement = useCallback(async (reel: Reel) => {
+    const advertisement = reel.advertisement;
+    if (!advertisement) return;
+    void trackAdvertisementClick(advertisement.id, createAdvertisementEventId("click", advertisement.id)).catch(() => undefined);
+    if (advertisement.destinationUrl?.startsWith("https://")) {
+      await Linking.openURL(advertisement.destinationUrl).catch(() => Alert.alert("Không thể mở liên kết", "Liên kết quảng cáo hiện không khả dụng."));
+    } else {
+      router.push({ pathname: "/reel/[reelId]", params: { reelId: reel.id } });
+    }
+  }, []);
+  const handleAdvertisementFeedback = useCallback(async (advertisementId: string, type: AdvertisementFeedbackType) => {
+    try {
+      await sendAdvertisementFeedback(advertisementId, type, type === AdvertisementFeedbackType.Report ? "Người dùng báo cáo từ menu quảng cáo." : undefined);
+      setReelItems((current) => current.filter((item) => item.advertisement?.id !== advertisementId));
+      showAppToast({ title: "Đã cập nhật", message: type === AdvertisementFeedbackType.Report ? "Cảm ơn bạn đã báo cáo quảng cáo." : "Bạn sẽ không thấy quảng cáo này nữa.", type: "success" });
+    } catch (error) { Alert.alert("Không thể cập nhật", error instanceof Error ? error.message : "Vui lòng thử lại."); }
   }, []);
 
   const handleReelsScroll = useCallback(
@@ -486,7 +525,7 @@ export function ReelsScreen() {
               length: reelHeight + ITEM_GAP,
               offset: (reelHeight + ITEM_GAP) * index,
             })}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.advertisement ? `advertisement:${item.advertisement.id}` : item.id}
             onMomentumScrollEnd={handleReelsScroll}
             onScroll={handleReelsScroll}
             pagingEnabled
@@ -495,6 +534,9 @@ export function ReelsScreen() {
             maxToRenderPerBatch={2}
             renderItem={({ index, item }) => (
               <ReelCard
+                onAdvertise={(reel) => router.push({ pathname: "/advertise/[postId]", params: { postId: reel.id, postType: "1" } })}
+                onAdvertisementFeedback={handleAdvertisementFeedback}
+                onAdvertisementPress={(reel) => void openAdvertisement(reel)}
                 active={
                   isAppActive &&
                   isFocused &&

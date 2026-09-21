@@ -1,4 +1,7 @@
+import type { AdvertisementPresentation } from "@/types/advertisement";
+
 export type Reel = {
+  advertisement?: AdvertisementPresentation;
   id: string;
   authorId: string | null;
   author: string;

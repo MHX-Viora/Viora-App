@@ -32,6 +32,12 @@ test("room startup hydrates persistent messages before background server sync", 
   assert.match(chatScreen, /nextCursor = result\.items\.at\(-1\)\?\.id/);
 });
 
+test("group rooms refresh message permissions even when messages are cached", () => {
+  assert.match(chatScreen, /useFocusEffect\(\s*useCallback\(\(\) => \{[\s\S]{0,300}if \(!isGroupConversation\) return;[\s\S]{0,180}load\(1, "background"\)/);
+  assert.match(chatScreen, /messagePermissions === null[\s\S]{0,220}Đang kiểm tra quyền gửi tin nhắn/);
+  assert.match(chatScreen, /!canSendInConversation[\s\S]{0,350}ChatComposerNotice/);
+});
+
 test("older messages remain user-driven through list pagination", () => {
   assert.match(
     chatScreen,

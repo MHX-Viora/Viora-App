@@ -115,4 +115,14 @@ export const modernTheme: AppTheme = {
   mode: "modern",
   notifications: notificationColors,
   reels: reelsColors,
+  wallet: {
+    accent: "#00E6EA", accentContrast: "#03213A", bannerAccent: "#00E6D3",
+    bannerBackground: "#07364D", bannerBorder: "#08759A", cardBackground: "#07304B",
+    cardBorder: "#00D9DF", coinBackground: "#FFC94A", coinBorder: "#FFE79A",
+    coinText: "#B75C00", glow: "rgba(0, 229, 234, 0.18)", historyBackground: "rgba(0, 41, 66, 0.76)",
+    iconBackground: "rgba(0, 230, 234, 0.16)", miniAccent: "#9A6CFF", miniBackground: "#28236C",
+    miniBorder: "#5E45B5", miniSoft: "rgba(154, 108, 255, 0.22)", moreAccent: "#39A6FF",
+    moreBackground: "#0A3158", moreBorder: "#145A91", moreSoft: "rgba(57, 166, 255, 0.16)",
+    muted: "#8FB7C9", skeleton: "#13455E", text: "#F7FCFF", walletBack: "#075C79", walletBody: "#007A94",
+  },
 };

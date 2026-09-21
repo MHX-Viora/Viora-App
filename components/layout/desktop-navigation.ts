@@ -21,6 +21,13 @@ export const desktopNavigationItems = [
     title: "Thông báo",
   },
   {
+    href: "/utilities" as const,
+    icon: "grid-outline" as const,
+    iconActive: "grid" as const,
+    route: "utilities" as const,
+    title: "Tiện ích",
+  },
+  {
     href: "/profile" as const,
     icon: "person-outline" as const,
     iconActive: "person" as const,

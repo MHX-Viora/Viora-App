@@ -90,4 +90,14 @@ export const premiumOceanTheme: AppTheme = {
   mode: "premium-ocean",
   notifications: oceanNotificationColors,
   reels: oceanReelsColors,
+  wallet: {
+    accent: "#13C8C5", accentContrast: "#06182A", bannerAccent: "#24D6A2",
+    bannerBackground: "#0A3441", bannerBorder: "#176A72", cardBackground: "#0C3047",
+    cardBorder: "#13C8C5", coinBackground: "#F4C95D", coinBorder: "#FFE8A0",
+    coinText: "#8D5900", glow: "rgba(19, 200, 197, 0.18)", historyBackground: "#081D31",
+    iconBackground: "rgba(19, 200, 197, 0.14)", miniAccent: "#A178E8", miniBackground: "#282458",
+    miniBorder: "#574A91", miniSoft: "rgba(161, 120, 232, 0.18)", moreAccent: "#168FE5",
+    moreBackground: "#0D2D49", moreBorder: "#195680", moreSoft: "rgba(22, 143, 229, 0.16)",
+    muted: "#91A7BC", skeleton: "#163E55", text: "#F5FAFF", walletBack: "#0F6071", walletBody: "#0E8994",
+  },
 };

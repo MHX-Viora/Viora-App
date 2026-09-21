@@ -1,8 +1,10 @@
 import type { MentionReference } from "@/types/mention";
+import type { AdvertisementPresentation } from "@/types/advertisement";
 
 export type PostFeedSort = "recommended" | "latest" | "trending";
 
 export type FeedPost = {
+  advertisement?: AdvertisementPresentation;
   id: string;
   author: string;
   authorId: string | null;
