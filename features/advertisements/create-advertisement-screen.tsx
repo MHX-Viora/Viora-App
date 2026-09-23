@@ -108,7 +108,7 @@ export function CreateAdvertisementScreen() {
   return (
     <SafeAreaView edges={["top"]} style={styles.screen}>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Quay lại" onPress={() => router.back()} style={styles.iconButton}><Ionicons color={theme.colors.text} name="arrow-back" size={22} /></Pressable>
+        <Pressable accessibilityLabel="Quay lại" onPress={() => router.canGoBack() ? router.back() : router.replace("/")} style={styles.iconButton}><Ionicons color={theme.colors.text} name="arrow-back" size={22} /></Pressable>
         <View style={styles.headerCopy}><Text style={styles.title}>Tạo quảng cáo</Text><Text style={styles.subtitle}>Quảng bá tự nhiên, rõ ràng và đúng đối tượng</Text></View>
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
