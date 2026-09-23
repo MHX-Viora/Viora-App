@@ -41,11 +41,6 @@ let appSyncPromise: Promise<void> | null = null;
 const synchronizeAuthenticatedApp = (reason: "cold-start" | "resume") => {
   if (appSyncPromise) return appSyncPromise;
 
-  console.info("[ChatSync] app sync started", {
-    appState: AppState.currentState,
-    reason,
-    timestamp: new Date().toISOString(),
-  });
   emitRealtimeSyncRequest();
 
   appSyncPromise = Promise.all([
@@ -53,30 +48,11 @@ const synchronizeAuthenticatedApp = (reason: "cold-start" | "resume") => {
     syncChatUnreadCount(reason),
     getNotifications({ page: 1, pageSize: 1 })
       .then((result) => {
-        console.info("[NotificationSync] unread count fetched", {
-          reason,
-          source: "api",
-          timestamp: new Date().toISOString(),
-          unreadCount: result.unreadCount,
-        });
         setNotificationUnreadCount(result.unreadCount);
       })
-      .catch((error: unknown) => {
-        console.info("[NotificationSync] unread count fetch failed", {
-          message: error instanceof Error ? error.message : String(error),
-          reason,
-          source: "api",
-          timestamp: new Date().toISOString(),
-        });
-      }),
+      .catch(() => undefined),
   ])
-    .then(() => {
-      console.info("[ChatSync] app sync completed", {
-        appState: AppState.currentState,
-        reason,
-        timestamp: new Date().toISOString(),
-      });
-    })
+    .then(() => undefined)
     .finally(() => {
       appSyncPromise = null;
     });
@@ -142,18 +118,10 @@ function RootLayoutContent() {
       if (state !== "active" && Platform.OS === "web") return;
 
       if (state === "active") {
-        console.info("[ChatSync] app resumed", {
-          appState: state,
-          timestamp: new Date().toISOString(),
-        });
         void synchronizeAuthenticatedApp("resume");
         return;
       }
 
-      console.info("[ChatSync] app backgrounded", {
-        appState: state,
-        timestamp: new Date().toISOString(),
-      });
       void stopRealtime().then(() => {
         if (AppState.currentState === "active") {
           void startRealtime();

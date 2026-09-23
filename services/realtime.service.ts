@@ -107,10 +107,6 @@ const getRealtimeConnection = () => {
     });
 
     connection.onreconnected(() => {
-      console.info("[ChatSync] SignalR reconnected", {
-        source: "signalr",
-        timestamp: new Date().toISOString(),
-      });
       emitRealtimeSyncRequest();
       void syncChatUnreadCount("signalr-reconnected");
       for (const groupName of joinedGroups) {
@@ -314,11 +310,6 @@ export const startRealtime = async () => {
     })
       .then(async (connected) => {
         if (!connected) return;
-        console.info("[ChatSync] SignalR connected", {
-          source: "signalr",
-          timestamp: new Date().toISOString(),
-        });
-
         if (!shouldRunRealtime) {
           await realtimeConnection.stop().catch((error: unknown) => {
             console.info("[Realtime] late stop ignored", realtimeErrorMessage(error));

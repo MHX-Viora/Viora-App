@@ -1272,12 +1272,6 @@ export function ChatScreen() {
     }
     void markConversationRead(conversationId)
       .then(() => {
-        console.info("[ChatSync] conversation marked read", {
-          conversationId,
-          source: "api",
-          timestamp: new Date().toISOString(),
-          unreadCount: 0,
-        });
         void syncChatUnreadCount("mark-read");
       })
       .catch(handleRoomApiError);
