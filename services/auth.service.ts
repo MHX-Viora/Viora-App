@@ -16,6 +16,7 @@ import type {
 } from "@/types/auth";
 import { clearGoogleAuthSession } from "@/services/google-auth.service";
 import { refreshTokenTransportHeaders } from "@/services/refresh-token-transport";
+import { requestRefreshWithCookieFallback } from "@/services/refresh-token-request";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -357,12 +358,15 @@ export class InvalidRefreshTokenError extends Error {}
 
 export const refreshToken = async (): Promise<AccessTokenResponse> => {
   const storedRefreshToken = await getRefreshToken();
-  const response = await fetch(`${BASE_URL}/api/accounts/refresh-token`, {
-    method: "POST",
-    headers: AUTH_JSON_HEADERS,
-    body: JSON.stringify({ refreshToken: storedRefreshToken }),
-    credentials: "include",
-  });
+  const response = await requestRefreshWithCookieFallback(
+    (token) => fetch(`${BASE_URL}/api/accounts/refresh-token`, {
+      method: "POST",
+      headers: AUTH_JSON_HEADERS,
+      body: JSON.stringify({ refreshToken: token }),
+      credentials: "include",
+    }),
+    storedRefreshToken,
+  );
 
   //  Backend trả accessToken mới.
   const data = await parseResponseText(response);

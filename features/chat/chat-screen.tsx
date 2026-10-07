@@ -1272,12 +1272,6 @@ export function ChatScreen() {
     }
     void markConversationRead(conversationId)
       .then(() => {
-        console.info("[ChatSync] conversation marked read", {
-          conversationId,
-          source: "api",
-          timestamp: new Date().toISOString(),
-          unreadCount: 0,
-        });
         void syncChatUnreadCount("mark-read");
       })
       .catch(handleRoomApiError);
@@ -1505,6 +1499,13 @@ export function ChatScreen() {
       }
     },
     [conversationId, handleRoomApiError, markConversationReadSafe, normalizeMessage],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isGroupConversation) return;
+      void load(1, "background");
+    }, [isGroupConversation, load]),
   );
 
   const scrollToReplyMessage = useCallback(
@@ -2742,6 +2743,11 @@ export function ChatScreen() {
       >
         {isBlocked ? (
           <ChatComposerNotice message={blockedComposerMessage} type="blocked" />
+        ) : conversationType === "Group" && messagePermissions === null ? (
+          <ChatComposerNotice
+            message="Đang kiểm tra quyền gửi tin nhắn..."
+            type="permission"
+          />
         ) : !canSendInConversation ? (
           showAdminOnlyMessage ? (
             <View style={styles.permissionComposer}>
@@ -2749,7 +2755,12 @@ export function ChatScreen() {
                 Chỉ quản trị viên mới có thể gửi tin nhắn.
               </Text>
             </View>
-          ) : null
+          ) : (
+            <ChatComposerNotice
+              message="Bạn không có quyền gửi tin nhắn trong nhóm này."
+              type="permission"
+            />
+          )
         ) : (
           <>
         {replyTo && (

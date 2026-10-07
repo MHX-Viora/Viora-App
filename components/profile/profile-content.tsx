@@ -17,11 +17,14 @@ import { layout, spacing } from "@/theme";
 import type { FeedPost } from "@/types/feed";
 import type { Reel } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
+import { canCreateArticle } from "@/types/account-style";
 
 
-type ProfileTab = "posts" | "videos";
+type ProfileTab = "posts" | "articles" | "videos";
 
 export function ProfileContent({
+  accountStyle,
+  onOpenArticle,
   isLoading,
   onCommentReel,
   onCommentPost,
@@ -41,6 +44,8 @@ export function ProfileContent({
   reelsPaused,
   stats,
 }: {
+  accountStyle?: number;
+  onOpenArticle?: (articleId: string) => void;
   isLoading?: boolean;
   onCommentReel?: (reelId: string) => void;
   onCommentPost?: (postId: string) => void;
@@ -66,7 +71,11 @@ export function ProfileContent({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<ProfileTab>("posts");
   const [, startTabTransition] = useTransition();
-  const isPostsTab = activeTab === "posts";
+  const showArticles = canCreateArticle(accountStyle);
+  const isArticlesTab = showArticles && activeTab === "articles";
+  const isVideosTab = activeTab === "videos";
+  const visiblePosts = useMemo(() => posts.filter(post =>
+    isArticlesTab ? post.postType === 2 : post.postType === 0), [posts, isArticlesTab]);
   const postColumnLayout = getResponsiveContentLayout({
     isDesktopWeb,
     maxWidth: layout.profilePostMaxWidth,
@@ -78,7 +87,9 @@ export function ProfileContent({
     },
     [activeTab, startTabTransition],
   );
-  const emptyText = isPostsTab
+  const emptyText = isArticlesTab
+    ? "Chưa có bài báo"
+    : !isVideosTab
     ? "Bài viết của bạn sẽ xuất hiện tại đây"
     : "Video của bạn sẽ xuất hiện tại đây";
 
@@ -96,12 +107,17 @@ export function ProfileContent({
       </View>
       <View style={styles.tabs}>
         <ProfileTabButton
-          active={isPostsTab}
+          active={!isArticlesTab && !isVideosTab}
           label="Bài viết"
           onPress={() => changeTab("posts")}
         />
+        {showArticles ? <ProfileTabButton
+          active={isArticlesTab}
+          label="Bài báo"
+          onPress={() => changeTab("articles")}
+        /> : null}
         <ProfileTabButton
-          active={!isPostsTab}
+          active={isVideosTab}
           label="Video"
           onPress={() => changeTab("videos")}
         />
@@ -109,22 +125,24 @@ export function ProfileContent({
 
       {isLoading ? (
         <ProfileContentSkeleton activeTab={activeTab} />
-      ) : isPostsTab && posts.length > 0 ? (
+      ) : !isVideosTab && visiblePosts.length > 0 ? (
         <View style={[styles.postsList, postColumnLayout]}>
-          {posts.map((post) => (
+          {visiblePosts.map((post) => (
             <PostCard
               key={post.id}
               onComment={onCommentPost}
               onDeleted={onDeletePost}
               onOpenAuthor={onOpenAuthor}
+              onOpenArticle={onOpenArticle}
               onReact={onReactPost}
               onSave={onSavePost}
               onShare={onSharePost}
               post={post}
+              variant={isArticlesTab ? "news" : "default"}
             />
           ))}
         </View>
-      ) : !isPostsTab && reels.length > 0 ? (
+      ) : isVideosTab && reels.length > 0 ? (
         <ReelsGridViewer
           onComment={onCommentReel}
           onCommentCreated={reelCommentEvent}
@@ -141,7 +159,7 @@ export function ProfileContent({
         <View style={styles.emptyState}>
           <Ionicons
             color={colors.textMuted}
-            name={isPostsTab ? "images-outline" : "videocam-outline"}
+            name={isArticlesTab ? "newspaper-outline" : isVideosTab ? "videocam-outline" : "images-outline"}
             size={32}
           />
           <Text style={styles.emptyText}>{emptyText}</Text>
@@ -156,7 +174,7 @@ function ProfileContentSkeleton({ activeTab }: { activeTab: ProfileTab }) {
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
-  const isPostsTab = activeTab === "posts";
+  const isPostsTab = activeTab !== "videos";
 
   useEffect(() => {
     const animation = Animated.loop(

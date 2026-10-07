@@ -1,5 +1,7 @@
 import { authenticatedFetch } from "@/services/authenticated-fetch";
 import type { Article, SaveArticleInput, UploadedArticleMedia } from "@/types/article";
+import { appendArticleMedia } from "@/utils/article-upload";
+import { Platform } from "react-native";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -80,12 +82,9 @@ export const updateArticle = async (id: string, input: SaveArticleInput) =>
 
 export const uploadArticleMedia = async (uris: string[]): Promise<UploadedArticleMedia[]> => {
   const formData = new FormData();
-  uris.forEach((uri, index) => {
-    const name = uri.split("/").pop() || `article-${index}`;
-    const extension = name.split(".").pop()?.toLowerCase();
-    const isVideo = ["mp4", "mov", "m4v", "webm"].includes(extension || "");
-    formData.append("files", { uri, name, type: isVideo ? `video/${extension === "mov" ? "quicktime" : "mp4"}` : `image/${extension === "png" ? "png" : "jpeg"}` } as unknown as Blob);
-  });
+  for (const [index, uri] of uris.entries()) {
+    await appendArticleMedia(formData, uri, index, Platform.OS === "web");
+  }
   return readResponse<UploadedArticleMedia[]>(await authenticatedFetch(`${BASE_URL}/api/articles/media`, {
     method: "POST",
     headers: { Accept: "application/json" },

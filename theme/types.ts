@@ -75,6 +75,35 @@ export type ThemeEffects = {
   >;
 };
 
+export type WalletTheme = {
+  accent: string;
+  accentContrast: string;
+  bannerAccent: string;
+  bannerBackground: string;
+  bannerBorder: string;
+  cardBackground: string;
+  cardBorder: string;
+  coinBackground: string;
+  coinBorder: string;
+  coinText: string;
+  glow: string;
+  historyBackground: string;
+  iconBackground: string;
+  miniAccent: string;
+  miniBackground: string;
+  miniBorder: string;
+  miniSoft: string;
+  moreAccent: string;
+  moreBackground: string;
+  moreBorder: string;
+  moreSoft: string;
+  muted: string;
+  skeleton: string;
+  text: string;
+  walletBack: string;
+  walletBody: string;
+};
+
 export type AppTheme = {
   colors: ThemeColors;
   effects: ThemeEffects;
@@ -83,6 +112,7 @@ export type AppTheme = {
   mode: ThemeMode;
   notifications: ThemeColors;
   reels: ThemeColors;
+  wallet: WalletTheme;
 };
 
 export type ThemedStyle<T> = {

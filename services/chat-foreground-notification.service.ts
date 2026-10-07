@@ -32,15 +32,7 @@ export const showChatRealtimeNotification = async (
   if (getActiveChatConversation() === event.conversationId) return;
 
   const dedupeKey = event.message.id || event.conversationId;
-  if (!claimChatNotification(dedupeKey)) {
-    console.info("[ChatSync] message deduped", {
-      conversationId: event.conversationId,
-      messageId: event.message.id,
-      source: "signalr",
-      timestamp: new Date().toISOString(),
-    });
-    return;
-  }
+  if (!claimChatNotification(dedupeKey)) return;
 
   try {
     await showRichChatNotification({

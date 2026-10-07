@@ -1,0 +1,7 @@
+# Fireworks V6
+
+Upgrade only presentation; keep gift, coin, realtime, session, queue/combo, event contracts and the current 4500ms lifetime. Scale the requested longer choreography into that lifetime: staggered curved launches, short anticipation, multi-ring explosions, four distinct patterns, secondary bursts, 65% grand finale, Golden Willow/rain and gentle afterglow.
+
+Use a bounded deterministic particle model with drag, gravity, lifetime, twinkle, rotation and depth. Web Canvas draws particles in one surface using the existing Animated progress; native uses compound SVG cohorts because Skia is not installed. No React state per frame, dependencies or changes to business logic. Use container bounds, protect controls, respect system/user reduced motion. Preserve banner structure; add gradient/spark/pulse accents and brief Vietnamese sender caption.
+
+Source: `features/live/`; focused Node tests beside the model; development preview in `scripts/`; handoff in `docs/handoffs/`. Follow existing typed functional components and memoized plans (`const show = useMemo(() => fireworksPlan(quality), [quality]);`). Verify model physics, chronology/budget/bounds, RAF/listener lifecycle, real previews at desktop/tablet/portrait/landscape, queue/combo/cancel, heap/frame samples. Commands: `npm test`, `npx tsc --noEmit`, `npm run lint`, `$env:EXPO_OFFLINE='1'; npx expo export --platform web --max-workers 0 --output-dir ../.diagnostics/firework-v6-export`. Actual native Agora GPU FPS requires a device.

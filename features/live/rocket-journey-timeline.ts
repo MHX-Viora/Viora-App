@@ -1,0 +1,1 @@
+export const JOURNEY={charge:0,materialize:.067,ignition:.133,launch:.205,boost:.40,gate1:.445,gate2:.48,gate3:.515,sonic:.535,distance:.56,portal:.61,arrival:.655,burst:.675,swarm:.75,willow:.84,afterglow:.875,finish:1} as const;

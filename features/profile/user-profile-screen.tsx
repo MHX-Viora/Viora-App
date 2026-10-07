@@ -19,7 +19,7 @@ import { ProfileContent } from "@/components/profile/profile-content";
 import { ProfileOverview } from "@/components/profile/profile-overview";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { createPrivateConversation } from "@/services/chat.service";
-import { getPosts } from "@/services/feed.service";
+import { getProfilePosts } from "@/features/profile/profile-posts";
 import { deleteFriend } from "@/services/friend.service";
 import { reactPost, savePost } from "@/services/post.service";
 import { formatReelCount, getReels } from "@/services/reel.service";
@@ -100,9 +100,9 @@ export function UserProfileScreen() {
     setIsLoading(true);
     setLoadErrorMessage("");
     try {
-      const [nextProfile, postsResponse, reelsResponse] = await Promise.all([
-        getUserProfile(userId),
-        getPosts({ page: 1, pageSize: PROFILE_PAGE_SIZE, userId }),
+      const nextProfile = await getUserProfile(userId);
+      const [postsResponse, reelsResponse] = await Promise.all([
+        getProfilePosts(userId, nextProfile.accountStyle, PROFILE_PAGE_SIZE),
         getReels({ page: 1, pageSize: PROFILE_PAGE_SIZE, sort: "popular", userId }),
       ]);
 
@@ -460,6 +460,9 @@ export function UserProfileScreen() {
             />
           </View>
           <ProfileContent
+            key={profile.id}
+            accountStyle={profile.accountStyle}
+            onOpenArticle={(id) => router.push({ pathname: "/article/[id]", params: { id } })}
             isLoading={isLoading}
             onCommentPost={openPostComments}
             onCommentReel={openReelComments}

@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { ArticleBlockView } from "@/components/article/article-renderer";
 import { getResponsiveContentLayout } from "@/components/layout/responsive-layout";
+import { getArticlePublishError } from "@/features/article/article-publish-validation";
 import { useResponsive } from "@/hooks/use-responsive";
 import { createArticle, getArticle, updateArticle, uploadArticleMedia } from "@/services/article.service";
 import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
@@ -41,8 +42,11 @@ export function ArticleEditorScreen() {
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(Boolean(id));
   const [uploading, setUploading] = useState(false);
+  const [publishAttempted, setPublishAttempted] = useState(false);
+  const [publishServerError, setPublishServerError] = useState("");
   const [keyboardSpacer, setKeyboardSpacer] = useState(0);
   const focusedBlockIndex = useRef<number | null>(null);
+  const publishError = (publishAttempted ? getArticlePublishError(title, blocks) : null) || publishServerError;
 
   useEffect(() => {
     if (!id) return;
@@ -104,19 +108,28 @@ export function ArticleEditorScreen() {
   };
 
   const publish = async () => {
-    if (!title.trim()) return Alert.alert("Thiếu tiêu đề", "Vui lòng nhập tiêu đề bài viết.");
+    setPublishAttempted(true);
+    if (getArticlePublishError(title, blocks)) return;
     try {
       setBusy(true);
+      setPublishServerError("");
       const payload = { title: title.trim(), visibility: 0, blocks: normalizeOrder(blocks).map(({ createdAt: _createdAt, updatedAt: _updatedAt, ...block }) => block) };
       const saved = id ? await updateArticle(id, payload) : await createArticle(payload);
-      router.replace({ pathname: "/article/[id]", params: { id: saved.id } });
-    } catch (error) { Alert.alert("Không thể đăng bài", error instanceof Error ? error.message : "Vui lòng kiểm tra nội dung."); }
+      const reader = { pathname: "/article/[id]" as const, params: { id: saved.id } };
+      if (id && router.canGoBack()) router.dismissTo(reader);
+      else router.replace(reader);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Vui lòng kiểm tra nội dung.";
+      setPublishServerError(message);
+      if (Platform.OS !== "web") Alert.alert("Không thể đăng bài", message);
+    }
     finally { setBusy(false); }
   };
 
   if (busy && id && blocks.length === 0) return <View style={styles.center}><ActivityIndicator color={theme.colors.primary} /></View>;
   return <SafeAreaView edges={["top"]} style={styles.screen}>
     <View style={styles.header}><Pressable accessibilityLabel="Đóng" onPress={() => router.back()}><Ionicons color={theme.colors.text} name="close" size={27} /></Pressable><Text style={styles.headerTitle}>{id ? "Sửa bài viết dài" : "Bài viết dài"}</Text><View style={styles.headerActions}><Pressable accessibilityLabel="Xem trước" onPress={() => setPreview(true)} style={styles.headerPreview}><Ionicons color={theme.colors.primary} name="eye-outline" size={22} /></Pressable><Pressable disabled={busy || uploading} onPress={() => void publish()}><Text style={styles.publish}>Đăng</Text></Pressable></View></View>
+    {publishError ? <View accessibilityLiveRegion="assertive" style={styles.publishError}><Ionicons color={theme.colors.danger} name="alert-circle-outline" size={20} /><Text style={styles.publishErrorText}>{publishError}</Text></View> : null}
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.keyboardArea}>
     <DraggableFlatList
       containerStyle={styles.editorList}
@@ -156,6 +169,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   blockInput: { color: colors.text, fontSize: 17, lineHeight: 25, minHeight: 90, textAlignVertical: "top" }, blockLabel: { color: colors.textMuted, fontSize: 12, fontWeight: "700", textTransform: "uppercase" }, bottom: { alignItems: "center", backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, bottom: 0, flexDirection: "row", left: 0, paddingHorizontal: spacing.sm, paddingTop: spacing.sm, position: "absolute", right: 0 },
   captionInput: { color: colors.textMuted, fontSize: 14, paddingVertical: spacing.xs }, center: { alignItems: "center", backgroundColor: colors.background, flex: 1, justifyContent: "center" }, codeInput: { fontFamily: "monospace" }, content: { padding: spacing.md, paddingBottom: 110 }, empty: { color: colors.textMuted, padding: spacing.xl, textAlign: "center" },
   header: { alignItems: "center", backgroundColor: colors.surface, borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 56, paddingHorizontal: spacing.md }, headerActions: { alignItems: "center", flexDirection: "row", gap: spacing.md }, headerPreview: { alignItems: "center", height: 40, justifyContent: "center", width: 40 }, headerTitle: { color: colors.text, fontSize: 16, fontWeight: "800" }, headingInput: { fontSize: 23, fontWeight: "800" }, insert: { alignItems: "center", flexDirection: "row", gap: spacing.xs, paddingTop: spacing.xs }, insertText: { color: colors.primary, fontSize: 13 },
+  publishError: { alignItems: "center", backgroundColor: colors.dangerSoft, flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, publishErrorText: { color: colors.danger, flex: 1, fontSize: 13, lineHeight: 19 },
   dragHandle: { alignItems: "center", flexDirection: "row", gap: spacing.xs, justifyContent: "center", paddingVertical: spacing.xs }, dragText: { color: colors.textMuted, fontSize: 12 },
   editorList: { flex: 1, minHeight: 0 }, keyboardArea: { flex: 1 }, previewContent: { padding: spacing.lg }, previewTitle: { color: colors.text, fontSize: 34, fontWeight: "900", lineHeight: 41, marginBottom: spacing.xl }, publish: { color: colors.primary, fontSize: 15, fontWeight: "800" }, row: { flexDirection: "row", gap: spacing.md }, screen: { backgroundColor: colors.background, flex: 1 },
   titleInput: { color: colors.text, fontSize: 32, fontWeight: "900", lineHeight: 39, marginBottom: spacing.xl, minHeight: 100, textAlignVertical: "top" }, tool: { alignItems: "center", gap: 3, minWidth: 58, paddingHorizontal: spacing.xs }, toolText: { color: colors.text, fontSize: 10 }, upload: { alignItems: "center", backgroundColor: colors.surfaceElevated, borderRadius: 12, flexDirection: "row", gap: spacing.sm, left: spacing.lg, padding: spacing.md, position: "absolute", right: spacing.lg, top: 70 }, uploadText: { color: colors.text },

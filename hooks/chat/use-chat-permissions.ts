@@ -26,15 +26,11 @@ export function useChatPermissions({
   const currentUserRole =
     conversationDetails?.role ?? (Number.isNaN(routeRole) ? 0 : routeRole);
   const canAddMembers = conversationType === "Group";
-  const hasGroupMessagePermission =
-    conversationType !== "Group" || messagePermissions !== null;
   const canSendInConversation =
     conversationType === "Group"
       ? messagePermissions?.canSendMessage === true
       : messagePermissions?.canSendMessage ?? true;
-  const shouldRenderComposer =
-    isBlocked ||
-    (conversationType === "Group" ? hasGroupMessagePermission : true);
+  const shouldRenderComposer = true;
   const showAdminOnlyMessage =
     conversationType === "Group" &&
     messagePermissions?.onlyAdminCanSend === true &&

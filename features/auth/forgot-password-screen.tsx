@@ -421,8 +421,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 18,
+    borderColor: colors.borderSubtle,
+    borderRadius: 16,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.xl,

@@ -1,5 +1,6 @@
 ﻿import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
   Alert,
@@ -32,11 +33,22 @@ import {
 } from "@/components/layout/tab-bar-style";
 import { feedPosts as initialPosts } from "@/features/feed/data";
 import { openProfileByUserId } from "@/features/profile/open-profile";
+import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { createPost, getPosts } from "@/services/feed.service";
 import { trackArticleInteraction } from "@/services/article.service";
 import {
+  advertisementToFeedPost,
+  createAdvertisementEventId,
+  getAdvertisementDelivery,
+  getMyAdvertisements,
+  sendAdvertisementFeedback,
+  trackAdvertisementImpression,
+} from "@/services/advertisement.service";
+import {
+  isPostDeletedLocally,
   reactPost,
   savePost,
+  subscribePostDeleted,
 } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
 import { getSession } from "@/stores/session-store";
@@ -44,11 +56,13 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing } from "@/theme";
 import type { CreatePostInput, FeedPost, PostFeedSort } from "@/types/feed";
 import { canCreateArticle } from "@/types/account-style";
+import { AdvertisementFeedbackType, AdvertisementPlacement, AdvertisementStatus, type Advertisement } from "@/types/advertisement";
+import { AD_PLACEMENT_GAPS, insertAdvertisements, shouldLoadFeedAdvertisements } from "@/utils/advertisement-insertion";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
 const PAGE_SIZE = 10;
-type FeedContentCategory = Exclude<FeedCategory, "reels">;
+type FeedContentCategory = Exclude<FeedCategory, "reels" | "live">;
 
 export function FeedScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
@@ -61,18 +75,33 @@ export function FeedScreen() {
   const { isDesktopWeb, isLargeDesktop, isWeb } = useResponsive();
   const [activeCategory, setActiveCategory] =
     useState<FeedContentCategory>(initialCategory);
+  const isFocused = useIsFocused();
+  const hasBeenFocusedRef = useRef(false);
   const activeCategoryRef = useRef<FeedContentCategory>(initialCategory);
   const [articleSort, setArticleSort] = useState<PostFeedSort>("recommended");
   const articleSortRef = useRef<PostFeedSort>("recommended");
   const viewedArticleIdsRef = useRef(new Set<string>());
+  const viewedAdvertisementIdsRef = useRef(new Set<string>());
+  const pendingAdvertisementIdsRef = useRef(new Set<string>());
+  const advertisementEventIdsRef = useRef(new Map<string, string>());
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60, minimumViewTime: 1_000 }).current;
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken<FeedPost>[] }) => {
-      if (activeCategoryRef.current !== "articles") return;
-
       viewableItems.forEach(({ item }) => {
-        if (item.postType !== 2 || viewedArticleIdsRef.current.has(item.id)) return;
-        viewedArticleIdsRef.current.add(item.id);
-        void trackArticleInteraction(item.id, "impression").catch(() => undefined);
+        if (activeCategoryRef.current !== "articles" && item.advertisement && !item.advertisement.isPreview && !viewedAdvertisementIdsRef.current.has(item.advertisement.id) && !pendingAdvertisementIdsRef.current.has(item.advertisement.id)) {
+          const adId = item.advertisement.id;
+          pendingAdvertisementIdsRef.current.add(adId);
+          const eventId = advertisementEventIdsRef.current.get(adId) ?? createAdvertisementEventId("impression", adId);
+          advertisementEventIdsRef.current.set(adId, eventId);
+          void trackAdvertisementImpression(adId, eventId)
+            .then(() => { viewedAdvertisementIdsRef.current.add(adId); })
+            .catch(() => undefined)
+            .finally(() => { pendingAdvertisementIdsRef.current.delete(adId); });
+        }
+        if (activeCategoryRef.current === "articles" && item.postType === 2 && !item.advertisement && !viewedArticleIdsRef.current.has(item.id)) {
+          viewedArticleIdsRef.current.add(item.id);
+          void trackArticleInteraction(item.id, "impression").catch(() => undefined);
+        }
       });
     },
   ).current;
@@ -117,12 +146,22 @@ export function FeedScreen() {
     }
 
     try {
-      const result = await getPosts({
-        page: nextPage,
-        pageSize: PAGE_SIZE,
-        postType: category === "community" ? 0 : 2,
-        sort: category === "articles" ? sort : undefined,
-      });
+      const shouldLoadAds = shouldLoadFeedAdvertisements(category);
+      const placement = AdvertisementPlacement.Feed;
+      const [result, delivery, mine] = await Promise.all([
+        getPosts({
+          page: nextPage,
+          pageSize: PAGE_SIZE,
+          postType: category === "community" ? 0 : 2,
+          sort: category === "articles" ? sort : undefined,
+        }),
+        shouldLoadAds
+          ? getAdvertisementDelivery(placement, 3).catch(() => ({ items: [] as Advertisement[] }))
+          : Promise.resolve({ items: [] as Advertisement[] }),
+        shouldLoadAds && nextPage === 1
+          ? getMyAdvertisements(1, 20, AdvertisementStatus.Active).catch(() => ({ items: [] as Advertisement[] }))
+          : Promise.resolve({ items: [] as Advertisement[] }),
+      ]);
 
       if (
         loadRequestIdRef.current !== requestId ||
@@ -130,12 +169,37 @@ export function FeedScreen() {
         (category === "articles" && articleSortRef.current !== sort)
       ) return;
 
+      const now = Date.now();
+      const deliveredIds = new Set(delivery.items.map((advertisement) => advertisement.id));
+      const previews = shouldLoadAds ? mine.items
+        .filter((advertisement) => advertisement.placement === placement &&
+          advertisement.status === AdvertisementStatus.Active &&
+          advertisement.reservedAmount > 0 &&
+          Date.parse(advertisement.startAt) <= now && Date.parse(advertisement.endAt) > now &&
+          !deliveredIds.has(advertisement.id))
+        .slice(0, 1)
+        .map((advertisement) => advertisementToFeedPost(advertisement, true)) : [];
       setPosts((current) => {
-        if (nextPage === 1) return result.posts;
+        if (nextPage === 1) {
+          const organic = result.posts.filter((post) => !isPostDeletedLocally(post.id));
+          if (!shouldLoadAds) return organic;
+          return insertAdvertisements(
+            organic,
+            [...previews, ...delivery.items.map((advertisement) => advertisementToFeedPost(advertisement))],
+            AD_PLACEMENT_GAPS.feed,
+          ).map((entry) => entry.item);
+        }
         const existingIds = new Set(current.map((post) => post.id));
+        const organic = result.posts.filter((post) => !existingIds.has(post.id) && !isPostDeletedLocally(post.id));
+        if (!shouldLoadAds) return [...current, ...organic];
+        const displayedAdIds = new Set(current.flatMap((post) => post.advertisement ? [post.advertisement.id] : []));
         return [
           ...current,
-          ...result.posts.filter((post) => !existingIds.has(post.id)),
+          ...insertAdvertisements(
+            organic,
+            delivery.items.filter((advertisement) => !displayedAdIds.has(advertisement.id)).map((advertisement) => advertisementToFeedPost(advertisement)),
+            AD_PLACEMENT_GAPS.feed,
+          ).map((entry) => entry.item),
         ];
       });
       setPage(nextPage);
@@ -176,6 +240,12 @@ export function FeedScreen() {
     loadCurrentUser();
     loadPosts(1, initialCategory);
   }, []);
+
+  useEffect(() => {
+    if (!isFocused) return;
+    if (hasBeenFocusedRef.current) void loadPosts(1, activeCategoryRef.current, articleSortRef.current);
+    else hasBeenFocusedRef.current = true;
+  }, [isFocused]);
 
   const selectCategory = (category: FeedContentCategory) => {
     if (activeCategoryRef.current === category) return;
@@ -345,6 +415,9 @@ export function FeedScreen() {
   const handleDeletedPost = (postId: string) => {
     setPosts((current) => current.filter((post) => post.id !== postId));
   };
+  useEffect(() => subscribePostDeleted((postId) => {
+    setPosts((current) => current.filter((post) => post.id !== postId));
+  }), []);
   const handleNotInterested = async (postId: string) => {
     try {
       await trackArticleInteraction(postId, "notInterested");
@@ -358,6 +431,18 @@ export function FeedScreen() {
   };
   const openUserProfile = (userId: string) => {
     void openProfileByUserId(router, userId);
+  };
+  const handleAdvertisementPress = async (post: FeedPost) => {
+    const advertisement = post.advertisement;
+    if (!advertisement) return;
+    await openAdvertisement(advertisement, { id: post.id, authorId: post.authorId, postType: post.postType });
+  };
+  const handleAdvertisementFeedback = async (advertisementId: string, type: AdvertisementFeedbackType) => {
+    try {
+      await sendAdvertisementFeedback(advertisementId, type, type === AdvertisementFeedbackType.Report ? "Người dùng báo cáo từ menu quảng cáo." : undefined);
+      setPosts((current) => current.filter((item) => item.advertisement?.id !== advertisementId));
+      showAppToast({ title: "Đã cập nhật", message: type === AdvertisementFeedbackType.Report ? "Cảm ơn bạn đã báo cáo quảng cáo." : "Bạn sẽ không thấy quảng cáo này nữa.", type: "success" });
+    } catch (error) { Alert.alert("Không thể cập nhật", error instanceof Error ? error.message : "Vui lòng thử lại."); }
   };
   const openWithImagePicker = async () => {
     const selectedUris = await pickImages();
@@ -380,7 +465,7 @@ export function FeedScreen() {
             posts.length === 0 && styles.emptyContent,
           ]}
           data={posts}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.advertisement ? `advertisement:${item.advertisement.id}` : item.id}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>
@@ -398,12 +483,16 @@ export function FeedScreen() {
           onEndReached={loadMorePosts}
           onEndReachedThreshold={0.35}
           onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           onRefresh={() =>
             loadPosts(1, activeCategoryRef.current, articleSortRef.current)
           }
           refreshing={isLoading}
           renderItem={({ item }) => (
             <PostCard
+              onAdvertise={(post) => router.push({ pathname: "/advertise/[postId]", params: { postId: post.id, postType: String(post.postType) } })}
+              onAdvertisementFeedback={handleAdvertisementFeedback}
+              onAdvertisementPress={(post) => void handleAdvertisementPress(post)}
               onComment={setCommentsPostId}
               onDeleted={handleDeletedPost}
               onOpenAuthor={openUserProfile}
@@ -437,6 +526,7 @@ export function FeedScreen() {
         }}
         onCreatePress={() => setModalVisible(true)}
         onImagePress={openWithImagePicker}
+        onLivePress={() => router.push("/(tabs)/live")}
         onReelsPress={() => router.push("/(tabs)/reels")}
         onSearchPress={() => setSearchVisible(true)}
       />

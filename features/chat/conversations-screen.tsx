@@ -259,12 +259,6 @@ export function ConversationsScreen({
         setTotalPages(result.totalPages);
         setError("");
         if (nextPage === 1) {
-          console.info("[ChatSync] conversations fetched", {
-            itemCount: result.items.length,
-            page: result.page,
-            source: "api",
-            timestamp: new Date().toISOString(),
-          });
           void syncChatUnreadCount("conversation-focus");
         }
       } catch (loadError) {
@@ -541,12 +535,6 @@ export function ConversationsScreen({
       updateConversationLocal(conversation.id, { unreadCount: 0 });
       try {
         await markConversationRead(conversation.id);
-        console.info("[ChatSync] conversation marked read", {
-          conversationId: conversation.id,
-          source: "api",
-          timestamp: new Date().toISOString(),
-          unreadCount: 0,
-        });
         void syncChatUnreadCount("mark-read");
       } catch (readError) {
         if (isConversationGoneError(readError)) {

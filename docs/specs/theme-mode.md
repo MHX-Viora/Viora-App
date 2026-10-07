@@ -2,11 +2,11 @@
 
 ## Objective
 
-Add an application-wide `modern | classic` appearance preference without changing
-API, navigation, authentication, business, realtime, notification, or call behavior.
-Modern must preserve the current visual output. Classic uses the requested white,
-light-gray, traditional-blue flat palette and removes decorative glass, blur,
-gradient, neon, and glow effects.
+Keep an application-wide appearance preference without changing API, navigation,
+authentication, business, realtime, notification, or call behavior. Light is the
+default and uses layered neutral surfaces with restrained ANKT teal. Modern and
+Premium Ocean remain available as dark themes. The stored `classic` mode remains
+the compatibility key for Light.
 
 ## Tech Stack
 
@@ -70,17 +70,18 @@ behavior remain unchanged.
   independent from session state; keep the theme contract extensible.
 - Ask first: adding a dependency other than AsyncStorage, changing navigation,
   changing native build configuration beyond dependency autolinking.
-- Never: change APIs, auth, realtime, notifications, business rules, layouts,
-  spacing, typography, icons, or existing feature animations.
+- Never: change APIs, authentication behavior, realtime, notifications, database,
+  or business rules. Visual-only layout and token changes are allowed.
 
 ## Success Criteria
 
-- Settings exposes “Giao diện” with Modern and Classic choices and a selected check.
+- Settings exposes “Giao diện” with Light, Modern Dark, and Ocean choices and a selected check.
 - Changing mode updates the mounted app with a 200–300 ms fade and no reload.
 - `theme_mode` persists as `modern` or `classic` and restores on next launch.
 - StatusBar, navigation, shared overlays, and all listed feature screens consume theme.
-- Classic matches the requested palette and disables decorative glass/blur/gradient/glow.
-- Modern remains visually unchanged.
+- Light matches the requested layered neutral palette, removes auth ornaments,
+  and disables decorative glass/blur/gradient/glow.
+- Modern and Premium Ocean remain visually unchanged and selectable.
 - Type-check and lint pass; no unexplained component-level hardcoded UI colors remain.
 
 ## Assumptions

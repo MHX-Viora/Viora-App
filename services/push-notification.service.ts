@@ -109,14 +109,6 @@ const shouldSuppressForegroundNotification = async (
   if (!dedupeKey) return false;
 
   const shouldShow = claimChatNotification(dedupeKey);
-  if (!shouldShow) {
-    console.info("[ChatSync] message deduped", {
-      conversationId,
-      messageId,
-      source: "fcm",
-      timestamp: new Date().toISOString(),
-    });
-  }
   return !shouldShow;
 };
 

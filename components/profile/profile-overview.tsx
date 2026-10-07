@@ -38,8 +38,8 @@ export function ProfileOverview({
     <>
       <View style={styles.hero}>
         <ViewableImage
+          adaptive
           accessibilityLabel={`Anh bia cua ${name}`}
-          contentFit="cover"
           source={cover}
           style={styles.cover}
         />
@@ -98,7 +98,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     lineHeight: 20,
     marginTop: spacing.sm,
   },
-  cover: { borderRadius: 12, height: 170, width: "100%" },
+  cover: { borderRadius: 12, height: 280, width: "100%" },
   editButton: {
     alignItems: "center",
     backgroundColor: colors.primary,

@@ -2,7 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
@@ -29,15 +29,12 @@ const FILTERS = [
 
 export default function StickerStoreScreen() {
   const { theme } = useTheme();
-  const { height: viewportHeight, isDesktopWeb, isWeb, width: viewportWidth } = useResponsive();
+  const { height: viewportHeight, isDesktopWeb, width: viewportWidth } = useResponsive();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
   const dialogLayout = getResponsiveDialogLayout({ isDesktopWeb, maxWidth: 720 });
   const columnCount = viewportWidth >= breakpoints.largeDesktop ? 6 : viewportWidth >= breakpoints.tablet ? 4 : 3;
   const cardCellWidth = `${100 / columnCount}%` as `${number}%`;
   const previewGridMaxHeight = Math.max(120, Math.min(360, viewportHeight * 0.48));
-  const previewStickerSize = isWeb
-    ? 120
-    : Math.max(72, Math.floor((viewportWidth - spacing.md * 2) / 3));
   const [filter, setFilter] = useState<(typeof FILTERS)[number][0]>("featured");
   const [packs, setPacks] = useState<StickerPack[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,28 +123,34 @@ export default function StickerStoreScreen() {
         />
       )}
       <Modal animationType="slide" onRequestClose={closePreview} transparent visible={preview !== null}>
-        <Pressable onPress={closePreview} style={[styles.scrim, dialogLayout.backdrop]}>
-          <Pressable onPress={() => undefined} style={[styles.preview, dialogLayout.surface]}>
+        <View style={[styles.scrim, dialogLayout.backdrop]}>
+          <Pressable accessibilityLabel="Đóng xem trước" onPress={closePreview} style={StyleSheet.absoluteFill} />
+          <View style={[styles.preview, dialogLayout.surface]}>
             <View style={styles.previewHeader}><Text style={styles.title}>{preview?.pack.name}</Text><Pressable accessibilityLabel="Đóng xem trước" onPress={closePreview}><Ionicons color={theme.colors.text} name="close" size={24} /></Pressable></View>
-            <ScrollView
+            <FlatList
               contentContainerStyle={[styles.previewGrid, isDesktopWeb && styles.desktopPreviewGrid]}
-              style={[styles.previewScroll, { maxHeight: previewGridMaxHeight }]}
-            >
-              {preview?.stickers.map((sticker) => (
-                <Image
-                  cachePolicy="memory-disk"
-                  contentFit="contain"
-                  key={sticker.id}
-                  source={{ uri: sticker.thumbnailUrl ?? sticker.imageUrl }}
-                  style={[styles.previewSticker, { height: previewStickerSize, width: previewStickerSize }]}
-                />
-              ))}
-            </ScrollView>
+              data={preview?.stickers ?? []}
+              keyExtractor={(sticker) => sticker.id}
+              nestedScrollEnabled
+              numColumns={4}
+              renderItem={({ item: sticker }) => (
+                <View style={styles.previewStickerCell}>
+                  <Image
+                    cachePolicy="memory-disk"
+                    contentFit="contain"
+                    source={{ uri: sticker.thumbnailUrl ?? sticker.imageUrl }}
+                    style={styles.previewSticker}
+                  />
+                </View>
+              )}
+              showsVerticalScrollIndicator
+              style={[styles.previewList, { maxHeight: previewGridMaxHeight }]}
+            />
             <Text style={styles.meta}>{preview?.pack.stickerCount} nhãn dán</Text>
             <Text style={styles.price}>{preview?.canUse ? "Bạn có thể sử dụng bộ này" : `${preview?.pack.price.toLocaleString("vi-VN")} xu`}</Text>
             {!preview?.canUse ? <Pressable accessibilityState={{ disabled: true }} disabled style={styles.disabledPurchase}><Text style={styles.disabledPurchaseText}>Chưa kết nối ví ANKT</Text></Pressable> : null}
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -159,6 +162,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   empty: { color: colors.textMuted, padding: spacing.xl, textAlign: "center" }, error: { color: colors.danger, padding: spacing.lg, textAlign: "center" },
   filter: { borderBottomColor: "transparent", borderBottomWidth: 2, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm }, filterText: { color: colors.textMuted, fontWeight: "600" }, filters: { borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: "row", justifyContent: "space-around" },
   header: { alignItems: "center", borderBottomColor: colors.border, borderBottomWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 52, paddingHorizontal: spacing.md }, list: { padding: spacing.sm }, meta: { color: colors.textMuted, fontSize: 12 }, packName: { color: colors.text, fontWeight: "700", marginTop: spacing.sm }, price: { color: colors.primary, fontWeight: "700", marginTop: spacing.xs }, screen: { backgroundColor: colors.background, flex: 1 }, state: { marginTop: spacing.xl }, thumbnail: { aspectRatio: 1, borderRadius: 8, width: "100%" }, title: { color: colors.text, fontSize: 20, fontWeight: "700" },
-  disabledPurchase: { alignItems: "center", backgroundColor: colors.surfaceElevated, borderRadius: 8, marginTop: spacing.md, padding: spacing.md }, disabledPurchaseText: { color: colors.textMuted, fontWeight: "700" }, preview: { backgroundColor: colors.card, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "82%", padding: spacing.md, width: "100%" }, previewGrid: { flexDirection: "row", flexWrap: "wrap", paddingVertical: spacing.md }, previewHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" }, previewScroll: { flexGrow: 0 }, previewSticker: { aspectRatio: 1 }, scrim: { backgroundColor: colors.overlay, flex: 1, justifyContent: "flex-end" },
-  desktopPreviewGrid: { gap: spacing.sm, paddingVertical: spacing.sm },
+  disabledPurchase: { alignItems: "center", backgroundColor: colors.surfaceElevated, borderRadius: 8, marginTop: spacing.md, padding: spacing.md }, disabledPurchaseText: { color: colors.textMuted, fontWeight: "700" }, preview: { backgroundColor: colors.card, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "82%", overflow: "hidden", padding: spacing.md, width: "100%" }, previewGrid: { paddingVertical: spacing.md }, previewHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" }, previewList: { flexGrow: 0, flexShrink: 1 }, previewStickerCell: { alignItems: "center", padding: spacing.xs, width: "25%" }, previewSticker: { aspectRatio: 1, maxWidth: 120, width: "100%" }, scrim: { backgroundColor: colors.overlay, flex: 1, justifyContent: "flex-end" },
+  desktopPreviewGrid: { paddingVertical: spacing.sm },
 });

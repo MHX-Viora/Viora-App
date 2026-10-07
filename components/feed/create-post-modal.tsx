@@ -154,7 +154,6 @@ export function CreatePostModal({
       link,
       locationName,
       longitude,
-      post: "",
       visibility,
       mentionUserIds: activeMentionIds(body, mentions),
     });
@@ -350,7 +349,7 @@ export function CreatePostModal({
                     >
                       <ViewableImage
                         accessibilityLabel={`Ảnh đã chọn ${index + 1}`}
-                        contentFit="cover"
+                        adaptive
                         source={{ uri: normalizeFeedImageUri(uri) }}
                         style={styles.preview}
                       />

@@ -100,7 +100,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="utilities"
         options={{
-          href: null,
           tabBarAccessibilityLabel: "Tiện ích",
           tabBarIcon: ({ focused }) => (
             <TabIcon
@@ -131,6 +130,13 @@ export default function TabLayout() {
         options={{
           href: null,
           title: "Reels",
+        }}
+      />
+      <Tabs.Screen
+        name="live"
+        options={{
+          href: null,
+          title: "Live",
         }}
       />
       <Tabs.Screen

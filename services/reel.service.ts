@@ -1,5 +1,8 @@
-import { authenticatedFetch } from "@/services/authenticated-fetch";
-import { getAccessToken, getUser } from "@/stores/session-store";
+import { authenticatedFetch, getRealtimeAccessToken, refreshRejectedAccessToken } from "@/services/authenticated-fetch";
+import { sendAuthenticatedUpload } from "@/services/authenticated-upload";
+import { Platform } from "react-native";
+import { appendReelVideo } from "@/utils/reel-upload";
+import { getUser } from "@/stores/session-store";
 import type {
   ApiReel,
   CreateReelInput,
@@ -49,6 +52,10 @@ const getApiErrorMessage = (data: unknown, fallback: string) => {
     return data.message;
   }
 
+  if (isRecord(data) && typeof data.detail === "string" && data.detail.trim()) {
+    return data.detail;
+  }
+
   if (isRecord(data) && typeof data.title === "string" && data.title.trim()) {
     return data.title;
   }
@@ -82,9 +89,7 @@ const uploadFormData = async (
   url: string,
   formData: FormData,
 ): Promise<{ ok: boolean; status: number; text: string }> => {
-  const token = await getAccessToken();
-
-  return new Promise((resolve, reject) => {
+  const send = (token: string, body: FormData) => new Promise<{ ok: boolean; status: number; text: string }>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
     xhr.open("POST", url);
@@ -113,8 +118,10 @@ const uploadFormData = async (
         ),
       );
     };
-    xhr.send(formData);
+    xhr.send(body);
   });
+
+  return sendAuthenticatedUpload(send, formData, getRealtimeAccessToken, refreshRejectedAccessToken);
 };
 
 const getHashtagName = (tag: unknown) => {
@@ -239,11 +246,12 @@ export const createReel = async ({
     .map(getHashtagName)
     .filter(Boolean)
     .forEach((tag) => formData.append("hashtags", tag));
-  formData.append("video", {
-    name: fileName,
-    type: getUploadVideoType(fileName, videoType),
+  await appendReelVideo(formData, {
     uri: videoUri,
-  } as unknown as Blob);
+    fileName,
+    mimeType: getUploadVideoType(fileName, videoType),
+    isWeb: Platform.OS === "web",
+  });
 
   const response = await uploadFormData(`${BASE_URL}/api/reels`, formData);
   const text = response.text;

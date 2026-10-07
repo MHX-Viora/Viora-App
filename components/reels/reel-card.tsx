@@ -42,6 +42,8 @@ import { followUser } from "@/services/user.service";
 import { useResponsive } from "@/hooks/use-responsive";
 import { spacing } from "@/theme";
 import type { Reel } from "@/types/reel";
+import { AdvertisementFeedbackType } from "@/types/advertisement";
+import { advertisementCtaLabel } from "@/utils/advertisement-format";
 import { formatReelTime } from "@/utils/reel-time";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -50,6 +52,9 @@ export function ReelCard({
   active,
   height,
   onComment,
+  onAdvertise,
+  onAdvertisementFeedback,
+  onAdvertisementPress,
   onDelete,
   onOpenAuthor,
   onReact,
@@ -64,6 +69,9 @@ export function ReelCard({
   active: boolean;
   height: number;
   onComment?: (reelId: string) => void;
+  onAdvertise?: (reel: Reel) => void;
+  onAdvertisementFeedback?: (advertisementId: string, type: AdvertisementFeedbackType) => void;
+  onAdvertisementPress?: (reel: Reel) => void;
   onDelete?: (reelId: string) => void;
   onOpenAuthor?: (userId: string) => void;
   onReact?: (reelId: string) => void;
@@ -488,7 +496,7 @@ export function ReelCard({
         ]}
         pointerEvents="box-none"
       >
-        <View pointerEvents="box-none" style={styles.bottomContent}>
+        <View pointerEvents="box-none" style={[styles.bottomContent, reel.advertisement && styles.advertisementBottomContent]}>
           <View
             style={[
               styles.copy,
@@ -503,16 +511,47 @@ export function ReelCard({
             ]}
           >
             <View style={styles.authorLine}>
-              <Pressable
-                accessibilityRole="button"
-                disabled={!reel.authorId || !onOpenAuthor}
-                onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
-                style={styles.authorPressable}
-              >
-                <Text ellipsizeMode="tail" numberOfLines={1} style={styles.author}>
-                  {reel.author}
-                </Text>
-              </Pressable>
+              {reel.advertisement ? (
+                <View style={styles.advertisementAvatarWrap}>
+                  <Pressable
+                    accessibilityLabel={`Trang của ${reel.author}`}
+                    accessibilityRole="button"
+                    disabled={!reel.authorId || !onOpenAuthor}
+                    onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
+                  >
+                    <UserAvatar displayName={reel.author} imageUrl={reel.avatar} size={48} style={styles.avatar} />
+                  </Pressable>
+                  {!isFollowingAuthor && !reel.isMine ? (
+                    <Pressable
+                      accessibilityLabel="Theo dõi người đăng"
+                      accessibilityRole="button"
+                      disabled={isFollowingAuthorBusy}
+                      onPress={handleFollowAuthor}
+                      style={styles.follow}
+                    >
+                      {isFollowingAuthorBusy ? <ActivityIndicator color={colors.white} size="small" /> : <Ionicons color={colors.white} name="add" size={14} />}
+                    </Pressable>
+                  ) : null}
+                  {showFollowSuccess ? (
+                    <View style={styles.followSuccess}>
+                      <Ionicons color={colors.white} name="checkmark" size={16} />
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+              <View style={styles.authorCopy}>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={!reel.authorId || !onOpenAuthor}
+                  onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
+                  style={styles.authorPressable}
+                >
+                  <Text ellipsizeMode="tail" numberOfLines={1} style={styles.author}>
+                    {reel.author}
+                  </Text>
+                </Pressable>
+                {reel.advertisement ? <Text style={styles.sponsoredText}>Được tài trợ</Text> : null}
+              </View>
               {reel.isAuthorVerified && (
                 <VerifiedBadge
                   accessibilityLabel="Tài khoản đã xác minh"
@@ -520,12 +559,17 @@ export function ReelCard({
                 />
               )}
             </View>
+            {reel.advertisement?.isPreview ? (
+              <Text style={styles.advertisementPreviewText}>Bản xem trước quảng cáo</Text>
+            ) : null}
             <Text ellipsizeMode="tail" numberOfLines={2} style={styles.caption}>
               {reel.caption}
             </Text>
-            <Text ellipsizeMode="tail" numberOfLines={1} style={styles.hashtags}>
-              {reel.hashtags}
-            </Text>
+            {reel.hashtags ? (
+              <Text ellipsizeMode="tail" numberOfLines={reel.advertisement ? 2 : 1} style={styles.hashtags}>
+                {reel.hashtags}
+              </Text>
+            ) : null}
             {(reel.caption.length > 70 || reel.hashtags.length > 45) && (
               <Pressable
                 accessibilityLabel="Xem đầy đủ mô tả và hashtag"
@@ -542,7 +586,8 @@ export function ReelCard({
               desktopCopyWidth !== null && styles.desktopRail,
             ]}
           >
-            <View style={styles.avatarWrap}>
+            {!reel.advertisement ? (
+              <View style={styles.avatarWrap}>
               <Pressable
                 accessibilityRole="button"
                 disabled={!reel.authorId || !onOpenAuthor}
@@ -575,7 +620,8 @@ export function ReelCard({
                   <Ionicons color={colors.white} name="checkmark" size={16} />
                 </View>
               )}
-            </View>
+              </View>
+            ) : null}
             <ReelAction
               icon="heart"
               label="Thích reels"
@@ -602,6 +648,19 @@ export function ReelCard({
             />
           </View>
         </View>
+        {reel.advertisement ? (
+          <Pressable
+            accessibilityLabel={`${advertisementCtaLabel(reel.advertisement.ctaType)} quảng cáo`}
+            accessibilityRole="button"
+            onPress={() => onAdvertisementPress?.(reel)}
+            style={({ pressed }) => [styles.advertisementCta, pressed && styles.advertisementCtaPressed]}
+          >
+            <Text numberOfLines={1} style={styles.advertisementCtaText}>
+              {advertisementCtaLabel(reel.advertisement.ctaType)}
+            </Text>
+            <Ionicons color={colors.white} name="chevron-forward" size={18} />
+          </Pressable>
+        ) : null}
       </View>
 
       {showControls && (
@@ -629,10 +688,20 @@ export function ReelCard({
             ]}
           >
             <View style={styles.moderationGroup}>
+              {reel.advertisement ? <>
+                <View style={styles.advertisementInfo}><Ionicons color={colors.white} name="information-circle-outline" size={21} /><View style={styles.advertisementInfoCopy}><Text style={styles.moderationText}>{reel.advertisement.isPreview ? "Bản xem trước quảng cáo" : "Tại sao tôi thấy quảng cáo này?"}</Text><Text style={styles.advertisementInfoText}>{reel.advertisement.isPreview ? "Lượt xem thử này không tính phí." : "Quảng cáo được phân phối theo đối tượng và ngân sách đã thiết lập."}</Text></View></View>
+                <Pressable onPress={() => { setShowControls(false); if (reel.authorId) onOpenAuthor?.(reel.authorId); }} style={styles.moderationAction}><Ionicons color={colors.white} name="business-outline" size={21} /><Text style={styles.moderationText}>Thông tin nhà quảng cáo</Text></Pressable>
+                {!reel.advertisement.isPreview ? <>
+                  <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.Hide); }} style={styles.moderationAction}><Ionicons color={colors.white} name="eye-off-outline" size={21} /><Text style={styles.moderationText}>Ẩn quảng cáo</Text></Pressable>
+                  <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.NotInterested); }} style={styles.moderationAction}><Ionicons color={colors.white} name="thumbs-down-outline" size={21} /><Text style={styles.moderationText}>Không quan tâm</Text></Pressable>
+                  <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.Report); }} style={styles.moderationAction}><Ionicons color={colors.danger} name="flag-outline" size={21} /><Text style={[styles.moderationText, styles.deleteText]}>Báo cáo quảng cáo</Text></Pressable>
+                </> : null}
+              </> :
               <Pressable onPress={openReport} style={styles.moderationAction}>
                 <Ionicons color={colors.white} name="flag-outline" size={21} />
                 <Text style={styles.moderationText}>Báo cáo video</Text>
               </Pressable>
+              }
               <Pressable
                 onPress={handleDownload}
                 style={styles.moderationAction}
@@ -644,6 +713,12 @@ export function ReelCard({
                 />
                 <Text style={styles.moderationText}>Tải xuống video</Text>
               </Pressable>
+              {reel.isMine && !reel.advertisement && onAdvertise && (
+                <Pressable onPress={() => { setShowControls(false); onAdvertise?.(reel); }} style={styles.moderationAction}>
+                  <Ionicons color={colors.white} name="megaphone-outline" size={21} />
+                  <Text style={styles.moderationText}>Quảng cáo video</Text>
+                </Pressable>
+              )}
               {reel.isMine && (
                 <Pressable
                   disabled={isDeleting}
@@ -840,7 +915,17 @@ export function ReelCard({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  advertisementAvatarWrap: { marginRight: spacing.xs, transform: [{ translateY: -3 }] },
+  advertisementBottomContent: { marginBottom: spacing.sm },
+  advertisementCta: { alignItems: "center", alignSelf: "stretch", backgroundColor: colors.visuals.rgb_0_0_0_0_54, borderColor: colors.visuals.rgb_255_255_255_0_24, borderRadius: 10, borderWidth: 1, flexDirection: "row", gap: spacing.sm, justifyContent: "center", marginHorizontal: spacing.md, minHeight: 44, paddingHorizontal: spacing.md },
+  advertisementCtaPressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
+  advertisementCtaText: { color: colors.white, fontSize: 14, fontWeight: "800" },
+  advertisementInfo: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },
+  advertisementInfoCopy: { flex: 1, gap: 3 },
+  advertisementInfoText: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+  advertisementPreviewText: { color: colors.visuals.rgb_255_255_255_0_86, fontSize: 10, fontWeight: "700", marginTop: spacing.xs },
   author: { color: colors.white, fontSize: 18, fontWeight: "800" },
+  authorCopy: { flexShrink: 1 },
   authorLine: {
     alignItems: "center",
     flexDirection: "row",
@@ -1001,6 +1086,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: spacing.xs,
   },
   moderationText: { color: colors.white, fontSize: 15, fontWeight: "800" },
+  sponsoredText: { color: colors.visuals.rgb_255_255_255_0_86, fontSize: 11, fontWeight: "700" },
   playButton: {
     alignItems: "center",
     alignSelf: "center",

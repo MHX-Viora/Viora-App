@@ -7,6 +7,7 @@ import type {
   LayoutChangeEvent,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  ViewToken,
 } from "react-native";
 import {
   Alert,
@@ -44,11 +45,22 @@ import { ReelCard } from "@/components/reels/reel-card";
 import { ReelsHeader } from "@/components/reels/reels-header";
 import { ReelsSearchModal } from "@/components/reels/reels-search-modal";
 import { openProfileByUserId } from "@/features/profile/open-profile";
+import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { getReelIndexFromOffset } from "@/features/reels/reel-pagination";
+import { getSession } from "@/stores/session-store";
+import { canCreateArticle } from "@/types/account-style";
 import { useResponsive } from "@/hooks/use-responsive";
 import { reels } from "@/features/reels/data";
 import { reactPost, savePost } from "@/services/post.service";
 import { getReelShareLink } from "@/services/share-link.service";
+import {
+  advertisementToReel,
+  createAdvertisementEventId,
+  getAdvertisementDelivery,
+  getMyAdvertisements,
+  sendAdvertisementFeedback,
+  trackAdvertisementImpression,
+} from "@/services/advertisement.service";
 import {
   createReel as createReelApi,
   formatReelCount,
@@ -56,6 +68,8 @@ import {
 } from "@/services/reel.service";
 import { layout, spacing } from "@/theme";
 import type { Reel, ReelSort } from "@/types/reel";
+import { AdvertisementFeedbackType, AdvertisementPlacement, AdvertisementStatus, type Advertisement } from "@/types/advertisement";
+import { AD_PLACEMENT_GAPS, mergeReelAdvertisements } from "@/utils/advertisement-insertion";
 import { type ThemeColors, useTheme } from "@/theme";
 
 
@@ -127,10 +141,30 @@ export function ReelsScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
   const reelsListRef = useRef<FlatList<Reel>>(null);
+  const viewedAdvertisementIdsRef = useRef(new Set<string>());
+  const pendingAdvertisementIdsRef = useRef(new Set<string>());
+  const advertisementEventIdsRef = useRef(new Map<string, string>());
   const [reelItems, setReelItems] = useState(reels);
+  const [canAdvertise, setCanAdvertise] = useState(false);
+  useEffect(() => {
+    void getSession().then((session) => setCanAdvertise(canCreateArticle(session?.user?.accountStyle))).catch(() => undefined);
+  }, []);
   const [sort, setSort] = useState<ReelSort>("popular");
   const [reelHeight, setReelHeight] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [visibleAdvertisementId, setVisibleAdvertisementId] = useState<string | null>(null);
+  const reelViewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 60,
+    minimumViewTime: 1_000,
+  }).current;
+  const onReelViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    const visibleAdvertisement = viewableItems.find((item) =>
+      (item.item as Reel).advertisement,
+    );
+    setVisibleAdvertisementId(
+      (visibleAdvertisement?.item as Reel | undefined)?.advertisement?.id ?? null,
+    );
+  }).current;
   const [isLoadingReels, setIsLoadingReels] = useState(true);
   const [reelsMessage, setReelsMessage] = useState("");
   const [isAppActive, setIsAppActive] = useState(
@@ -155,12 +189,24 @@ export function ReelsScreen() {
     setReelsMessage("");
 
     try {
-      const response = await getReels({
-        page: 1,
-        pageSize: PAGE_SIZE,
-        sort: nextSort,
-      });
-      setReelItems(response.reels);
+      const [response, delivery, mine] = await Promise.all([
+        getReels({ page: 1, pageSize: PAGE_SIZE, sort: nextSort }),
+        getAdvertisementDelivery(AdvertisementPlacement.Reels, 3).catch(() => ({ items: [] })),
+        getMyAdvertisements(1, 20, AdvertisementStatus.Active).catch(() => ({ items: [] as Advertisement[] })),
+      ]);
+      const now = Date.now();
+      const previews = mine.items
+        .filter((advertisement) => advertisement.placement === AdvertisementPlacement.Reels &&
+          advertisement.status === AdvertisementStatus.Active &&
+          advertisement.reservedAmount > 0 &&
+          Date.parse(advertisement.startAt) <= now && Date.parse(advertisement.endAt) > now)
+        .slice(0, 1);
+      setReelItems(mergeReelAdvertisements(
+        response.reels,
+        delivery.items.map((advertisement) => ({ postId: advertisement.postId, item: advertisementToReel(advertisement) })),
+        previews.map((advertisement) => ({ postId: advertisement.postId, item: advertisementToReel(advertisement, true) })),
+        AD_PLACEMENT_GAPS.reels,
+      ));
       setActiveIndex(0);
       requestAnimationFrame(() =>
         reelsListRef.current?.scrollToOffset({ animated: false, offset: 0 }),
@@ -183,8 +229,25 @@ export function ReelsScreen() {
   }, []);
 
   useEffect(() => {
-    loadReels(sort);
-  }, [loadReels, sort]);
+    if (isFocused) void loadReels(sort);
+  }, [isFocused, loadReels, sort]);
+
+  useEffect(() => {
+    const advertisement = reelItems.find(
+      (item) => item.advertisement?.id === visibleAdvertisementId,
+    )?.advertisement;
+    if (!advertisement || advertisement.isPreview || viewedAdvertisementIdsRef.current.has(advertisement.id) ||
+        !isFocused || !isAppActive || searchVisible || commentsPostId !== null || createVisible) return;
+    const adId = advertisement.id;
+    if (pendingAdvertisementIdsRef.current.has(adId)) return;
+    pendingAdvertisementIdsRef.current.add(adId);
+    const eventId = advertisementEventIdsRef.current.get(adId) ?? createAdvertisementEventId("impression", adId);
+    advertisementEventIdsRef.current.set(adId, eventId);
+    void trackAdvertisementImpression(adId, eventId)
+      .then(() => { viewedAdvertisementIdsRef.current.add(adId); })
+      .catch(() => undefined)
+      .finally(() => { pendingAdvertisementIdsRef.current.delete(adId); });
+  }, [visibleAdvertisementId, isAppActive, isFocused, reelItems, searchVisible, commentsPostId, createVisible]);
 
   useEffect(() => {
     const parent = navigation.getParent();
@@ -219,6 +282,18 @@ export function ReelsScreen() {
 
   const handleInteractionLockChange = useCallback((locked: boolean) => {
     setIsInteractionLocked(locked);
+  }, []);
+  const handleAdvertisementPress = useCallback(async (reel: Reel) => {
+    const advertisement = reel.advertisement;
+    if (!advertisement) return;
+    await openAdvertisement(advertisement, { id: reel.id, authorId: reel.authorId, postType: 1 });
+  }, []);
+  const handleAdvertisementFeedback = useCallback(async (advertisementId: string, type: AdvertisementFeedbackType) => {
+    try {
+      await sendAdvertisementFeedback(advertisementId, type, type === AdvertisementFeedbackType.Report ? "Người dùng báo cáo từ menu quảng cáo." : undefined);
+      setReelItems((current) => current.filter((item) => item.advertisement?.id !== advertisementId));
+      showAppToast({ title: "Đã cập nhật", message: type === AdvertisementFeedbackType.Report ? "Cảm ơn bạn đã báo cáo quảng cáo." : "Bạn sẽ không thấy quảng cáo này nữa.", type: "success" });
+    } catch (error) { Alert.alert("Không thể cập nhật", error instanceof Error ? error.message : "Vui lòng thử lại."); }
   }, []);
 
   const handleReelsScroll = useCallback(
@@ -451,6 +526,7 @@ export function ReelsScreen() {
               })
             }
             onReelsPress={() => undefined}
+            onLivePress={() => router.push("/(tabs)/live")}
             onArticlesPress={() =>
               router.replace({
                 pathname: "/(tabs)",
@@ -486,15 +562,20 @@ export function ReelsScreen() {
               length: reelHeight + ITEM_GAP,
               offset: (reelHeight + ITEM_GAP) * index,
             })}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item.advertisement ? `advertisement:${item.advertisement.id}` : item.id}
             onMomentumScrollEnd={handleReelsScroll}
+            onViewableItemsChanged={onReelViewableItemsChanged}
             onScroll={handleReelsScroll}
             pagingEnabled
             ref={reelsListRef}
+            viewabilityConfig={reelViewabilityConfig}
             initialNumToRender={2}
             maxToRenderPerBatch={2}
             renderItem={({ index, item }) => (
               <ReelCard
+                onAdvertise={canAdvertise ? (reel) => router.push({ pathname: "/advertise/[postId]", params: { postId: reel.id, postType: "1" } }) : undefined}
+                onAdvertisementFeedback={handleAdvertisementFeedback}
+                onAdvertisementPress={(reel) => void handleAdvertisementPress(reel)}
                 active={
                   isAppActive &&
                   isFocused &&

@@ -23,14 +23,16 @@ import { getRecentStickers } from "./recent-sticker-storage";
 type Props = {
   onSelect: (sticker: Sticker) => void;
   onOpenStore: () => void;
+  dark?: boolean;
 };
 
 const USABLE_PACKS_KEY = stickerPackPageKey("usable", 1, 50);
 
-export function StickerPanel({ onSelect, onOpenStore }: Props) {
+export function StickerPanel({ onSelect, onOpenStore, dark = false }: Props) {
   const { theme } = useTheme();
   const { isWeb } = useResponsive();
-  const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
+  const colors = dark ? theme.reels : theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [packs, setPacks] = useState<StickerPack[]>(
     () => getStickerPackPageCache(USABLE_PACKS_KEY)?.value.items ?? [],
   );
@@ -119,19 +121,19 @@ export function StickerPanel({ onSelect, onOpenStore }: Props) {
   return (
     <View accessibilityLabel="Bảng nhãn dán" style={[styles.panel, isWeb && styles.webPanel]}>
       <View style={[styles.searchRow, isWeb && styles.webSearchRow]}>
-        <Ionicons color={theme.colors.textMuted} name="search" size={18} />
+        <Ionicons color={colors.textMuted} name="search" size={18} />
         <TextInput
           accessibilityLabel="Tìm nhãn dán"
           onChangeText={setQuery}
           placeholder="Tìm nhãn dán"
-          placeholderTextColor={theme.colors.textMuted}
+          placeholderTextColor={colors.textMuted}
           style={[styles.searchInput, isWeb && styles.webSearchInput]}
           value={query}
         />
       </View>
       <ScrollView contentContainerStyle={[styles.tabs, isWeb && styles.webTabs]} horizontal showsHorizontalScrollIndicator={false}>
         <Pressable accessibilityLabel="Nhãn dán gần đây" onPress={() => setSelectedPackId("recent")} style={[styles.tab, isWeb && styles.webTab, selectedPackId === "recent" && styles.activeTab]}>
-          <Ionicons color={selectedPackId === "recent" ? theme.colors.primary : theme.colors.textMuted} name="time-outline" size={isWeb ? 20 : 22} />
+          <Ionicons color={selectedPackId === "recent" ? colors.primary : colors.textMuted} name="time-outline" size={isWeb ? 20 : 22} />
         </Pressable>
         {packs.map((pack) => (
           <Pressable accessibilityLabel={pack.name} key={pack.id} onPress={() => setSelectedPackId(pack.id)} style={[styles.tab, isWeb && styles.webTab, selectedPackId === pack.id && styles.activeTab]}>
@@ -139,10 +141,10 @@ export function StickerPanel({ onSelect, onOpenStore }: Props) {
           </Pressable>
         ))}
         <Pressable accessibilityLabel="Mở cửa hàng nhãn dán" onPress={onOpenStore} style={[styles.tab, isWeb && styles.webTab]}>
-          <Ionicons color={theme.colors.primary} name="add" size={isWeb ? 22 : 24} />
+          <Ionicons color={colors.primary} name="add" size={isWeb ? 22 : 24} />
         </Pressable>
       </ScrollView>
-      {loading ? <ActivityIndicator color={theme.colors.primary} style={styles.state} /> : error && stickers.length === 0 ? <Text style={styles.error}>{error}</Text> : stickers.length === 0 ? <Text style={styles.empty}>Chưa có nhãn dán.</Text> : (
+      {loading ? <ActivityIndicator color={colors.primary} style={styles.state} /> : error && stickers.length === 0 ? <Text style={styles.error}>{error}</Text> : stickers.length === 0 ? <Text style={styles.empty}>Chưa có nhãn dán.</Text> : (
         <ScrollView contentContainerStyle={[styles.grid, isWeb && styles.webGrid]} keyboardShouldPersistTaps="handled">
           {stickers.map((sticker) => (
             <Pressable accessibilityLabel={`Gửi nhãn dán ${sticker.name}`} key={sticker.id} onPress={() => onSelect(sticker)} style={[styles.stickerButton, isWeb && styles.webStickerButton]}>
