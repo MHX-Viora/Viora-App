@@ -1,4 +1,4 @@
-﻿import Ionicons from "@expo/vector-icons/Ionicons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import {
@@ -153,10 +153,11 @@ export function UserProfileScreen() {
         type: "success",
       });
     } catch (error) {
-      Alert.alert(
-        "Không thể theo dõi",
-        error instanceof Error ? error.message : "Vui lòng thử lại.",
-      );
+      showAppToast({
+        title: profile.isFollowing ? "Không thể bỏ theo dõi" : "Không thể theo dõi",
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+        type: "error",
+      });
     } finally {
       setIsActionLoading(false);
     }
@@ -172,7 +173,7 @@ export function UserProfileScreen() {
       if (friendshipStatus === "accepted" || friendshipStatus === "pending") {
         const isPendingRequest = friendshipStatus === "pending";
 
-        await deleteFriend(profile.id);
+        await deleteFriend(profile.friendship?.friendshipId || profile.id);
         const nextProfile = await getUserProfile(profile.id);
         setProfile(nextProfile);
         showAppToast({
@@ -199,24 +200,23 @@ export function UserProfileScreen() {
           : current,
       );
 
-      if (result.message) {
-        showAppToast({
-          message: result.message,
-          title: "Đã gửi lời mời",
-          type: "success",
-        });
-      }
+      showAppToast({
+        message: result.message || "Đã gửi lời mời kết bạn.",
+        title: "Đã gửi lời mời",
+        type: "success",
+      });
     } catch (error) {
       const isCancelAction =
         friendshipStatus === "accepted" || friendshipStatus === "pending";
-      Alert.alert(
-        isCancelAction
+      showAppToast({
+        title: isCancelAction
           ? friendshipStatus === "pending"
             ? "Không thể hủy lời mời kết bạn"
             : "Không thể hủy kết bạn"
           : "Không thể gửi lời mời kết bạn",
-        error instanceof Error ? error.message : "Vui lòng thử lại.",
-      );
+        message: error instanceof Error ? error.message : "Vui lòng thử lại.",
+        type: "error",
+      });
     } finally {
       setIsActionLoading(false);
     }
@@ -244,10 +244,11 @@ export function UserProfileScreen() {
       );
       openChatRoom(conversationId);
     } catch (error) {
-      Alert.alert(
-        "Không thể tạo cuộc trò chuyện.",
-        error instanceof Error ? error.message : "Đã xảy ra lỗi, vui lòng thử lại.",
-      );
+      showAppToast({
+        title: "Không thể mở cuộc trò chuyện",
+        message: error instanceof Error ? error.message : "Đã xảy ra lỗi, vui lòng thử lại.",
+        type: "error",
+      });
     } finally {
       setIsChatLoading(false);
     }
