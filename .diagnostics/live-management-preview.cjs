@@ -1,0 +1,3 @@
+const http = require('node:http');
+const html = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live toolbar verification</title><style>html,body,#root{height:100%;width:100%;margin:0;overflow:hidden}#root{display:flex}</style></head><body><div id="root"></div><script src="http://localhost:3000/scripts/host-toolbar-preview.bundle?platform=web&dev=true&hot=false&minify=false"></script></body></html>';
+http.createServer((req,res) => { res.setHeader('Content-Type','text/html; charset=utf-8'); res.end(html); }).listen(8086,'127.0.0.1',() => console.log('Preview: http://localhost:8086'));
