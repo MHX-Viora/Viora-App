@@ -12,10 +12,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
+import { AdaptiveMediaImage } from "./adaptive-media-image";
 
 
 type ViewableImageProps = Omit<ImageProps, "style"> & {
   style: StyleProp<ViewStyle>;
+  adaptive?: boolean;
+  naturalSize?: boolean;
+  maxHeight?: number;
 };
 
 export function ViewableImage({
@@ -23,12 +27,18 @@ export function ViewableImage({
   contentFit = "cover",
   source,
   style,
+  adaptive = false,
+  naturalSize = false,
+  maxHeight,
   ...imageProps
 }: ViewableImageProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [visible, setVisible] = useState(false);
+  const previewStyle = adaptive && naturalSize
+    ? { ...StyleSheet.flatten(style), height: undefined, aspectRatio: undefined }
+    : style;
 
   return (
     <>
@@ -36,15 +46,22 @@ export function ViewableImage({
         accessibilityLabel={`${accessibilityLabel}. Nhấn để xem ảnh`}
         accessibilityRole="imagebutton"
         onPress={() => setVisible(true)}
-        style={[style, styles.previewWrap]}
+        style={[previewStyle, styles.previewWrap]}
       >
-        <Image
+        {adaptive ? <AdaptiveMediaImage
+          {...imageProps}
+          accessibilityLabel={accessibilityLabel}
+          source={source}
+          naturalSize={naturalSize}
+          maxHeight={maxHeight}
+          style={naturalSize ? undefined : StyleSheet.absoluteFill}
+        /> : <Image
           accessibilityLabel={accessibilityLabel}
           contentFit={contentFit}
           source={source}
           style={StyleSheet.absoluteFill}
           {...imageProps}
-        />
+        />}
       </Pressable>
 
       <Modal
@@ -64,12 +81,16 @@ export function ViewableImage({
           >
             <Ionicons color={colors.white} name="close" size={28} />
           </Pressable>
-          <Image
+          {adaptive ? <AdaptiveMediaImage
+            accessibilityLabel={accessibilityLabel}
+            source={source}
+            style={styles.fullImage}
+          /> : <Image
             accessibilityLabel={accessibilityLabel}
             contentFit="contain"
             source={source}
             style={styles.fullImage}
-          />
+          />}
         </SafeAreaView>
       </Modal>
     </>

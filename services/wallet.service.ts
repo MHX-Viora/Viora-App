@@ -3,6 +3,8 @@ import { resolveWalletRequestErrorMessage } from "@/utils/wallet-payment";
 import type {
   Wallet,
   WalletPayment,
+  WalletPaymentPage,
+  WalletHistoryGroup,
   WalletTransaction,
   WalletTransactionPage,
   WalletTransactionType,
@@ -47,25 +49,27 @@ export const getWalletTransactions = (params: {
   page?: number;
   pageSize?: number;
   type?: WalletTransactionType;
+  group?: WalletHistoryGroup;
 } = {}) => {
   const query = new URLSearchParams({
     page: String(params.page ?? 1),
     pageSize: String(params.pageSize ?? 20),
   });
   if (params.type !== undefined) query.set("type", String(params.type));
+  if (params.group !== undefined) query.set("group", String(params.group));
   return request<WalletTransactionPage>(`/api/wallet/transactions?${query}`);
 };
 
 export const getWalletTransaction = (id: string) =>
   request<WalletTransaction>(`/api/wallet/transactions/${encodeURIComponent(id)}`);
 
-export const createWalletDeposit = (amount: number) => {
+export const createWalletDeposit = (amount: number, requestKey = idempotencyKey("deposit")) => {
   const origin = typeof window === "undefined" ? "https://ankt.vn" : window.location.origin;
   return request<WalletPayment>("/api/wallet/deposits", {
     body: JSON.stringify({
       amount,
       cancelUrl: `${origin}/wallet/deposit?status=cancelled`,
-      idempotencyKey: idempotencyKey("deposit"),
+      idempotencyKey: requestKey,
       returnUrl: `${origin}/wallet/deposit?status=return`,
     }),
     headers: JSON_HEADERS,
@@ -76,8 +80,17 @@ export const createWalletDeposit = (amount: number) => {
 export const getWalletPayment = (id: string) =>
   request<WalletPayment>(`/api/wallet/payments/${encodeURIComponent(id)}`);
 
+export const getWalletPayments = (page = 1, pageSize = 20) =>
+  request<WalletPaymentPage>(`/api/wallet/payments?page=${page}&pageSize=${pageSize}`);
+
+export const cancelWalletPayment = (id: string) =>
+  request<WalletPayment>(`/api/wallet/payments/${encodeURIComponent(id)}/cancel`, { method: "POST", headers: JSON_HEADERS });
+
 export const getWalletBankAccounts = () =>
   request<WalletBankAccount[]>("/api/wallet/bank-accounts");
+
+export type WalletBank = { code: string; name: string; shortName: string; bin: string; logo: string };
+export const getWalletBanks = () => request<WalletBank[]>("/api/wallet/banks");
 
 export const createWalletBankAccount = (input: {
   bankCode: string;
@@ -94,9 +107,9 @@ export const createWalletBankAccount = (input: {
 export const getWithdrawalQuote = (amount: number) =>
   request<WithdrawalQuote>(`/api/wallet/withdrawals/quote?amount=${encodeURIComponent(String(amount))}`);
 
-export const createWalletWithdrawal = (amount: number, bankAccountId: string, requestKey: string) =>
+export const createWalletWithdrawal = (amount: number, bankAccountId: string, requestKey: string, expectedFee: number) =>
   request<WalletWithdrawal>("/api/wallet/withdrawals", {
-    body: JSON.stringify({ amount, bankAccountId, idempotencyKey: requestKey }),
+    body: JSON.stringify({ amount, bankAccountId, idempotencyKey: requestKey, expectedFee }),
     headers: JSON_HEADERS,
     method: "POST",
   });
@@ -105,3 +118,5 @@ export const createWithdrawalIdempotencyKey = () => idempotencyKey("withdrawal")
 
 export const getWalletWithdrawal = (id: string) =>
   request<WalletWithdrawal>(`/api/wallet/withdrawals/${encodeURIComponent(id)}`);
+
+export const cancelWalletWithdrawal = (id: string) => request<WalletWithdrawal>(`/api/wallet/withdrawals/${encodeURIComponent(id)}/cancel`, { method: "POST", headers: JSON_HEADERS });

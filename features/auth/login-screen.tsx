@@ -242,15 +242,16 @@ const createStyles = (theme: AppTheme) => {
   return StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 18,
+    borderColor: colors.borderSubtle,
+    borderRadius: 16,
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.xl,
-    shadowColor: colors.glow,
-    shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 18,
+    elevation: effects.shadow.elevation,
+    shadowColor: effects.shadow.shadowColor,
+    shadowOffset: effects.shadow.shadowOffset,
+    shadowOpacity: effects.shadow.shadowOpacity,
+    shadowRadius: effects.shadow.shadowRadius,
   },
   container: { gap: spacing.xl, maxWidth: 430, width: "100%" },
   content: {

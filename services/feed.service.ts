@@ -1,4 +1,5 @@
 import { authenticatedFetch } from "@/services/authenticated-fetch";
+import { Platform } from "react-native";
 import { getUser } from "@/stores/session-store";
 import type {
   ApiPost,
@@ -9,6 +10,8 @@ import type {
 } from "@/types/feed";
 import { formatPostTime } from "@/utils/post-format";
 import { normalizePostLink } from "@/utils/post-link";
+import { appendPostImage } from "@/utils/post-upload";
+import { isOwnPost } from "@/utils/post-ownership";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 
@@ -21,29 +24,6 @@ const FORM_HEADERS = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-const getFileName = (uri: string, fallbackName: string) => {
-  const fileName = uri.split("/").pop();
-  return fileName && fileName.includes(".") ? fileName : fallbackName;
-};
-
-const getFileType = (fileName: string) => {
-  const extension = fileName.split(".").pop()?.toLowerCase();
-
-  if (extension === "png") return "image/png";
-  if (extension === "webp") return "image/webp";
-  return "image/jpeg";
-};
-
-const appendFile = (formData: FormData, uri: string, index: number) => {
-  const fileName = getFileName(uri, `post-${index + 1}.jpg`);
-
-  formData.append("files", {
-    uri,
-    name: fileName,
-    type: getFileType(fileName),
-  } as unknown as Blob);
-};
 
 const parseResponseText = (text: string) => {
   if (!text) return null;
@@ -67,7 +47,7 @@ const getApiErrorMessage = (data: unknown, fallback: string) => {
   }
 
   if (isRecord(data) && typeof data.title === "string" && data.title.trim()) {
-    return data.title;
+    return typeof data.detail === "string" && data.detail.trim() ? data.detail : data.title;
   }
 
   return fallback;
@@ -82,20 +62,20 @@ export const mapFeedPost = (
     post.user?.displayName?.trim() ||
     currentUser?.displayName?.trim() ||
     "Người dùng ANKT",
-  authorId: post.user?.id ?? null,
+  authorId: post.user?.id ?? (post.isMine || post.isOwner ? currentUser?.id ?? null : null),
   avatar: post.user?.avatarUrl || currentUser?.avatarUrl || DEFAULT_AVATAR,
   body: post.content || "",
   comments: post.commentCount ?? 0,
   images: (post.media ?? [])
-    .map((media) => media.mediaUrl || media.thumbnailUrl || "")
+    .map((media) => media.mediaUrl || media.url || media.thumbnailUrl || "")
     .filter(Boolean),
   isAuthorVerified: post.user?.isVerified ?? false,
   authorAccountStyle: post.user?.accountStyle ?? 0,
-  isMine: !!currentUser?.id && post.user?.id === currentUser.id,
+  isMine: isOwnPost(post, currentUser?.id),
   isReacted: post.isReacted ?? false,
   isSaved: post.isSaved ?? false,
   link: normalizePostLink(post.link),
-  location: post.location?.trim() || null,
+  location: (post.location ?? post.locationName)?.trim() || null,
   publishedAt: formatPostTime(post.createdAt),
   reactionType: post.reactionType ?? 0,
   reactions: post.reactionCount ?? 0,
@@ -176,7 +156,6 @@ export const createPost = async (
   payload: CreatePostInput,
 ): Promise<FeedPost> => {
   const formData = new FormData();
-  formData.append("post", payload.post ?? "");
   formData.append("content", payload.content);
   formData.append("visibility", String(payload.visibility));
 
@@ -200,7 +179,9 @@ export const createPost = async (
     formData.append("mentionUserIds", id),
   );
 
-  payload.files.forEach((uri, index) => appendFile(formData, uri, index));
+  for (const [index, uri] of payload.files.entries()) {
+    await appendPostImage(formData, uri, index, Platform.OS === "web");
+  }
 
   const response = await authenticatedFetch(`${BASE_URL}/api/feed`, {
     method: "POST",
@@ -215,5 +196,5 @@ export const createPost = async (
   }
 
   const currentUser = await getUser();
-  return mapFeedPost(data as ApiPost, currentUser);
+  return mapFeedPost({ ...(data as ApiPost), user: currentUser, isMine: true }, currentUser);
 };

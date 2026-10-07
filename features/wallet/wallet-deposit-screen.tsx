@@ -1,6 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { router, type Href } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
@@ -8,16 +8,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WalletScreenHeader } from "@/components/wallet/wallet-screen-header";
 import { useResponsive } from "@/hooks/use-responsive";
-import { createWalletDeposit, getWalletPayment, invalidateWalletData } from "@/services/wallet.service";
+import { cancelWalletPayment, createWalletDeposit, getWalletPayment, invalidateWalletData } from "@/services/wallet.service";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
 import type { WalletPayment } from "@/types/wallet";
 import { formatVnd } from "@/utils/wallet-format";
+import { parseVndInput } from "@/utils/money";
 import { formatWalletPaymentTimeRemaining, resolveWalletPaymentQrValue } from "@/utils/wallet-payment";
 
 const PRESETS = [50_000, 100_000, 200_000, 500_000, 1_000_000] as const;
 const ACTIVE_PAYMENT_KEY = "wallet:active-deposit-payment";
 
 export function WalletDepositScreen() {
+  const { paymentId } = useLocalSearchParams<{ paymentId?: string }>();
   const { theme } = useTheme();
   const { isDesktopWeb } = useResponsive();
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
@@ -29,15 +31,17 @@ export function WalletDepositScreen() {
   const [error, setError] = useState<string | null>(null);
   const checkingRef = useRef(false);
   const refreshedPaymentRef = useRef<string | null>(null);
+  const creationRef = useRef(false);
+  const requestRef = useRef({ amount: 0, key: "" });
 
   useEffect(() => {
     let active = true;
-    void AsyncStorage.getItem(ACTIVE_PAYMENT_KEY)
+    void (paymentId ? Promise.resolve(paymentId) : AsyncStorage.getItem(ACTIVE_PAYMENT_KEY))
       .then((paymentId) => paymentId ? getWalletPayment(paymentId) : null)
       .then((restored) => { if (active && restored) setPayment(restored); })
       .catch(() => undefined);
     return () => { active = false; };
-  }, []);
+  }, [paymentId]);
 
   const checkPayment = useCallback(async () => {
     if (!payment?.id || checkingRef.current) return;
@@ -77,16 +81,34 @@ export function WalletDepositScreen() {
     return () => clearInterval(timer);
   }, [payment]);
 
-  const selectedAmount = custom ? Number(custom.replace(/\D/g, "")) : amount;
+  const selectedAmount = custom ? parseVndInput(custom) ?? 0 : amount;
   const createPayment = async () => {
+    if (creationRef.current || selectedAmount <= 0) return;
+    creationRef.current = true;
+    if (requestRef.current.amount !== selectedAmount) requestRef.current = { amount: selectedAmount, key: `deposit:${Date.now()}:${Math.random().toString(36).slice(2)}` };
     setSubmitting(true); setError(null);
     try {
-      const created = await createWalletDeposit(selectedAmount);
+      const created = await createWalletDeposit(selectedAmount, requestRef.current.key);
       await AsyncStorage.setItem(ACTIVE_PAYMENT_KEY, created.id);
       setPayment(created);
     }
     catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Không thể tạo thanh toán."); }
-    finally { setSubmitting(false); }
+    finally { creationRef.current = false; setSubmitting(false); }
+  };
+
+  const cancelPayment = async () => {
+    if (!payment || submitting) return;
+    setSubmitting(true); setError(null);
+    try {
+      const next = await cancelWalletPayment(payment.id);
+      setPayment(next);
+      if (next.status !== 0) {
+        await AsyncStorage.removeItem(ACTIVE_PAYMENT_KEY);
+        invalidateWalletData();
+      } else setError("Chưa thể xác nhận hủy thanh toán. Vui lòng thử lại.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể hủy thanh toán.");
+    } finally { setSubmitting(false); }
   };
 
   if (payment) {
@@ -115,7 +137,8 @@ export function WalletDepositScreen() {
             {paymentHint && <Text style={styles.paymentHint}>{paymentHint}</Text>}
           </View>
           {!terminal && payment.checkoutUrl && <Pressable onPress={() => void Linking.openURL(payment.checkoutUrl!)} style={styles.primaryButton}><Text style={styles.primaryText}>Mở trang dự phòng</Text></Pressable>}
-          <Pressable onPress={() => paid ? router.replace("/wallet" as Href) : void AsyncStorage.removeItem(ACTIVE_PAYMENT_KEY).finally(() => setPayment(null))} style={styles.secondaryButton}><Text style={styles.secondaryText}>{paid ? "Về Ví ANKT" : terminal ? "Tạo giao dịch mới" : "Hủy thanh toán"}</Text></Pressable>
+          {error && <Text style={styles.error}>{error}</Text>}
+          <Pressable disabled={submitting} onPress={() => paid ? router.replace("/wallet" as Href) : terminal ? void AsyncStorage.removeItem(ACTIVE_PAYMENT_KEY).finally(() => setPayment(null)) : void cancelPayment()} style={styles.secondaryButton}><Text style={styles.secondaryText}>{submitting ? "Đang hủy…" : paid ? "Về Ví ANKT" : terminal ? "Tạo giao dịch mới" : "Hủy thanh toán"}</Text></Pressable>
         </ScrollView>
       </SafeAreaView>
     );
@@ -128,6 +151,7 @@ export function WalletDepositScreen() {
         <Text style={styles.sectionLabel}>Chọn số tiền</Text>
         <View style={styles.presets}>{PRESETS.map((value) => <Pressable key={value} onPress={() => { setAmount(value); setCustom(""); }} style={[styles.preset, !custom && amount === value && styles.presetActive]}><Text style={[styles.presetText, !custom && amount === value && styles.presetTextActive]}>{formatVnd(value)}</Text></Pressable>)}</View>
         <TextInput accessibilityLabel="Nhập số tiền khác" inputMode="numeric" onChangeText={setCustom} placeholder="Số tiền khác" placeholderTextColor={theme.colors.placeholder} style={styles.input} value={custom} />
+        {custom && (parseVndInput(custom) === null || selectedAmount <= 0) && <Text accessibilityRole="alert" style={styles.error}>Số tiền VNĐ phải là số nguyên lớn hơn 0.</Text>}
         <View accessibilityLabel="Phương thức thanh toán: Quét mã QR" style={styles.paymentMethod}>
           <View style={styles.paymentMethodIcon}><Ionicons color={theme.colors.primary} name="qr-code-outline" size={22} /></View>
           <View style={styles.paymentMethodCopy}><Text style={styles.paymentMethodLabel}>Phương thức thanh toán</Text><Text style={styles.paymentMethodValue}>Quét mã QR</Text></View>

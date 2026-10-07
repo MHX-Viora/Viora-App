@@ -1,5 +1,9 @@
 # Theme Mode Handoff
 
+> The current Light palette and default are documented in
+> [Light Theme Redesign](light-theme-redesign.md). This handoff records the
+> original theme-mode implementation.
+
 ## Delivered
 
 - Added typed, extensible `modern | classic` themes and semantic color/effect tokens.

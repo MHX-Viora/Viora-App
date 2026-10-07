@@ -24,6 +24,7 @@ import {
 import { syncChatUnreadCount } from "@/services/chat-sync.service";
 import { getNotifications } from "@/services/notification.service";
 import { ensureFreshSession } from "@/services/authenticated-fetch";
+import { hasSessionIdentityMismatch } from "@/services/jwt-expiry";
 import { setupIncomingCallNotifeeEvents } from "@/services/incoming-call-notifee-events";
 import {
   registerPushNotifications,
@@ -32,7 +33,7 @@ import {
   setupPushTokenRefreshHandling,
 } from "@/services/push-notification.service";
 import { startRealtime, stopRealtime } from "@/services/realtime.service";
-import { subscribeSessionInvalidation } from "@/stores/session-store";
+import { getSession, subscribeSessionInvalidation } from "@/stores/session-store";
 import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
 import { ThemeProvider, useTheme } from "@/theme";
 
@@ -198,12 +199,16 @@ function RootLayoutContent() {
     };
 
     void checkLoginStatus()
-      .catch((error: unknown) => {
+      .catch(async (error: unknown) => {
         console.info(
           "[Session] initial hydration failed",
           error instanceof Error ? error.message : String(error),
         );
-        router.replace("/login");
+        // A failed notification restore or temporary storage error is not a logout.
+        const remainingSession = await getSession().catch(() => undefined);
+        if (remainingSession === null || (remainingSession && hasSessionIdentityMismatch(remainingSession))) {
+          router.replace("/login");
+        }
       })
       .finally(() => setIsAppReady(true));
   }, [segments, sessionRevision]);
@@ -224,6 +229,8 @@ function RootLayoutContent() {
         <Stack.Screen name="user/[userId]" />
         <Stack.Screen name="post/[postId]" />
         <Stack.Screen name="reel/[reelId]" />
+        <Stack.Screen name="live/[id]" />
+        <Stack.Screen name="live/host" options={{ orientation: "default" }} />
         <Stack.Screen name="group/[inviteCode]" />
         <Stack.Screen name="call/[callId]" />
         <Stack.Screen name="incoming-call/[callId]" />

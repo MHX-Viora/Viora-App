@@ -40,18 +40,21 @@ export function AuthField({
 }: AuthFieldProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, theme.isDark), [colors, theme.isDark]);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.field}>
+      <View style={[styles.field, isFocused && styles.fieldFocused]}>
         <Ionicons color={colors.textMuted} name={icon} size={21} />
         <TextInput
           accessibilityLabel={label}
           placeholder={placeholder}
           placeholderTextColor={colors.textMuted}
+          onBlur={() => setIsFocused(false)}
+          onFocus={() => setIsFocused(true)}
           secureTextEntry={secure && !passwordVisible}
           style={styles.input}
           {...inputProps}
@@ -88,7 +91,7 @@ export function AuthPrimaryButton({
 }) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, theme.isDark), [colors, theme.isDark]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -124,7 +127,7 @@ export function AuthFooterLink({
 }) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, theme.isDark), [colors, theme.isDark]);
   return (
     <View style={styles.footerRow}>
       <Text style={styles.footerText}>{prompt} </Text>
@@ -135,23 +138,24 @@ export function AuthFooterLink({
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
+const createStyles = (colors: ThemeColors, isDark: boolean) => StyleSheet.create({
   disabled: { opacity: 0.58 },
   field: {
     alignItems: "center",
-    backgroundColor: colors.visuals.rgb_9_23_41_0_70,
-    borderColor: colors.border,
-    borderRadius: 12,
+    backgroundColor: colors.input,
+    borderColor: colors.borderSubtle,
+    borderRadius: 10,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     minHeight: 48,
     paddingHorizontal: spacing.md,
-    shadowColor: colors.primary,
+    shadowColor: colors.shadow,
     shadowOffset: { height: 0, width: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
+    shadowOpacity: isDark ? 0.12 : 0,
+    shadowRadius: 2,
   },
+  fieldFocused: { backgroundColor: colors.surface, borderColor: colors.primary },
   fieldGroup: { gap: spacing.xs },
   footerLink: { color: colors.primary, fontSize: 14, fontWeight: "800" },
   footerRow: {
@@ -167,19 +171,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   primaryButton: {
     alignItems: "center",
     backgroundColor: colors.primary,
-    borderRadius: 24,
-    borderColor: colors.visuals.rgb_255_255_255_0_20,
+    borderRadius: 10,
+    borderColor: colors.borderSubtle,
     borderWidth: 1,
-    elevation: 3,
+    elevation: isDark ? 3 : 1,
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "center",
     minHeight: 56,
     paddingHorizontal: spacing.xl,
     shadowColor: colors.glow,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: isDark ? 0.28 : 0.06,
+    shadowRadius: isDark ? 10 : 2,
   },
   primaryButtonText: {
     color: colors.primaryContrast,

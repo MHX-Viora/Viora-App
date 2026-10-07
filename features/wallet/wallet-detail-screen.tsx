@@ -24,7 +24,8 @@ export function WalletDetailScreen() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [walletResult, transactionResult] = await Promise.all([getWallet(), getWalletTransactions({ pageSize: 5 })]);
+      const transactionResult = await getWalletTransactions({ pageSize: 5 });
+      const walletResult = await getWallet();
       setWallet(walletResult);
       setRecent(transactionResult.data);
     } finally { setLoading(false); }

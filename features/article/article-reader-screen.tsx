@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
@@ -15,6 +16,7 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { getArticle, trackArticleInteraction } from "@/services/article.service";
 import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 import type { Article } from "@/types/article";
+import { withoutHashtags } from "@/utils/display-text";
 
 export function ArticleReaderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,10 +29,16 @@ export function ArticleReaderScreen() {
   const lastMilestoneRef = useRef(0);
   const latestPercentageRef = useRef(0);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!id) return;
-    getArticle(id).then(setArticle).catch((reason) => setError(reason instanceof Error ? reason.message : "Không thể tải bài viết."));
-  }, [id]);
+    let active = true;
+    setArticle(null);
+    setError("");
+    getArticle(id)
+      .then((result) => { if (active) setArticle(result); })
+      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "Không thể tải bài viết."); });
+    return () => { active = false; };
+  }, [id]));
 
   const sendReadingProgress = useCallback((articleId: string, percentage: number) => {
     const duration = Math.min(
@@ -82,7 +90,7 @@ export function ArticleReaderScreen() {
 
   return <SafeAreaView edges={["top"]} style={styles.screen}>
     <View style={styles.topBar}>
-      <Pressable accessibilityLabel="Quay lại" onPress={() => router.back()}><Ionicons color={theme.colors.text} name="arrow-back" size={26} /></Pressable>
+      <Pressable accessibilityLabel="Quay lại" onPress={() => router.canGoBack() ? router.back() : router.replace("/")}><Ionicons color={theme.colors.text} name="arrow-back" size={26} /></Pressable>
       {article.isOwner ? <Pressable onPress={() => router.push({ pathname: "/article/editor", params: { id: article.id } })}><Text style={styles.edit}>Chỉnh sửa</Text></Pressable> : null}
     </View>
     <FlatList
@@ -90,7 +98,7 @@ export function ArticleReaderScreen() {
       data={article.blocks}
       initialNumToRender={5}
       keyExtractor={(item) => item.id || String(item.orderIndex)}
-      ListHeaderComponent={<View style={styles.header}><Text style={styles.title}>{article.title}</Text><View style={styles.authorRow}><UserAvatar displayName={article.author.displayName} imageUrl={article.author.avatarUrl} size={40} style={styles.avatar} /><View><Text style={styles.author}>{article.author.displayName}</Text><Text style={styles.meta}>{article.readingTimeMinutes} phút đọc · {article.viewCount} lượt xem</Text></View></View></View>}
+      ListHeaderComponent={<View style={styles.header}><Text style={styles.title}>{withoutHashtags(article.title)}</Text><View style={styles.authorRow}><UserAvatar displayName={article.author.displayName} imageUrl={article.author.avatarUrl} size={40} style={styles.avatar} /><View><Text style={styles.author}>{article.author.displayName}</Text><Text style={styles.meta}>{article.readingTimeMinutes} phút đọc · {article.viewCount} lượt xem</Text></View></View></View>}
       maxToRenderPerBatch={5}
       onScroll={handleScroll}
       renderItem={({ item }) => <ArticleBlockView block={item} />}

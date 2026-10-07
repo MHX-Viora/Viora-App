@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
@@ -13,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ThemeModeSheet } from "@/components/profile/theme-mode-sheet";
 import { TmiSponsor } from "@/components/common/tmi-sponsor";
 import { PwaInstallAction } from "@/components/pwa/pwa-install-action";
+import { setReducedGiftEffects, useReducedGiftEffects } from "@/features/live/premium-gift-effect-preference";
 import { getThemeDefinition, spacing, type AppTheme, useTheme } from "@/theme";
 
 const SETTINGS = [
@@ -25,6 +27,7 @@ const SETTINGS = [
     icon: "person-circle-outline",
     label: "Cài đặt tài khoản",
   },
+  { action: "advertisements", icon: "megaphone-outline", label: "Quảng cáo" },
   {
     action: "policies-terms",
     icon: "document-text-outline",
@@ -37,6 +40,7 @@ type ProfileSettingsSheetProps = {
   onClose: () => void;
   onLogout: () => void;
   onOpenAccountSettings: () => void;
+  onOpenAdvertisements: () => void;
   onOpenLikedActivity: () => void;
   onOpenPoliciesTerms: () => void;
   onOpenSavedActivity: () => void;
@@ -49,6 +53,7 @@ export function ProfileSettingsSheet({
   onClose,
   onLogout,
   onOpenAccountSettings,
+  onOpenAdvertisements,
   onOpenLikedActivity,
   onOpenPoliciesTerms,
   onOpenSavedActivity,
@@ -57,6 +62,7 @@ export function ProfileSettingsSheet({
 }: ProfileSettingsSheetProps) {
   const insets = useSafeAreaInsets();
   const [showThemeMode, setShowThemeMode] = useState(false);
+  const reducedGiftEffects = useReducedGiftEffects();
   const { mode, theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -88,6 +94,11 @@ export function ProfileSettingsSheet({
         )}
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.row}>
+          <Ionicons color={theme.colors.icon} name="sparkles-outline" size={23} />
+          <Text style={styles.rowText}>Giảm hiệu ứng quà tặng</Text>
+          <Switch accessibilityLabel="Giảm hiệu ứng quà tặng" value={reducedGiftEffects} onValueChange={setReducedGiftEffects} />
+        </View>
         {SETTINGS.map((item) => (
           <Pressable
             accessibilityRole="button"
@@ -97,6 +108,8 @@ export function ProfileSettingsSheet({
                 ? () => setShowThemeMode(true)
                 : item.action === "account-settings"
                   ? onOpenAccountSettings
+                  : item.action === "advertisements"
+                    ? onOpenAdvertisements
                   : item.action === "saved"
                     ? onOpenSavedActivity
                     : item.action === "reacted"

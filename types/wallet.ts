@@ -1,6 +1,7 @@
 export type WalletStatus = 0 | 1 | 2;
 export type PaymentStatus = 0 | 1 | 2 | 3 | 4;
-export type WalletTransactionType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type WalletTransactionType = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+export type WalletHistoryGroup = 0 | 1 | 2 | 3;
 
 export type Wallet = {
   id: string;
@@ -24,6 +25,8 @@ export type WalletBankAccount = {
 };
 
 export type WalletWithdrawal = {
+  feePercent?: number | null;
+  timeline?: { status: WithdrawalStatus; at: string; reason: string | null }[];
   id: string;
   transactionCode: string;
   amount: number;
@@ -44,6 +47,7 @@ export type WalletWithdrawal = {
 };
 
 export type WithdrawalQuote = {
+  feePercent: number;
   amount: number;
   fee: number;
   netAmount: number;
@@ -52,6 +56,9 @@ export type WithdrawalQuote = {
 };
 
 export type WalletTransaction = {
+  coinAmount?: number | null;
+  coinBalanceBefore?: number | null;
+  coinBalanceAfter?: number | null;
   id: string;
   type: WalletTransactionType;
   amount: number;
@@ -67,6 +74,11 @@ export type WalletTransaction = {
   paymentStatus?: PaymentStatus | null;
   createdAt: string;
   completedAt: string | null;
+  hasBalanceSnapshot?: boolean;
+  source?: string | null;
+  destination?: string | null;
+  relatedContent?: string | null;
+  relatedStatus?: string | null;
 };
 
 export type WalletTransactionPage = {
@@ -92,4 +104,12 @@ export type WalletPayment = {
   createdAt: string;
   expiresAt: string;
   paidAt: string | null;
+};
+
+export type WalletPaymentPage = {
+  data: WalletPayment[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 };

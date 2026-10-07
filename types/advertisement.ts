@@ -64,6 +64,7 @@ export type AdvertisementContent = {
     accountStyle: number;
   };
   media: { id: string; mediaUrl: string; thumbnailUrl: string | null }[];
+  hashtags?: string[];
   article: {
     title: string;
     thumbnailUrl: string | null;
@@ -128,4 +129,5 @@ export type AdvertisementPresentation = {
   id: string;
   ctaType: AdvertisementCtaType;
   destinationUrl: string | null;
+  isPreview?: boolean;
 };

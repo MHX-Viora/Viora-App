@@ -6,6 +6,14 @@ import type {
 } from "@/types/feed";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
+const deletedPostIds = new Set<string>();
+const postDeletedListeners = new Set<(postId: string) => void>();
+
+export const isPostDeletedLocally = (postId: string) => deletedPostIds.has(postId);
+export const subscribePostDeleted = (listener: (postId: string) => void) => {
+  postDeletedListeners.add(listener);
+  return () => { postDeletedListeners.delete(listener); };
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -136,6 +144,9 @@ export const deletePost = async (postId: string): Promise<string> => {
   if (!response.ok) {
     throw new Error(getApiErrorMessage(data, "Không thể xóa bài viết."));
   }
+
+  deletedPostIds.add(postId);
+  for (const listener of postDeletedListeners) listener(postId);
 
   return isRecord(data) && typeof data.message === "string"
     ? data.message

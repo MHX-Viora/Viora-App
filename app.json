@@ -123,6 +123,7 @@
     "plugins": [
       "expo-router",
       "./plugins/with-notifee-call-config",
+      "./plugins/with-agora-android",
       "./plugins/with-release-signing",
       [
         "expo-splash-screen",

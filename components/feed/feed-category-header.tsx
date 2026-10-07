@@ -6,17 +6,19 @@ import { getFeedCategorySidebarLayout } from "@/components/layout/responsive-lay
 import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 
-export type FeedCategory = "community" | "reels" | "articles";
+export type FeedCategory = "community" | "reels" | "articles" | "live";
 
 export function FeedCategoryHeader({
   activeCategory,
   onArticlesPress,
   onCommunityPress,
+  onLivePress,
   onReelsPress,
 }: {
   activeCategory: FeedCategory;
   onArticlesPress: () => void;
   onCommunityPress: () => void;
+  onLivePress: () => void;
   onReelsPress: () => void;
 }) {
   const { theme } = useTheme();
@@ -48,6 +50,12 @@ export function FeedCategoryHeader({
       icon: "newspaper-outline" as const,
       label: "Báo",
       onPress: onArticlesPress,
+    },
+    {
+      active: activeCategory === "live",
+      icon: "radio-outline" as const,
+      label: "Live",
+      onPress: onLivePress,
     },
   ];
 

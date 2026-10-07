@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { PostCard } from "@/components/feed/post-card";
+import { showAppToast } from "@/components/common/app-toast";
 import { getPostById } from "@/services/feed.service";
 import { getReelById } from "@/services/reel.service";
 import { AdvertisementRequestError, createAdvertisement, submitAdvertisement } from "@/services/advertisement.service";
@@ -23,7 +24,8 @@ const OBJECTIVES = [
   { value: AdvertisementObjective.Traffic, label: "Tăng lượt truy cập", icon: "navigate-outline" as const },
   { value: AdvertisementObjective.Engagement, label: "Tăng tương tác", icon: "chatbubbles-outline" as const },
 ];
-const CTAS = [AdvertisementCtaType.LearnMore, AdvertisementCtaType.BuyNow, AdvertisementCtaType.Message, AdvertisementCtaType.SignUp];
+const INTERNAL_CTAS = [AdvertisementCtaType.LearnMore, AdvertisementCtaType.Message, AdvertisementCtaType.ContactNow, AdvertisementCtaType.Follow];
+const EXTERNAL_CTAS = [AdvertisementCtaType.LearnMore, AdvertisementCtaType.BuyNow, AdvertisementCtaType.SignUp, AdvertisementCtaType.Download, AdvertisementCtaType.ViewProduct, AdvertisementCtaType.GetOffer];
 
 export function CreateAdvertisementScreen() {
   const { postId, postType } = useLocalSearchParams<{ postId: string; postType?: string }>();
@@ -35,15 +37,16 @@ export function CreateAdvertisementScreen() {
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const submitInFlight = useRef(false);
   const [objective, setObjective] = useState(AdvertisementObjective.Awareness);
   const [ctaType, setCtaType] = useState(AdvertisementCtaType.LearnMore);
   const [destinationUrl, setDestinationUrl] = useState("");
   const [targetingMode, setTargetingMode] = useState(AdvertisementTargetingMode.Automatic);
   const [minimumAge, setMinimumAge] = useState("18");
   const [maximumAge, setMaximumAge] = useState("55");
-  const [targetLocation, setTargetLocation] = useState("");
   const [budget, setBudget] = useState(50_000);
   const [customBudget, setCustomBudget] = useState("");
+  const [startDelayDays, setStartDelayDays] = useState(0);
   const [durationDays, setDurationDays] = useState(3);
 
   useEffect(() => {
@@ -57,23 +60,26 @@ export function CreateAdvertisementScreen() {
       if (numericPostType === 1) setReel(content as Reel);
       else setPost(content as FeedPost);
     }).catch((error) => {
-      if (mounted) Alert.alert("Không thể tạo quảng cáo", error instanceof Error ? error.message : "Vui lòng thử lại.");
+      if (mounted) showAppToast({ message: error instanceof Error ? error.message : "Không thể tải nội dung. Vui lòng thử lại.", type: "error" });
     }).finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, [numericPostType, postId]);
 
-  const resolvedBudget = customBudget.trim() ? Number(customBudget.replace(/\D/g, "")) : budget;
-  const insufficient = Number.isFinite(resolvedBudget) && balance < resolvedBudget;
+  const dailyBudget = customBudget.trim() ? Number(customBudget.replace(/\D/g, "")) : budget;
+  const totalBudget = dailyBudget * durationDays;
+  const insufficient = Number.isFinite(totalBudget) && balance < totalBudget;
 
   const handleSubmit = async () => {
-    if (!Number.isFinite(resolvedBudget) || resolvedBudget < 50_000) {
-      Alert.alert("Ngân sách chưa hợp lệ", "Ngân sách tối thiểu là 50.000đ.");
+    if (submitInFlight.current) return;
+    if (!Number.isFinite(totalBudget) || dailyBudget < 50_000 || totalBudget > 1_000_000_000) {
+      showAppToast({ message: "Ngân sách ngày tối thiểu là 50.000đ và tổng ngân sách tối đa là 1 tỷ đồng.", type: "error" });
       return;
     }
     if (insufficient) return;
+    submitInFlight.current = true;
     setSubmitting(true);
     try {
-      const startAt = new Date();
+      const startAt = new Date(Date.now() + startDelayDays * 86_400_000);
       const endAt = new Date(startAt.getTime() + durationDays * 86_400_000);
       const created = await createAdvertisement({
         postId,
@@ -83,24 +89,21 @@ export function CreateAdvertisementScreen() {
         targetingMode,
         minimumAge: targetingMode === AdvertisementTargetingMode.Custom ? Number(minimumAge) : undefined,
         maximumAge: targetingMode === AdvertisementTargetingMode.Custom ? Number(maximumAge) : undefined,
-        targetLocation: targetingMode === AdvertisementTargetingMode.Custom ? targetLocation.trim() || undefined : undefined,
-        totalBudget: resolvedBudget,
+        dailyBudget,
+        totalBudget,
         startAt: startAt.toISOString(),
         endAt: endAt.toISOString(),
       });
       const submitted = await submitAdvertisement(created.id);
-      router.replace({ pathname: "/advertisements/[id]", params: { id: submitted.id } });
+      router.replace({ pathname: "/advertisements/[id]", params: { id: submitted.id, submitted: "1" } });
     } catch (error) {
       if (error instanceof AdvertisementRequestError && error.code === "INSUFFICIENT_WALLET_BALANCE") {
         setBalance(error.details?.available ?? balance);
-        Alert.alert("Số dư không đủ", "Số dư của bạn không đủ để chạy quảng cáo.", [
-          { text: "Để sau", style: "cancel" },
-          { text: "Nạp tiền", onPress: () => router.push("/wallet/deposit") },
-        ]);
+        showAppToast({ message: "Số dư Ví ANKT không đủ để chạy quảng cáo.", type: "error" });
       } else {
-        Alert.alert("Không thể gửi quảng cáo", error instanceof Error ? error.message : "Vui lòng thử lại.");
+        showAppToast({ message: error instanceof Error ? error.message : "Không thể gửi quảng cáo. Vui lòng thử lại.", type: "error" });
       }
-    } finally { setSubmitting(false); }
+    } finally { submitInFlight.current = false; setSubmitting(false); }
   };
 
   if (loading) return <SafeAreaView style={styles.center}><ActivityIndicator color={theme.colors.primary} size="large" /></SafeAreaView>;
@@ -113,7 +116,7 @@ export function CreateAdvertisementScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Section title="Xem trước nội dung">
-          {post ? <View style={styles.preview}><View style={styles.sponsored}><Ionicons color={theme.colors.primary} name="megaphone-outline" size={14} /><Text style={styles.sponsoredText}>Được tài trợ</Text></View><PostCard post={post} variant={numericPostType === 2 ? "news" : "default"} /></View> : null}
+          {post ? <View style={styles.preview}><View style={styles.sponsored}><Ionicons color={theme.colors.primary} name="megaphone-outline" size={14} /><Text style={styles.sponsoredText}>Được tài trợ</Text></View><PostCard post={post} variant={numericPostType === 2 ? "news" : "default"} /><View style={styles.previewCta}><Text style={styles.previewCtaText}>{advertisementCtaLabel(ctaType)}</Text></View></View> : null}
           {reel ? <View style={styles.reelPreview}><Image contentFit="cover" source={{ uri: reel.thumbnailUrl }} style={StyleSheet.absoluteFill} /><View style={styles.reelShade} /><View style={styles.reelCopy}><Text style={styles.reelAuthor}>{reel.author}</Text><Text numberOfLines={2} style={styles.reelCaption}>{reel.caption}</Text><Text style={styles.reelSponsored}>Được tài trợ</Text><View style={styles.previewCta}><Text style={styles.previewCtaText}>{advertisementCtaLabel(ctaType)}</Text></View></View></View> : null}
         </Section>
 
@@ -122,29 +125,32 @@ export function CreateAdvertisementScreen() {
         </Section>
 
         <Section title="Nút kêu gọi hành động">
-          <View style={styles.wrap}>{CTAS.map((item) => <Chip key={item} active={ctaType === item} label={advertisementCtaLabel(item)} onPress={() => setCtaType(item)} />)}</View>
-          <TextInput autoCapitalize="none" keyboardType="url" onChangeText={setDestinationUrl} placeholder="https://website-cua-ban.vn (không bắt buộc)" placeholderTextColor={theme.colors.placeholder} style={styles.input} value={destinationUrl} />
-          <Text style={styles.helper}>Chỉ chấp nhận liên kết HTTPS. Để trống sẽ mở nội dung trong ANKT.</Text>
+          <TextInput autoCapitalize="none" keyboardType="url" onChangeText={(value) => { if (Boolean(value.trim()) !== Boolean(destinationUrl.trim())) setCtaType(AdvertisementCtaType.LearnMore); setDestinationUrl(value); }} placeholder="https://website-cua-ban.vn (không bắt buộc)" placeholderTextColor={theme.colors.placeholder} style={styles.input} value={destinationUrl} />
+          <Text style={styles.helper}>Chỉ chấp nhận HTTPS. Để trống để mở nội dung, trò chuyện hoặc hồ sơ trong ANKT.</Text>
+          <View style={styles.wrap}>{(destinationUrl.trim() ? EXTERNAL_CTAS : INTERNAL_CTAS).map((item) => <Chip key={item} active={ctaType === item} label={advertisementCtaLabel(item)} onPress={() => setCtaType(item)} />)}</View>
         </Section>
 
         <Section title="Đối tượng">
           <View style={styles.segment}><Chip active={targetingMode === AdvertisementTargetingMode.Automatic} label="Tự động" onPress={() => setTargetingMode(AdvertisementTargetingMode.Automatic)} /><Chip active={targetingMode === AdvertisementTargetingMode.Custom} label="Tùy chỉnh" onPress={() => setTargetingMode(AdvertisementTargetingMode.Custom)} /></View>
-          {targetingMode === AdvertisementTargetingMode.Custom ? <><View style={styles.ageRow}><TextInput keyboardType="number-pad" onChangeText={setMinimumAge} placeholder="Tuổi từ" placeholderTextColor={theme.colors.placeholder} style={[styles.input, styles.ageInput]} value={minimumAge} /><TextInput keyboardType="number-pad" onChangeText={setMaximumAge} placeholder="Đến" placeholderTextColor={theme.colors.placeholder} style={[styles.input, styles.ageInput]} value={maximumAge} /></View><TextInput onChangeText={setTargetLocation} placeholder="Khu vực (không bắt buộc)" placeholderTextColor={theme.colors.placeholder} style={styles.input} value={targetLocation} /></> : <Text style={styles.helper}>ANKT tự tối ưu phân phối cho người có khả năng quan tâm.</Text>}
+          {targetingMode === AdvertisementTargetingMode.Custom ? <View style={styles.ageRow}><TextInput keyboardType="number-pad" onChangeText={setMinimumAge} placeholder="Tuổi từ" placeholderTextColor={theme.colors.placeholder} style={[styles.input, styles.ageInput]} value={minimumAge} /><TextInput keyboardType="number-pad" onChangeText={setMaximumAge} placeholder="Đến" placeholderTextColor={theme.colors.placeholder} style={[styles.input, styles.ageInput]} value={maximumAge} /></View> : <Text style={styles.helper}>ANKT tự tối ưu phân phối cho người có khả năng quan tâm.</Text>}
         </Section>
 
         <Section title="Ngân sách & thời gian">
-          <View style={styles.wrap}>{BUDGETS.map((item) => <Chip key={item} active={!customBudget && budget === item} label={formatVnd(item)} onPress={() => { setBudget(item); setCustomBudget(""); }} />)}</View>
-          <TextInput keyboardType="number-pad" onChangeText={setCustomBudget} placeholder="Ngân sách khác (tối thiểu 50.000đ)" placeholderTextColor={theme.colors.placeholder} style={styles.input} value={customBudget} />
+          <View style={styles.wrap}>{BUDGETS.map((item) => <Chip key={item} active={!customBudget && budget === item} label={`${formatVnd(item)}/ngày`} onPress={() => { setBudget(item); setCustomBudget(""); }} />)}</View>
+          <TextInput keyboardType="number-pad" onChangeText={setCustomBudget} placeholder="Ngân sách khác mỗi ngày (tối thiểu 50.000đ)" placeholderTextColor={theme.colors.placeholder} style={styles.input} value={customBudget} />
+          <Text style={styles.fieldLabel}>Bắt đầu</Text>
+          <View style={styles.wrap}>{[{ days: 0, label: "Hôm nay" }, { days: 1, label: "Ngày mai" }, { days: 3, label: "Sau 3 ngày" }].map((option) => <Chip key={option.days} active={startDelayDays === option.days} label={option.label} onPress={() => setStartDelayDays(option.days)} />)}</View>
           <Text style={styles.fieldLabel}>Thời gian chạy</Text>
           <View style={styles.wrap}>{[1, 3, 7].map((days) => <Chip key={days} active={durationDays === days} label={`${days} ngày`} onPress={() => setDurationDays(days)} />)}</View>
+          <Text style={styles.helper}>Dự kiến: {new Date(Date.now() + startDelayDays * 86_400_000).toLocaleDateString("vi-VN")} – {new Date(Date.now() + (startDelayDays + durationDays) * 86_400_000).toLocaleDateString("vi-VN")}</Text>
         </Section>
 
         <View style={styles.summary}>
-          <View><Text style={styles.summaryLabel}>Số dư Ví ANKT</Text><Text style={styles.summaryValue}>{formatVnd(balance)}</Text></View>
-          <View style={styles.summaryRight}><Text style={styles.summaryLabel}>Tổng ngân sách</Text><Text style={styles.summaryBudget}>{formatVnd(Number.isFinite(resolvedBudget) ? resolvedBudget : 0)}</Text></View>
+          <View><Text style={styles.summaryLabel}>Số dư Ví ANKT</Text><Text style={styles.summaryValue}>{formatVnd(balance)}</Text><Text style={styles.summaryLabel}>Mỗi ngày: {formatVnd(Number.isFinite(dailyBudget) ? dailyBudget : 0)}</Text></View>
+          <View style={styles.summaryRight}><Text style={styles.summaryLabel}>Tổng ngân sách · {durationDays} ngày</Text><Text style={styles.summaryBudget}>{formatVnd(Number.isFinite(totalBudget) ? totalBudget : 0)}</Text></View>
         </View>
-        {insufficient ? <View accessibilityRole="alert" style={styles.insufficient}><Ionicons color={theme.colors.warning} name="wallet-outline" size={22} /><View style={styles.insufficientCopy}><Text style={styles.insufficientTitle}>Số dư của bạn không đủ để chạy quảng cáo.</Text><Text style={styles.helper}>Cần nạp thêm {formatVnd(Math.max(0, resolvedBudget - balance))}.</Text></View><Pressable onPress={() => router.push("/wallet/deposit")}><Text style={styles.deposit}>Nạp tiền</Text></Pressable></View> : null}
-        <Pressable accessibilityRole="button" disabled={submitting || insufficient} onPress={() => void handleSubmit()} style={[styles.submit, (submitting || insufficient) && styles.disabled]}>{submitting ? <ActivityIndicator color={theme.colors.primaryContrast} /> : <Text style={styles.submitText}>Gửi xét duyệt · {formatVnd(Number.isFinite(resolvedBudget) ? resolvedBudget : 0)}</Text>}</Pressable>
+        {insufficient ? <View accessibilityRole="alert" style={styles.insufficient}><Ionicons color={theme.colors.warning} name="wallet-outline" size={22} /><View style={styles.insufficientCopy}><Text style={styles.insufficientTitle}>Số dư của bạn không đủ để chạy quảng cáo.</Text><Text style={styles.helper}>Cần nạp thêm {formatVnd(Math.max(0, totalBudget - balance))}.</Text></View><Pressable onPress={() => router.push("/wallet/deposit")}><Text style={styles.deposit}>Nạp tiền</Text></Pressable></View> : null}
+        <Pressable accessibilityRole="button" disabled={submitting || insufficient} onPress={() => void handleSubmit()} style={[styles.submit, (submitting || insufficient) && styles.disabled]}>{submitting ? <ActivityIndicator color={theme.colors.primaryContrast} /> : <Text style={styles.submitText}>Gửi xét duyệt · {formatVnd(Number.isFinite(totalBudget) ? totalBudget : 0)}</Text>}</Pressable>
         <Text style={styles.terms}>Ngân sách sẽ được tạm giữ trong Ví. Phần chưa sử dụng được hoàn khi quảng cáo bị từ chối, hủy hoặc kết thúc.</Text>
       </ScrollView>
     </SafeAreaView>

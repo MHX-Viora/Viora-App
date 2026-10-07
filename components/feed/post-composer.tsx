@@ -27,6 +27,7 @@ export function PostComposer({
   onCommunityPress,
   onCreatePress,
   onImagePress,
+  onLivePress,
   onReelsPress,
   onSearchPress,
 }: {
@@ -41,6 +42,7 @@ export function PostComposer({
   onCommunityPress: () => void;
   onCreatePress: () => void;
   onImagePress: () => void;
+  onLivePress: () => void;
   onReelsPress: () => void;
   onSearchPress: () => void;
 }) {
@@ -54,6 +56,7 @@ export function PostComposer({
           activeCategory={activeCategory}
           onArticlesPress={onArticlesFeedPress}
           onCommunityPress={onCommunityPress}
+          onLivePress={onLivePress}
           onReelsPress={onReelsPress}
         />
         <DesktopDownloadPromo />

@@ -133,6 +133,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="live"
+        options={{
+          href: null,
+          title: "Live",
+        }}
+      />
+      <Tabs.Screen
         name="notification"
         options={{
           tabBarAccessibilityLabel: "Thông báo",

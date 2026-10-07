@@ -7,8 +7,6 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "node --experimental-strip-types scripts/test.mjs",
-    "test:app-links": "node scripts/android-app-links.test.mjs",
     "lint": "expo lint"
   },
   "dependencies": {
@@ -27,6 +25,7 @@
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
+    "agora-rtc-sdk-ng": "^4.24.8",
     "expo": "~54.0.34",
     "expo-asset": "~12.0.13",
     "expo-audio": "~1.1.1",
@@ -56,6 +55,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-agora": "^4.6.4",
     "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-qrcode-svg": "^6.3.21",

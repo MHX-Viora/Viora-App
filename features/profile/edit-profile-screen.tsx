@@ -168,8 +168,8 @@ export function EditProfileScreen() {
         >
           <View style={styles.coverBox}>
             <ViewableImage
+              adaptive
               accessibilityLabel="Ảnh bìa hồ sơ"
-              contentFit="cover"
               source={previewCover}
               style={styles.cover}
             />
@@ -285,7 +285,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 40,
   },
   content: { paddingBottom: spacing.xl },
-  cover: { height: 180, width: "100%" },
+  cover: { height: 280, width: "100%" },
   coverBox: { position: "relative" },
   coverButton: {
     alignItems: "center",

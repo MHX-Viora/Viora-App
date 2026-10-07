@@ -13,9 +13,9 @@ export type ThemeDefinition = {
 
 const definitions: Record<ThemeMode, ThemeDefinition> = {
   modern: {
-    description: "Giao diện ANKT hiện tại",
+    description: "Dark Navy và Cyan ANKT",
     id: "modern",
-    name: "Mặc định",
+    name: "Modern Dark",
     theme: modernTheme,
   },
   "premium-ocean": {
@@ -25,17 +25,17 @@ const definitions: Record<ThemeMode, ThemeDefinition> = {
     theme: premiumOceanTheme,
   },
   classic: {
-    description: "Nền sáng, xanh dương và thiết kế phẳng",
+    description: "Nền dịu, bề mặt phân tầng và teal ANKT",
     id: "classic",
-    name: "Cổ điển",
+    name: "Light",
     theme: classicTheme,
   },
 };
 
 export const themeCatalog: readonly ThemeDefinition[] = [
+  definitions.classic,
   definitions.modern,
   definitions["premium-ocean"],
-  definitions.classic,
 ];
 
 export const getThemeDefinition = (mode: ThemeMode): ThemeDefinition =>

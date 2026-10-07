@@ -49,10 +49,11 @@ export type SavePostResponse = {
 
 export type ApiPost = {
   id: string;
-  content: string;
+  content: string | null;
   postType: number;
   visibility: number;
   location: string | null;
+  locationName?: string | null;
   link?: string | null;
   createdAt: string;
   user?: {
@@ -63,9 +64,12 @@ export type ApiPost = {
     accountStyle?: number;
     isFollowing?: boolean;
   } | null;
+  isMine?: boolean;
+  isOwner?: boolean;
   media?: {
     id: string;
-    mediaUrl: string;
+    mediaUrl?: string;
+    url?: string;
     thumbnailUrl: string | null;
   }[];
   reactionCount: number;
@@ -100,7 +104,6 @@ export type CreatePostInput = {
   link?: string;
   locationName?: string;
   longitude?: number;
-  post?: string;
   visibility: number;
   mentionUserIds?: string[];
 };

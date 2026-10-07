@@ -20,12 +20,22 @@ export class AdvertisementRequestError extends Error {
 }
 
 const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
-  const response = await authenticatedFetch(`${BASE_URL}${path}`, options);
+  let response: Response;
+  try { response = await authenticatedFetch(`${BASE_URL}${path}`, options); }
+  catch (error) {
+    if (error instanceof TypeError) throw new AdvertisementRequestError("Không thể kết nối. Vui lòng thử lại.");
+    throw error;
+  }
   const text = await response.text();
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = null; }
   if (!response.ok) {
-    const error = new AdvertisementRequestError(data?.error?.message || "Không thể xử lý quảng cáo.");
+    const message = response.status >= 500
+      ? "Máy chủ đang gặp lỗi. Vui lòng thử lại."
+      : data?.error?.message || data?.message || "Không thể xử lý quảng cáo.";
+    const error = new AdvertisementRequestError(
+      data?.traceId ? `${message} (Mã tham chiếu: ${data.traceId})` : message,
+    );
     error.code = data?.error?.code;
     error.details = data?.error?.details;
     throw error;
@@ -51,8 +61,8 @@ export const cancelAdvertisement = (id: string) =>
 export const getAdvertisement = (id: string) =>
   request<Advertisement>(`/api/advertisements/${encodeURIComponent(id)}`);
 
-export const getMyAdvertisements = (page = 1, pageSize = 20) =>
-  request<AdvertisementPage>(`/api/advertisements/mine?page=${page}&pageSize=${pageSize}`);
+export const getMyAdvertisements = (page = 1, pageSize = 20, status?: number) =>
+  request<AdvertisementPage>(`/api/advertisements/mine?page=${page}&pageSize=${pageSize}${status === undefined ? "" : `&status=${status}`}`, { cache: "no-store" });
 
 export const getAdvertisementDelivery = (placement: AdvertisementPlacement, take = 3) =>
   request<{ items: Advertisement[] }>(`/api/advertisements/delivery?placement=${placement}&take=${take}`);
@@ -66,7 +76,7 @@ export const trackAdvertisementClick = (id: string, clientEventId: string) =>
 export const sendAdvertisementFeedback = (id: string, type: AdvertisementFeedbackType, reason?: string) =>
   request(`/api/advertisements/${encodeURIComponent(id)}/feedback`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ type, reason }) });
 
-export const advertisementToFeedPost = (advertisement: Advertisement): FeedPost => {
+export const advertisementToFeedPost = (advertisement: Advertisement, isPreview = false): FeedPost => {
   const content = advertisement.content;
   const post = mapFeedPost({
     ...content,
@@ -76,10 +86,10 @@ export const advertisementToFeedPost = (advertisement: Advertisement): FeedPost 
     isSaved: false,
     reactionType: 0,
   } as ApiPost);
-  return { ...post, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl } };
+  return { ...post, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, isPreview } };
 };
 
-export const advertisementToReel = (advertisement: Advertisement): Reel => {
+export const advertisementToReel = (advertisement: Advertisement, isPreview = false): Reel => {
   const content = advertisement.content;
   const reel = mapReel({
     ...content,
@@ -87,10 +97,10 @@ export const advertisementToReel = (advertisement: Advertisement): Reel => {
     isSaved: false,
     isReacted: false,
     reactionType: 0,
-    hashtags: [],
+    hashtags: content.hashtags ?? [],
     user: { ...content.user, avatarUrl: content.user.avatarUrl ?? "", isFollowing: false },
   } as ApiReel);
-  return { ...reel, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl } };
+  return { ...reel, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, isPreview } };
 };
 
 export const createAdvertisementEventId = (prefix: string, advertisementId: string) =>

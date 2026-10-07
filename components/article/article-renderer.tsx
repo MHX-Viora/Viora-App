@@ -7,7 +7,8 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
 import { ArticleBlockType, type ArticleBlock } from "@/types/article";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { withoutHashtags } from "@/utils/display-text";
 
 function ArticleVideo({ block }: { block: ArticleBlock }) {
   const player = useVideoPlayer(block.mediaUrl || null);
@@ -16,9 +17,9 @@ function ArticleVideo({ block }: { block: ArticleBlock }) {
 
 function ArticleImage({ block }: { block: ArticleBlock }) {
   const { theme } = useTheme();
-  const { isDesktopWeb } = useResponsive();
+  const { height: viewportHeight, isDesktopWeb } = useResponsive();
+  const imageMaxHeight = isDesktopWeb ? 420 : Math.min(420, viewportHeight * 0.55);
   const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
-  const [aspectRatio, setAspectRatio] = useState(16 / 10);
 
   return (
     <View
@@ -28,18 +29,15 @@ function ArticleImage({ block }: { block: ArticleBlock }) {
       })}
     >
       <ViewableImage
-        accessibilityLabel={block.caption || "Ảnh trong bài báo"}
-        contentFit="contain"
-        onLoad={({ source }) => {
-          if (source.width > 0 && source.height > 0) {
-            setAspectRatio(source.width / source.height);
-          }
-        }}
+        adaptive
+        naturalSize
+        maxHeight={imageMaxHeight}
+        accessibilityLabel={withoutHashtags(block.caption) || "Ảnh trong bài báo"}
         recyclingKey={block.id}
         source={{ uri: block.mediaUrl || "" }}
-        style={[styles.image, { aspectRatio }]}
+        style={styles.image}
       />
-      {block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}
+      {withoutHashtags(block.caption) ? <Text style={styles.caption}>{withoutHashtags(block.caption)}</Text> : null}
     </View>
   );
 }
@@ -50,15 +48,15 @@ export function ArticleBlockView({ block }: { block: ArticleBlock }) {
 
   switch (block.type) {
     case ArticleBlockType.Heading:
-      return <Text style={styles.heading}>{block.content}</Text>;
+      return <Text style={styles.heading}>{withoutHashtags(block.content)}</Text>;
     case ArticleBlockType.Text:
-      return <Text style={styles.paragraph}>{block.content}</Text>;
+      return <Text style={styles.paragraph}>{withoutHashtags(block.content)}</Text>;
     case ArticleBlockType.Image:
       return <ArticleImage block={block} />;
     case ArticleBlockType.Video:
-      return <View><ArticleVideo block={block} />{block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}</View>;
+      return <View><ArticleVideo block={block} />{withoutHashtags(block.caption) ? <Text style={styles.caption}>{withoutHashtags(block.caption)}</Text> : null}</View>;
     case ArticleBlockType.Quote:
-      return <View style={styles.quote}><Text style={styles.quoteText}>{block.content}</Text></View>;
+      return <View style={styles.quote}><Text style={styles.quoteText}>{withoutHashtags(block.content)}</Text></View>;
     case ArticleBlockType.Divider:
       return <View style={styles.divider} />;
     case ArticleBlockType.Code:

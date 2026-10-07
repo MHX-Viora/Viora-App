@@ -1,16 +1,31 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { spacing, type ThemeColors, useTheme } from "@/theme";
 import type { WalletTransaction } from "@/types/wallet";
-import { walletTransactionLabel, walletTransactionSign, walletTransactionStatusLabel, withdrawalStatusLabel } from "@/utils/wallet-format";
+import { walletTransactionDirection, walletTransactionDisplayAmount, walletTransactionRoute, walletTransactionStatusLabel, walletTransactionTitle, walletTransactionTone, withdrawalStatusLabel } from "@/utils/wallet-format";
 
 export function WalletTransactionRow({ item, onPress }: { item: WalletTransaction; onPress: () => void }) {
   const { theme } = useTheme(); const styles = useMemo(() => createStyles(theme.colors), [theme.colors]);
-  const incoming = item.amount > 0; const completed = item.withdrawalStatus === 2 || (item.withdrawalStatus == null && (item.paymentStatus === 1 || (item.paymentStatus == null && item.status === 1))); const pending = item.withdrawalStatus != null ? item.withdrawalStatus < 2 : item.paymentStatus === 0 || (item.paymentStatus == null && item.status === 0);
-  const statusLabel = item.withdrawalStatus !== undefined && item.withdrawalStatus !== null ? withdrawalStatusLabel(item.withdrawalStatus) : walletTransactionStatusLabel(item);
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}><View style={[styles.icon, incoming ? styles.iconIn : styles.iconOut]}><Ionicons color={incoming ? theme.colors.success : theme.colors.danger} name={incoming ? "arrow-down" : "arrow-up"} size={19} /></View><View style={styles.copy}><Text style={styles.title}>{walletTransactionLabel(item.type)}</Text><Text numberOfLines={1} style={styles.meta}>{item.description ?? new Date(item.createdAt).toLocaleString("vi-VN")}</Text></View><View style={styles.amountWrap}><Text style={[styles.amount, incoming ? styles.incoming : styles.outgoing]}>{walletTransactionSign(item.amount)}</Text><View style={[styles.statusBadge, completed ? styles.completeBadge : pending ? styles.pendingBadge : styles.failedBadge]}><Text style={[styles.status, completed ? styles.completeText : pending ? styles.pendingText : styles.failedText]}>{statusLabel}</Text></View></View></Pressable>;
+  const tone = walletTransactionTone(item);
+  const statusLabel = item.type === 7 && item.withdrawalStatus != null ? withdrawalStatusLabel(item.withdrawalStatus) : walletTransactionStatusLabel(item);
+  const neutralStatus = (item.type === 0 && (item.paymentStatus === 3 || item.paymentStatus === 4)) || (item.type === 7 && (item.withdrawalStatus === 4 || item.withdrawalStatus === 5)) || item.status === 3;
+  const statusColor = tone === "success" ? item.type === 4 ? theme.colors.primary : theme.colors.success : tone === "pending" ? theme.colors.warning : neutralStatus ? theme.colors.textMuted : theme.colors.danger;
+  const direction = walletTransactionDirection(item);
+  const amountColor = tone === "success" && (direction === "incoming" || direction === "released") ? theme.colors.success : theme.colors.text;
+  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+    <View style={styles.copy}>
+      <Text style={styles.title}>{walletTransactionTitle(item)}</Text>
+      <Text numberOfLines={1} style={styles.route}>{walletTransactionRoute(item)}</Text>
+      {(item.type === 10 || item.type === 11) && item.description ? <Text numberOfLines={2} style={styles.related}>{item.description}</Text> : null}
+      {item.relatedContent ? <Text numberOfLines={1} style={styles.related}>{item.type === 10 || item.type === 11 ? "Quà Live" : "Bài viết"}: {item.relatedContent}</Text> : null}
+      <Text style={styles.meta}>{new Date(item.createdAt).toLocaleString("vi-VN")}</Text>
+    </View>
+    <View style={styles.amountWrap}>
+      <Text style={[styles.amount, { color: amountColor }]}>{walletTransactionDisplayAmount(item)}</Text>
+      <Text style={[styles.status, { color: statusColor }]}>{statusLabel}</Text>
+    </View>
+  </Pressable>;
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({ amount: { fontSize: 14, fontWeight: "800" }, amountWrap: { alignItems: "flex-end", gap: 3 }, completeBadge: { backgroundColor: colors.successSoft }, completeText: { color: colors.successText }, copy: { flex: 1, minWidth: 0 }, failedBadge: { backgroundColor: colors.dangerSoft }, failedText: { color: colors.danger }, icon: { alignItems: "center", borderRadius: 20, height: 40, justifyContent: "center", width: 40 }, iconIn: { backgroundColor: colors.successSoft }, iconOut: { backgroundColor: colors.dangerSoft }, incoming: { color: colors.success }, meta: { color: colors.textMuted, fontSize: 12, marginTop: 3 }, outgoing: { color: colors.danger }, pendingBadge: { backgroundColor: colors.warningSoft }, pendingText: { color: colors.warning }, pressed: { opacity: 0.68 }, row: { alignItems: "center", borderBottomColor: colors.borderSubtle, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: spacing.md, paddingVertical: spacing.md }, status: { fontSize: 10, fontWeight: "700" }, statusBadge: { borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3 }, title: { color: colors.text, fontSize: 14, fontWeight: "700" } });
+const createStyles = (colors: ThemeColors) => StyleSheet.create({ amount: { fontSize: 14, fontWeight: "800" }, amountWrap: { alignItems: "flex-end", gap: 4 }, copy: { flex: 1, minWidth: 0 }, meta: { color: colors.textMuted, fontSize: 11, marginTop: 4 }, related: { color: colors.textMuted, fontSize: 11, marginTop: 3 }, route: { color: colors.textMuted, fontSize: 12, marginTop: 3 }, pressed: { opacity: 0.68 }, row: { alignItems: "center", borderBottomColor: colors.borderSubtle, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: spacing.sm, justifyContent: "space-between", paddingVertical: spacing.md }, status: { fontSize: 11, fontWeight: "700" }, title: { color: colors.text, fontSize: 14, fontWeight: "700" } });

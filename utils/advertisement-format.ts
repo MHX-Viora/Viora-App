@@ -1,5 +1,15 @@
 import { AdvertisementCtaType, AdvertisementStatus } from "@/types/advertisement";
 
+export const advertisementDestinationLabel = (destinationUrl: string | null) => {
+  if (!destinationUrl) return "Trong ANKT";
+  try {
+    const url = new URL(destinationUrl);
+    return url.protocol === "https:" ? url.hostname : "Trong ANKT";
+  } catch {
+    return "Trong ANKT";
+  }
+};
+
 export const advertisementCtaLabel = (type: AdvertisementCtaType) => ({
   [AdvertisementCtaType.LearnMore]: "Xem thêm",
   [AdvertisementCtaType.BuyNow]: "Mua ngay",

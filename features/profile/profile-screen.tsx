@@ -18,7 +18,7 @@ import { ProfileQrModal } from "@/components/profile/profile-qr-modal";
 import { ProfileSettingsSheet } from "@/components/profile/profile-settings-sheet";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { logout } from "@/services/auth.service";
-import { getPosts } from "@/services/feed.service";
+import { getProfilePosts } from "@/features/profile/profile-posts";
 import { reactPost, savePost } from "@/services/post.service";
 import { formatReelCount, getReels } from "@/services/reel.service";
 import { unregisterCurrentDevicePushToken } from "@/services/push-notification.service";
@@ -102,11 +102,7 @@ export function ProfileScreen() {
       try {
         const [statistics, postsResponse, reelsResponse, shareLink] = await Promise.all([
           getMyStatistics(),
-          getPosts({
-            page: 1,
-            pageSize: PROFILE_PAGE_SIZE,
-            userId: session.user.id,
-          }),
+          getProfilePosts(session.user.id, session.user.accountStyle, PROFILE_PAGE_SIZE),
           getReels({
             page: 1,
             pageSize: PROFILE_PAGE_SIZE,
@@ -338,6 +334,9 @@ export function ProfileScreen() {
         showEditButton
       />
       <ProfileContent
+        key={user.id}
+        accountStyle={user.accountStyle}
+        onOpenArticle={(id) => router.push({ pathname: "/article/[id]", params: { id } })}
         isLoading={isProfileContentLoading}
         onCommentPost={openPostComments}
         onCommentReel={openReelComments}
@@ -390,6 +389,10 @@ export function ProfileScreen() {
       onOpenAccountSettings={() => {
         setShowSettings(false);
         router.push("/account-settings");
+      }}
+      onOpenAdvertisements={() => {
+        setShowSettings(false);
+        router.push("/advertisements");
       }}
       onOpenLikedActivity={() => {
         setShowSettings(false);
