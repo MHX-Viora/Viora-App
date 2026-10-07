@@ -133,7 +133,7 @@ export function NotificationsScreen() {
 
   const refresh = useCallback(() => {
     if (isRefreshing) return;
-    loadNotifications(1, "refresh");
+    return loadNotifications(1, "refresh");
   }, [isRefreshing, loadNotifications]);
 
   const loadMore = useCallback(() => {
@@ -253,7 +253,13 @@ export function NotificationsScreen() {
           data={notifications}
           initialNumToRender={10}
           keyExtractor={(item) => item.id}
-          ListEmptyComponent={<NotificationEmpty message={errorMessage} />}
+          ListEmptyComponent={
+            <NotificationEmpty
+              isRetrying={isRefreshing}
+              message={errorMessage}
+              onRetry={refresh}
+            />
+          }
           ListFooterComponent={
             isLoadingMore ? (
               <View style={styles.footer}>

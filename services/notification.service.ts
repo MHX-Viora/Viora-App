@@ -35,9 +35,17 @@ export const getNotifications = async (
   if (query.isRead !== undefined) params.set("isRead", String(query.isRead));
   if (query.type !== undefined) params.set("type", String(query.type));
 
-  const response = await authenticatedFetch(
-    `${BASE_URL}/api/notifications?${params.toString()}`,
-  );
+  let response: Response;
+  try {
+    response = await authenticatedFetch(
+      `${BASE_URL}/api/notifications?${params.toString()}`,
+    );
+  } catch (error) {
+    if (error instanceof TypeError && /fetch|network|load failed/i.test(error.message)) {
+      throw new Error("Không thể kết nối đến máy chủ thông báo. Vui lòng thử lại.");
+    }
+    throw error;
+  }
   const data = parseResponseText(await response.text());
 
   if (!response.ok) {
