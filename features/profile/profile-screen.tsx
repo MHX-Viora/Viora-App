@@ -1,4 +1,4 @@
-﻿import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useEffect, useState, useMemo } from "react";
 import { Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -411,6 +411,10 @@ export function ProfileScreen() {
           pathname: "/profile-activity",
           params: { kind: "saved" },
         });
+      }}
+      onOpenDevelopers={() => {
+        setShowSettings(false);
+        router.push("/developers" as Href);
       }}
       onOpenSupport={() => {
         setShowSettings(false);

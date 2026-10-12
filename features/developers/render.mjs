@@ -1,0 +1,35 @@
+import { pages, revision } from './content.mjs';
+export const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+const link = (path, title, attributes = '') => `<a href="${escapeHtml(path)}" ${attributes}>${escapeHtml(title)}</a>`;
+export function renderBody(slug) {
+  const page = pages.find(item => item.slug === slug);
+  if (!page) throw new Error(`Unknown document: ${slug}`);
+  const nav = pages.filter(item => item.slug !== '').map(item => link(item.path, item.title, item.slug === slug ? 'aria-current="page"' : '')).join('');
+  const toc = page.sections.map(item => link(`#${item.id}`, item.title)).join('');
+  const sections = page.sections.map(item => `<section id="${item.id}"><h2>${escapeHtml(item.title)} ${link(`#${item.id}`, '#', 'class="anchor" aria-label="Lien kết mục"')}</h2>${item.paragraphs.map(text => `<p>${escapeHtml(text)}</p>`).join('')}${item.items.length ? `<ul>${item.items.map(text => `<li>${escapeHtml(text)}</li>`).join('')}</ul>` : ''}${item.code ? `<div class="code"><button type="button" data-copy>Sao chép</button><pre><code>${escapeHtml(item.code)}</code></pre></div>` : ''}</section>`).join('');
+  return `<div class="dev-docs"><a class="skip" href="#noi-dung">Đến nội dung</a><header class="dev-header">${link('/', 'ANKT', 'class="brand" aria-label="ANKT — về mạng xã hội"')}<span class="header-label">Developers</span><div class="header-actions"><button type="button" data-theme aria-label="Đổi giao diện sáng tối">◐</button>${link('/login?returnUrl=%2Fdevelopers%2Fconsole', 'Đăng nhập', 'data-auth-link')}${link('/developers/register', 'Bắt đầu phát triển', 'class="button small" data-console-link')}</div></header><div class="status" role="note"><strong>Mini App nằm trong Tiện ích, ngay dưới Ví.</strong> Bạn có thể đọc hướng dẫn và chuẩn bị website đối tác. Đăng ký, cấp credentials và phát hành chưa được mở.</div><div class="docs-toolbar"><button type="button" data-menu aria-expanded="false" aria-controls="dev-sidebar">☰ Danh mục</button><form role="search" class="search"><label for="dev-search">Tìm tài liệu</label><input id="dev-search" type="search" placeholder="SSO, đăng ký, cookie…" autocomplete="off" maxlength="120"><button type="submit">Tìm</button></form></div><div class="docs-layout"><aside id="dev-sidebar" class="sidebar"><p class="eyebrow">ANKT DEVELOPERS</p>${link('/developers', 'Tổng quan', slug === '' ? 'aria-current="page"' : '')}<nav aria-label="Danh mục tài liệu">${nav}</nav><div class="sidebar-footer">Nội dung ${revision}<br>Hướng dẫn công khai</div></aside><main id="noi-dung" tabindex="-1"><nav class="breadcrumbs" aria-label="Đường dẫn">${link('/developers', 'Developers')}${slug && slug !== 'docs' ? ` / ${link('/developers/docs', 'Tài liệu')}` : ''}${slug ? ` / <span>${escapeHtml(page.title)}</span>` : ''}</nav><div id="dev-results" aria-live="polite" hidden></div><article><p class="eyebrow">${slug === '' ? 'XÂY DỰNG CÙNG ANKT' : 'TÀI LIỆU / TIẾNG VIỆT'}</p><h1>${escapeHtml(page.title)}</h1><p class="lead">${escapeHtml(page.description)}</p>${slug === '' ? `<div class="hero-actions">${link('/developers/docs/getting-started', 'Bắt đầu đọc hướng dẫn →', 'class="button"')}${link('/developers/docs', 'Khám phá tài liệu', 'class="secondary"')}</div>` : ''}<details class="mobile-toc"><summary>Trên trang này</summary><nav>${toc}</nav></details>${sections}${slug === '' || slug === 'docs' ? `<div class="doc-grid">${pages.filter(item => item.slug && item.slug !== 'docs').map(item => `<a href="${item.path}"><h3>${escapeHtml(item.title)} <span>↗</span></h3><p>${escapeHtml(item.description)}</p></a>`).join('')}</div>` : ''}<section class="related"><h2>Đọc tiếp</h2>${pages.filter(item => item.slug && item.slug !== slug && item.slug !== 'docs').slice(slug === 'getting-started' ? 0 : 3, slug === 'getting-started' ? 3 : 6).map(item => link(item.path, item.title)).join('')}</section><footer>Cập nhật ${revision} · Nội dung được quản lý cùng mã nguồn.<br>${link('/developers/docs/faq', 'Câu hỏi thường gặp')} · ${link('/developers/register', 'Đăng ký Developer')} · ${link('/', 'Về ANKT')}</footer></article></main><aside class="toc"><p class="eyebrow">TRÊN TRANG NÀY</p><nav aria-label="Mục lục trang">${toc}</nav><p class="toc-note">Đọc hướng dẫn không cần tài khoản ANKT.</p></aside></div><div class="copy-status" role="status" aria-live="polite"></div></div>`;
+}
+export function renderDocument(slug) {
+  const page = pages.find(item => item.slug === slug);
+  if (!page) throw new Error('Unknown document');
+  const canonical = `https://mxh.ankt.vn${page.path}`;
+  const crumbs = [{ '@type': 'ListItem', position: 1, name: 'ANKT Developers', item: 'https://mxh.ankt.vn/developers' }];
+  if (slug) crumbs.push({ '@type': 'ListItem', position: 2, name: page.title, item: canonical });
+  const json = JSON.stringify({ '@context': 'https://schema.org', '@graph': [{ '@type': 'BreadcrumbList', itemListElement: crumbs }, { '@type': slug ? 'TechArticle' : 'WebPage', headline: page.title, description: page.description, inLanguage: 'vi', dateModified: revision, url: canonical }] }).replace(/</g, '\\u003c');
+  return `<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(page.title)} | ANKT Developers</title><meta name="description" content="${escapeHtml(page.description)}"><meta name="robots" content="index,follow"><link rel="canonical" href="${canonical}"><meta property="og:title" content="${escapeHtml(page.title)}"><meta property="og:description" content="${escapeHtml(page.description)}"><meta property="og:url" content="${canonical}"><meta property="og:type" content="${slug ? 'article' : 'website'}"><meta property="og:locale" content="vi_VN"><meta property="og:image" content="https://mxh.ankt.vn/pwa-icon-512.png"><link rel="icon" href="/favicon.ico"><link rel="stylesheet" href="/developers-assets/docs.css"><script type="application/ld+json">${json}</script></head><body>${renderBody(slug)}<script type="module" src="/developers-assets/bootstrap.mjs"></script></body></html>`;
+}
+export function validateContent() {
+  const errors = [];
+  const paths = new Set(pages.map(page => page.path));
+  if (paths.size !== pages.length) errors.push('Duplicate paths');
+  for (const page of pages) {
+    if (!page.description || !page.sections.length) errors.push(`Incomplete: ${page.path}`);
+    const ids = new Set(page.sections.map(section => section.id));
+    if (ids.size !== page.sections.length) errors.push(`Duplicate anchors: ${page.path}`);
+    for (const [, href] of renderBody(page.slug).matchAll(/href="([^"]+)"/g)) {
+      if (href.startsWith('#') && href !== '#noi-dung' && !ids.has(href.slice(1))) errors.push(`Broken anchor: ${href}`);
+      if (href.startsWith('/') && !paths.has(href) && !['/', '/developers/console', '/developers/register', '/login?returnUrl=%2Fdevelopers%2Fconsole'].includes(href)) errors.push(`Broken link: ${href}`);
+    }
+  }
+  return errors;
+}

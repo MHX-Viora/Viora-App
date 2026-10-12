@@ -1,4 +1,6 @@
-import { Stack, router, useSegments } from "expo-router";
+import { Stack, router, useSegments, usePathname, useGlobalSearchParams, type Href } from "expo-router";
+import { isPublicDeveloperPath, safeDeveloperReturn } from "@/features/developers/route-policy.mjs";
+import { rememberOAuthRequest } from "@/features/developers/oauth-request.mjs";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import {
@@ -84,6 +86,11 @@ function RootLayoutContent() {
     };
   }, [theme]);
   const segments = useSegments();
+  const pathname = usePathname();
+  const globalParams = useGlobalSearchParams();
+  useEffect(() => { if (pathname === '/developers/console/authorize') rememberOAuthRequest(globalParams); }, [pathname, globalParams]);
+  const { returnUrl } = globalParams;
+  const developerReturn = safeDeveloperReturn(returnUrl) ?? safeDeveloperReturn(pathname);
   const hasRegisteredPushNotifications = useRef(false);
   const hasHydratedAuthenticatedState = useRef(false);
   const [isAppReady, setIsAppReady] = useState(false);
@@ -106,6 +113,7 @@ function RootLayoutContent() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", async (state) => {
+      if (isPublicDeveloperPath(pathname)) return;
       const session = await ensureFreshSession();
       if (state !== AppState.currentState) return;
 
@@ -131,11 +139,14 @@ function RootLayoutContent() {
     });
 
     return () => subscription.remove();
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
+    let cancelled = false;
     const checkLoginStatus = async () => {
+      if (isPublicDeveloperPath(pathname)) return;
       const session = await ensureFreshSession();
+      if (cancelled) return;
       const currentRoute = segments[0];
 
       const isAuthRoute =
@@ -156,7 +167,7 @@ function RootLayoutContent() {
           currentRoute !== "forgot-password" &&
           currentRoute !== "__"
         ) {
-          router.replace("/login");
+          router.replace(developerReturn ? { pathname: "/login", params: { returnUrl: developerReturn } } : "/login");
         }
         return;
       }
@@ -167,14 +178,14 @@ function RootLayoutContent() {
         setNotificationNavigationReady(false);
         void stopRealtime();
         if (currentRoute !== "complete-profile") {
-          router.replace("/complete-profile");
+          router.replace(developerReturn ? { pathname: "/complete-profile", params: { returnUrl: developerReturn } } : "/complete-profile");
         }
         return;
       }
 
       // Đã đăng nhập và có user thì không ở lại các màn auth nữa.
       if (isAuthRoute) {
-        router.replace("/");
+        router.replace((developerReturn ?? "/") as Href);
       }
 
       await restorePendingIncomingCall();
@@ -200,18 +211,21 @@ function RootLayoutContent() {
 
     void checkLoginStatus()
       .catch(async (error: unknown) => {
+        if (cancelled) return;
         console.info(
           "[Session] initial hydration failed",
           error instanceof Error ? error.message : String(error),
         );
         // A failed notification restore or temporary storage error is not a logout.
         const remainingSession = await getSession().catch(() => undefined);
+        if (cancelled) return;
         if (remainingSession === null || (remainingSession && hasSessionIdentityMismatch(remainingSession))) {
-          router.replace("/login");
+          router.replace(developerReturn ? { pathname: "/login", params: { returnUrl: developerReturn } } : "/login");
         }
       })
-      .finally(() => setIsAppReady(true));
-  }, [segments, sessionRevision]);
+      .finally(() => { if (!cancelled) setIsAppReady(true); });
+    return () => { cancelled = true; };
+  }, [segments, sessionRevision, pathname, developerReturn]);
 
   return (
     <NavigationThemeProvider value={navigationTheme}>

@@ -1,4 +1,5 @@
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams, type Href } from "expo-router";
+import { safeDeveloperReturn } from "@/features/developers/route-policy.mjs";
 import { useCallback, useRef, useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
@@ -31,6 +32,8 @@ import { type AppTheme, useTheme } from "@/theme";
 const GOOGLE_LOGIN_ENABLED = true;
 
 export function LoginScreen() {
+  const { returnUrl } = useLocalSearchParams();
+  const developerReturn = safeDeveloperReturn(returnUrl);
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
@@ -79,7 +82,7 @@ export function LoginScreen() {
       }
 
       // Chưa có user thì hoàn thiện hồ sơ; đã có user thì vào trang chủ.
-      router.replace(session.user === null ? "/complete-profile" : "/");
+      router.replace(session.user === null ? { pathname: "/complete-profile", params: developerReturn ? { returnUrl: developerReturn } : {} } : (developerReturn ?? "/") as Href);
     } catch (error) {
       if (requestId !== loginRequestIdRef.current) return;
 
@@ -112,7 +115,7 @@ export function LoginScreen() {
         void startRealtime();
         void registerPushNotifications();
       }
-      router.replace(session.user === null ? "/complete-profile" : "/");
+      router.replace(session.user === null ? { pathname: "/complete-profile", params: developerReturn ? { returnUrl: developerReturn } : {} } : (developerReturn ?? "/") as Href);
     } catch (error) {
       if (requestId !== loginRequestIdRef.current) return;
       showAlert({
@@ -178,7 +181,7 @@ export function LoginScreen() {
               <Pressable
                 accessibilityRole="link"
                 hitSlop={8}
-                onPress={() => router.push("/forgot-password")}
+                onPress={() => router.push({ pathname: "/forgot-password", params: developerReturn ? { returnUrl: developerReturn } : {} })}
                 style={styles.forgotButton}
               >
                 <Text style={styles.forgotText}>Quên mật khẩu?</Text>
@@ -220,7 +223,7 @@ export function LoginScreen() {
 
             <AuthFooterLink
               action="Đăng ký ngay"
-              onPress={() => router.push("/register")}
+              onPress={() => router.push({ pathname: "/register", params: developerReturn ? { returnUrl: developerReturn } : {} })}
               prompt="Bạn chưa có tài khoản?"
             />
           </View>

@@ -1,5 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
+import { safeDeveloperReturn } from "@/features/developers/route-policy.mjs";
 import { useMemo, useRef, useState } from "react";
 import {
     KeyboardAvoidingView,
@@ -31,6 +32,8 @@ import { type AppTheme, useTheme } from "@/theme";
 const GENDERS: GenderLabel[] = ["Nam", "Nữ", "Khác"];
 
 export function CompleteProfileScreen() {
+  const { returnUrl } = useLocalSearchParams();
+  const developerReturn = safeDeveloperReturn(returnUrl);
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -98,7 +101,7 @@ export function CompleteProfileScreen() {
       await updateUser(user);
       void startRealtime();
       void registerPushNotifications();
-      router.replace("/");
+      router.replace((developerReturn ?? "/") as Href);
     } catch (error) {
       showAlert({
         title: "Không thể lưu hồ sơ",
