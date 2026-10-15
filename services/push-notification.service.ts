@@ -14,6 +14,7 @@ import {
   type FirebaseMessagingTypes,
 } from "@react-native-firebase/messaging";
 import { Platform } from "react-native";
+import { ensureNotificationSoundChannel } from "./notification-channel.service";
 import { getUser } from "@/stores/session-store";
 
 import {
@@ -293,11 +294,7 @@ const registerPushNotificationsInternal = async () => {
       ensureRequiredChannel: async () => {
         if (Platform.OS !== "android") return;
 
-        await Notifications.setNotificationChannelAsync("default", {
-          importance: Notifications.AndroidImportance.HIGH,
-          name: "default",
-          sound: "default",
-        });
+        await ensureNotificationSoundChannel();
       },
       getPermissions: async () => {
         const permissions = await Notifications.getPermissionsAsync();
