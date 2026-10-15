@@ -105,7 +105,7 @@ setMessageCache(conversationId, (entry) => ({
 - Reopening the sticker panel renders cached packs/detail immediately; stale metadata refresh does not cover cached content with a spinner.
 - New-message notifications update conversation unread count and last-message metadata locally without fetching the whole conversation list.
 - Existing realtime, read receipts, notifications, group chat, DM blocking, pinning, forwarding, stickers, and call signaling continue to pass tests.
-- Feed/Profile/Notifications/Friends/Search/Articles/Mini Apps are classified as realtime, semi-static, or static, with findings and scoped follow-up recommendations; only proven, low-risk duplicate-fetch fixes are included in this change.
+- Feed/Profile/Notifications/Friends/Search/Articles are classified as realtime, semi-static, or static, with findings and scoped follow-up recommendations; only proven, low-risk duplicate-fetch fixes are included in this change.
 - Web export succeeds and Android verification status is reported accurately.
 
 ## Open questions

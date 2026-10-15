@@ -21,7 +21,6 @@ const SETTINGS = [
   { action: "saved", icon: "bookmark-outline", label: "Đã lưu" },
   { action: "reacted", icon: "heart-outline", label: "Yêu thích" },
   { action: "support", icon: "help-circle-outline", label: "Hỗ trợ" },
-  { action: "developers", icon: "code-slash-outline", label: "Dành cho nhà phát triển" },
   { action: "theme", icon: "color-palette-outline", label: "Giao diện" },
   {
     action: "account-settings",
@@ -46,7 +45,6 @@ type ProfileSettingsSheetProps = {
   onOpenPoliciesTerms: () => void;
   onOpenSavedActivity: () => void;
   onOpenSupport: () => void;
-  onOpenDevelopers: () => void;
   visible: boolean;
 };
 
@@ -60,7 +58,6 @@ export function ProfileSettingsSheet({
   onOpenPoliciesTerms,
   onOpenSavedActivity,
   onOpenSupport,
-  onOpenDevelopers,
   visible,
 }: ProfileSettingsSheetProps) {
   const insets = useSafeAreaInsets();
@@ -119,7 +116,7 @@ export function ProfileSettingsSheet({
                       ? onOpenLikedActivity
                       : item.action === "policies-terms"
                         ? onOpenPoliciesTerms
-                        : item.action === "developers" ? onOpenDevelopers : onOpenSupport
+                        : onOpenSupport
             }
             style={({ pressed }) => [
               styles.row,

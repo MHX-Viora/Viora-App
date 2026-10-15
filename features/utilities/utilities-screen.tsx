@@ -2,11 +2,10 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, type Href } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { WalletSummaryCard } from "@/components/wallet/wallet-summary-card";
-import { MiniAppCatalog } from "@/features/mini-apps/catalog";
 import { useResponsive } from "@/hooks/use-responsive";
 import { getWallet } from "@/services/wallet.service";
 import { spacing, type ThemeColors, type WalletTheme, useTheme } from "@/theme";
@@ -56,16 +55,6 @@ export function UtilitiesScreen() {
           wallet={wallet}
         />
 
-        <MiniAppCatalog />
-
-        <Pressable accessibilityRole="link" onPress={() => navigate("/developers")} style={styles.futureBanner}>
-          <Ionicons color={palette.bannerAccent} name="code-slash-outline" size={32} />
-          <View style={styles.futureCopy}>
-            <Text style={styles.futureTitle}>ANKT Developers</Text>
-            <Text style={styles.futureBody}>Hướng dẫn chuẩn bị website đối tác, SSO và bảo mật tích hợp.</Text>
-          </View>
-          <Ionicons color={palette.bannerAccent} name="arrow-forward" size={22} />
-        </Pressable>
 
         <View style={styles.futureBanner}>
           <View pointerEvents="none" style={styles.futureGlow} />

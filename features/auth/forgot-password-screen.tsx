@@ -8,8 +8,7 @@ import {
   signOut,
 } from "@react-native-firebase/auth";
 import * as Linking from "expo-linking";
-import { router, useLocalSearchParams } from "expo-router";
-import { safeDeveloperReturn } from "@/features/developers/route-policy.mjs";
+import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useRef, useState, useMemo } from "react";
 import {
@@ -63,8 +62,6 @@ const validatePassword = (password: string, confirmation: string) => {
 };
 
 export function ForgotPasswordScreen() {
-  const { returnUrl } = useLocalSearchParams();
-  const developerReturn = safeDeveloperReturn(returnUrl);
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -176,7 +173,7 @@ export function ForgotPasswordScreen() {
       actionLabel: "Đăng nhập",
       kind: "success",
       message: "Mật khẩu đã được đổi. Vui lòng đăng nhập lại.",
-      onAction: () => router.replace({ pathname: "/login", params: developerReturn ? { returnUrl: developerReturn } : {} }),
+      onAction: () => router.replace("/login"),
       title: "Đổi mật khẩu thành công",
     });
   };

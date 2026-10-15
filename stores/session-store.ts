@@ -6,7 +6,6 @@ import { clearMessageCache } from "@/stores/message-cache";
 import { clearStickerCache } from "@/stores/sticker-cache";
 import { chatLocalRepository } from "@/data/chat-local/chat-local-repository";
 import { clearAfterLocalMutations } from "@/data/chat-local/chat-local-write-coordinator";
-import { writePublicProfileHint } from "@/features/developers/public-profile-hint.mjs";
 
 const SESSION_KEY = "viora.session";
 const invalidationListeners = new Set<() => void>();
@@ -38,11 +37,9 @@ export const getSession = async (): Promise<Session | null> => {
 
 export const saveSession = async (session: Session): Promise<void> => {
   await sessionStorage.setItemAsync(SESSION_KEY, JSON.stringify(session));
-  writePublicProfileHint(session.user);
 };
 
 export const clearSession = async (): Promise<void> => {
-  writePublicProfileHint(null);
   const session = await getSession();
   await Promise.all([
     sessionStorage.deleteItemAsync(SESSION_KEY),

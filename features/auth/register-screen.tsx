@@ -1,6 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, useLocalSearchParams } from "expo-router";
-import { safeDeveloperReturn } from "@/features/developers/route-policy.mjs";
+import { router } from "expo-router";
 import { useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
@@ -27,8 +26,6 @@ import { type ThemeColors, useTheme } from "@/theme";
 
 
 export function RegisterScreen() {
-  const { returnUrl } = useLocalSearchParams();
-  const developerReturn = safeDeveloperReturn(returnUrl);
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -75,7 +72,7 @@ export function RegisterScreen() {
         message: "Tài khoản đã được tạo. Vui lòng đăng nhập để tiếp tục.",
         type: "success",
       });
-      router.replace({ pathname: "/login", params: developerReturn ? { returnUrl: developerReturn } : {} });
+      router.replace("/login");
     } catch (error) {
       showAlert({
         title: "Đăng ký thất bại",
@@ -175,7 +172,7 @@ export function RegisterScreen() {
 
             <AuthFooterLink
               action="Đăng nhập ngay"
-              onPress={() => router.replace({ pathname: "/login", params: developerReturn ? { returnUrl: developerReturn } : {} })}
+              onPress={() => router.replace("/login")}
               prompt="Đã có tài khoản?"
             />
           </View>

@@ -80,7 +80,7 @@
   - Dependencies: none.
 
 - [x] Task 9: Audit remaining app data flows and apply only proven low-risk fixes.
-  - Acceptance: Feed/Profile/Notifications/Friends/Search/Articles/Mini Apps are classified; duplicate requests, reset-before-fetch, race guards, and recommended TTLs are documented; any code fix is isolated and tested.
+  - Acceptance: Feed/Profile/Notifications/Friends/Search/Articles are classified; duplicate requests, reset-before-fetch, race guards, and recommended TTLs are documented; any code fix is isolated and tested.
   - Verify: targeted tests for each changed flow; unchanged flows are reported, not broadly rewritten.
   - Files: maximum five files per isolated follow-up slice plus audit documentation.
   - Dependencies: Chat/Sticker checkpoints.

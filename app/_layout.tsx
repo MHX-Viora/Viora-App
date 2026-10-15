@@ -1,6 +1,4 @@
-import { Stack, router, useSegments, usePathname, useGlobalSearchParams, type Href } from "expo-router";
-import { isPublicDeveloperPath, safeDeveloperReturn } from "@/features/developers/route-policy.mjs";
-import { rememberOAuthRequest } from "@/features/developers/oauth-request.mjs";
+import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import {
@@ -86,11 +84,6 @@ function RootLayoutContent() {
     };
   }, [theme]);
   const segments = useSegments();
-  const pathname = usePathname();
-  const globalParams = useGlobalSearchParams();
-  useEffect(() => { if (pathname === '/developers/console/authorize') rememberOAuthRequest(globalParams); }, [pathname, globalParams]);
-  const { returnUrl } = globalParams;
-  const developerReturn = safeDeveloperReturn(returnUrl) ?? safeDeveloperReturn(pathname);
   const hasRegisteredPushNotifications = useRef(false);
   const hasHydratedAuthenticatedState = useRef(false);
   const [isAppReady, setIsAppReady] = useState(false);
@@ -113,7 +106,6 @@ function RootLayoutContent() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", async (state) => {
-      if (isPublicDeveloperPath(pathname)) return;
       const session = await ensureFreshSession();
       if (state !== AppState.currentState) return;
 
@@ -139,12 +131,11 @@ function RootLayoutContent() {
     });
 
     return () => subscription.remove();
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     const checkLoginStatus = async () => {
-      if (isPublicDeveloperPath(pathname)) return;
       const session = await ensureFreshSession();
       if (cancelled) return;
       const currentRoute = segments[0];
@@ -167,7 +158,7 @@ function RootLayoutContent() {
           currentRoute !== "forgot-password" &&
           currentRoute !== "__"
         ) {
-          router.replace(developerReturn ? { pathname: "/login", params: { returnUrl: developerReturn } } : "/login");
+          router.replace("/login");
         }
         return;
       }
@@ -178,14 +169,14 @@ function RootLayoutContent() {
         setNotificationNavigationReady(false);
         void stopRealtime();
         if (currentRoute !== "complete-profile") {
-          router.replace(developerReturn ? { pathname: "/complete-profile", params: { returnUrl: developerReturn } } : "/complete-profile");
+          router.replace("/complete-profile");
         }
         return;
       }
 
       // Đã đăng nhập và có user thì không ở lại các màn auth nữa.
       if (isAuthRoute) {
-        router.replace((developerReturn ?? "/") as Href);
+        router.replace("/");
       }
 
       await restorePendingIncomingCall();
@@ -220,12 +211,12 @@ function RootLayoutContent() {
         const remainingSession = await getSession().catch(() => undefined);
         if (cancelled) return;
         if (remainingSession === null || (remainingSession && hasSessionIdentityMismatch(remainingSession))) {
-          router.replace(developerReturn ? { pathname: "/login", params: { returnUrl: developerReturn } } : "/login");
+          router.replace("/login");
         }
       })
       .finally(() => { if (!cancelled) setIsAppReady(true); });
     return () => { cancelled = true; };
-  }, [segments, sessionRevision, pathname, developerReturn]);
+  }, [segments, sessionRevision]);
 
   return (
     <NavigationThemeProvider value={navigationTheme}>
