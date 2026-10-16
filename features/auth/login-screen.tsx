@@ -1,4 +1,5 @@
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, type Href } from "expo-router";
+import { pendingSsoReturn } from "@/utils/sso-return";
 import { useCallback, useRef, useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
@@ -79,7 +80,7 @@ export function LoginScreen() {
       }
 
       // Chưa có user thì hoàn thiện hồ sơ; đã có user thì vào trang chủ.
-      router.replace(session.user === null ? "/complete-profile" : "/");
+      router.replace(session.user === null ? "/complete-profile" : (pendingSsoReturn() as Href | null) ?? "/");
     } catch (error) {
       if (requestId !== loginRequestIdRef.current) return;
 
@@ -112,7 +113,7 @@ export function LoginScreen() {
         void startRealtime();
         void registerPushNotifications();
       }
-      router.replace(session.user === null ? "/complete-profile" : "/");
+      router.replace(session.user === null ? "/complete-profile" : (pendingSsoReturn() as Href | null) ?? "/");
     } catch (error) {
       if (requestId !== loginRequestIdRef.current) return;
       showAlert({

@@ -1,4 +1,5 @@
-import { Stack, router, useSegments } from "expo-router";
+import { Stack, router, useSegments, type Href } from "expo-router";
+import { pendingSsoReturn } from "@/utils/sso-return";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import {
@@ -136,6 +137,7 @@ function RootLayoutContent() {
   useEffect(() => {
     let cancelled = false;
     const checkLoginStatus = async () => {
+      if ((segments[0] as string) === "sso") return;
       const session = await ensureFreshSession();
       if (cancelled) return;
       const currentRoute = segments[0];
@@ -175,6 +177,8 @@ function RootLayoutContent() {
       }
 
       // Đã đăng nhập và có user thì không ở lại các màn auth nữa.
+      const ssoReturn = pendingSsoReturn();
+      if (ssoReturn) { router.replace(ssoReturn as Href); return; }
       if (isAuthRoute) {
         router.replace("/");
       }
