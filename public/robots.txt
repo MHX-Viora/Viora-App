@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /developers/login
+Disallow: /developers/register
+Disallow: /developers/verify-email
+Disallow: /developers/forgot-password
+Disallow: /developers/reset-password
+Disallow: /developers/console
+Disallow: /developers/api/
+
+Sitemap: https://mxh.ankt.vn/developer-sitemap.xml

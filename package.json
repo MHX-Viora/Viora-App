@@ -8,7 +8,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build:web": "expo export --platform web"
+    "build:web": "expo export --platform web",
+    "test:developer": "node --import tsx --test server/developer/*.test.cjs features/developer/tests/*.test.ts",
+    "test:developer:e2e": "node --import tsx --test --experimental-test-isolation=none features/developer/tests/account.e2e.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -73,6 +75,7 @@
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.2"
   },
   "private": true

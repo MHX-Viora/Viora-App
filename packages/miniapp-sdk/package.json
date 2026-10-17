@@ -1,0 +1,33 @@
+{
+  "name": "@ankt/miniapp-sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ANKT Mini App browser OIDC SDK",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test --experimental-test-isolation=none tests/*.test.mjs",
+    "example:fixture": "node examples/run-fixture.mjs",
+    "test:sso:e2e": "node --test --experimental-test-isolation=none examples/protocol.e2e.mjs"
+  },
+  "dependencies": {
+    "openid-client": "6.8.8"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

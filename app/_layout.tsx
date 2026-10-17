@@ -138,6 +138,8 @@ function RootLayoutContent() {
     let cancelled = false;
     const checkLoginStatus = async () => {
       if ((segments[0] as string) === "sso") return;
+      // This route only opens the independent portal; it needs no ANKT session.
+      if (segments[0] === "developers") return;
       const session = await ensureFreshSession();
       if (cancelled) return;
       const currentRoute = segments[0];
