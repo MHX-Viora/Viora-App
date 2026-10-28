@@ -40,6 +40,9 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+      - name: Verify VPS web entry
+        run: node --test scripts/prepare-vps-web.test.cjs scripts/web-entry.test.cjs
+
 
   deploy:
     name: Deploy to VPS
@@ -126,6 +129,7 @@ jobs:
             rm -rf dist
 
             npx expo export --platform web --clear
+            node scripts/prepare-vps-web.cjs dist
             node scripts/verify-production-api.mjs dist
 
             echo
@@ -140,6 +144,11 @@ jobs:
 
             if [ ! -d "$APP_DIR/dist/_expo" ]; then
               echo "ERROR: Không tìm thấy dist/_expo."
+              exit 1
+            fi
+
+            if [ ! -f "$APP_DIR/dist/developers/index.html" ]; then
+              echo "ERROR: Không tìm thấy entry /developers/ cho Nginx."
               exit 1
             fi
 
@@ -195,6 +204,9 @@ jobs:
 
             echo
             echo "Health check thành công."
+
+            curl --fail --silent --show-error --location --output /dev/null --max-time 15 "$HEALTH_URL/developers/"
+            curl --fail --silent --show-error --output /dev/null --max-time 15 'https://api.mxh.ankt.vn/api/mini-apps?page=1&pageSize=20'
 
             echo
             echo "========================================"
