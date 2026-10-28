@@ -436,7 +436,7 @@ function ChatLine({ item, isHost, hostAvatarUrl }: { item: LiveChatMessage; isHo
   if (isHost) return <LiveOverlayComment avatarUrl={item.avatarUrl ?? hostAvatarUrl} isHost name={item.name} stickerUrl={item.stickerUrl} text={item.text} />;
   return <View style={styles.chatLine}>
     <UserAvatar displayName={item.name} imageUrl={item.avatarUrl} size={23} />
-    {item.stickerUrl ? <View><Text style={styles.chatName}>{item.name}</Text><Image contentFit="contain" source={{ uri: item.stickerUrl }} style={styles.chatSticker} /></View> : <Text numberOfLines={3} style={styles.chatText}><Text style={styles.chatName}>{item.name}</Text>{" · "}{item.text}</Text>}
+    <View style={styles.chatCopy}><Text numberOfLines={1} style={styles.chatName}>{item.name}</Text>{item.stickerUrl ? <Image contentFit="contain" source={{ uri: item.stickerUrl }} style={styles.chatSticker} /> : <Text testID="live-chat-message" style={styles.chatText}>{item.text}</Text>}</View>
   </View>;
 }
 
@@ -508,8 +508,9 @@ const styles = StyleSheet.create({
   heartAction: { position: "relative" },
   actionLabel: { color: "#FFFFFF", fontSize: 9, fontWeight: "700" },
   chatLine: { alignItems: "flex-start", flexDirection: "row", gap: 7, paddingVertical: 4 },
-  chatText: { color: "#DAE5F1", flex: 1, fontSize: 12, lineHeight: 17 },
-  chatName: { color: "#FFFFFF", fontWeight: "800" },
+  chatCopy: { flex: 1, minWidth: 0 },
+  chatText: { color: "#DAE5F1", fontSize: 13, lineHeight: 19, marginTop: 2 },
+  chatName: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
   chatSticker: { height: 54, width: 54 },
   sidebar: { backgroundColor: "#0E1B2A", borderRadius: 15, overflow: "hidden" },
   roomTabs: { alignItems: "center", flexDirection: "row", justifyContent: "space-around", minHeight: 48, paddingHorizontal: 5 },
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   sidebarMessages: { flex: 1 },
   pinnedSidebar: { padding: 8 },
   sidebarInput: { padding: 9 },
-  sidebarList: { paddingHorizontal: 10, paddingVertical: 8 },
+  sidebarList: { paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   inlineEmojiSheet: { backgroundColor: "#0E1B2A", borderTopColor: "#20384C", borderTopWidth: 1, overflow: "hidden", padding: 8 },
   inlineEmojiHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", minHeight: 30, paddingHorizontal: 4 },
   inlineEmojiTitle: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
@@ -532,7 +533,7 @@ const styles = StyleSheet.create({
   mobileStatusLine: { alignItems: "center", flexDirection: "row", gap: 5, justifyContent: "space-between", marginTop: 8 },
   mobileBadges: { flex: 1, flexDirection: "row", gap: 3, minWidth: 0 },
   mobileHostBadge: { flexShrink: 1, fontSize: 9, paddingHorizontal: 5, paddingVertical: 4 },
-  mobileChat: { bottom: 72, gap: 4, left: 8, maxWidth: "82%", position: "absolute", right: 8, zIndex: 4 },
+  mobileChat: { bottom: 72, gap: 8, left: 8, maxWidth: "82%", position: "absolute", right: 8, zIndex: 4 },
   mobileActions: { gap: 6, marginLeft: 6 },
   mobileBottom: { alignItems: "flex-end", bottom: 8, flexDirection: "row", left: 8, position: "absolute", right: 8, zIndex: 4 },
   mobileEmojiBody: { maxHeight: 352 },

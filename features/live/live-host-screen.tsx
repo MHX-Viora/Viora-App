@@ -12,7 +12,7 @@ import { getUser } from "@/stores/session-store";
 import { mergeLiveChat, rememberDeletedComment } from "./live-chat-buffer";
 import type { LiveHeartBurstHandle } from "./live-heart-burst";
 import type { HostAgoraPreviewHandle } from "./host-agora-preview";
-import { demoHostComments, formatHostDuration, getHostTopGifters, initialHostSettings, type HostComment, type HostSettings } from "./live-host-model";
+import { formatHostDuration, initialHostSettings, type HostComment, type HostSettings } from "./live-host-model";
 import { LiveHostRoom } from "./live-host-room";
 import { LiveHostSetup } from "./live-host-setup";
 import { LiveCoverImage } from "./live-cover-image";
@@ -52,7 +52,6 @@ export function LiveHostScreen() {
   const [facing, setFacing] = useState<"front" | "back">("front");
   const [countdown, setCountdown] = useState(3);
   const [elapsed, setElapsed] = useState(0);
-  const [demoMode, setDemoMode] = useState(false);
   const [endRequested, setEndRequested] = useState(false);
   const [startedAt, setStartedAt] = useState<Date | null>(null);
   const [endedAt, setEndedAt] = useState<Date | null>(null);
@@ -77,7 +76,7 @@ export function LiveHostScreen() {
   }, []);
 
   useEffect(() => {
-    if (phase !== "live" || !liveId || demoMode) return;
+    if (phase !== "live" || !liveId) return;
     let inFlight = false;
     const send = async () => {
       if (inFlight) return;
@@ -89,7 +88,7 @@ export function LiveHostScreen() {
     void send();
     const timer = setInterval(() => void send(), 15_000);
     return () => clearInterval(timer);
-  }, [phase, liveId, demoMode]);
+  }, [phase, liveId]);
 
   useEffect(() => {
     if (Platform.OS !== "web" || typeof window === "undefined") return;
@@ -104,7 +103,6 @@ export function LiveHostScreen() {
     if (phase !== "countdown") return;
     const timer = setTimeout(() => {
       if (countdown > 1) setCountdown(countdown - 1);
-      else if (demoMode) { setStartedAt(new Date()); setPhase("live"); }
       else if (liveId) {
         void startLive(liveId).then((result) => { setStartedAt(new Date(result.startedAt)); setPhase("live"); }).catch(async () => {
           showAppToast({ title: "Không thể bắt đầu Live", message: "Vui lòng kiểm tra kết nối và thử lại.", type: "error" });
@@ -116,7 +114,7 @@ export function LiveHostScreen() {
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [phase, countdown, demoMode, liveId]);
+  }, [phase, countdown, liveId]);
 
   useEffect(() => {
     if (phase !== "live") return;
@@ -125,7 +123,7 @@ export function LiveHostScreen() {
   }, [phase]);
 
   useEffect(() => {
-    if (phase !== "live" || !liveId || demoMode) return;
+    if (phase !== "live" || !liveId) return;
     let active = true;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     const toHostComment = (comment: LiveRealtimeComment): HostComment => ({ id: comment.id, createdAt: comment.createdAt, userId: comment.userId, name: comment.name, avatarUrl: comment.avatarUrl, text: comment.text, time: new Date(comment.createdAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) });
@@ -146,14 +144,10 @@ export function LiveHostScreen() {
       onDisconnected: () => { if (active) { setConnected(false); setRealtimeRetry((value) => value + 1); } },
     }).then((connection) => { if (active) realtimeRef.current = connection; else void connection.close(); }).catch(() => { if (active) { setConnected(false); retryTimer = setTimeout(() => setRealtimeRetry((value) => value + 1), 5000); } });
     return () => { active = false; if (retryTimer) clearTimeout(retryTimer); const connection = realtimeRef.current; realtimeRef.current = null; void connection?.close(); };
-  }, [phase, liveId, demoMode, realtimeRetry, showGiftEvent]);
+  }, [phase, liveId, realtimeRetry, showGiftEvent]);
 
   const leave = () => router.canGoBack() ? router.back() : router.replace("/(tabs)/live");
   const setLivePinnedComment = async (commentId: string | null) => {
-    if (demoMode) {
-      setPinnedComment(commentId ? comments.find((item) => item.id === commentId) ?? null : null);
-      return;
-    }
     if (!realtimeRef.current) throw new Error("Chưa kết nối trò chuyện Live");
     await realtimeRef.current.setPinnedComment(commentId);
   };
@@ -241,20 +235,9 @@ export function LiveHostScreen() {
       showAppToast({ title: "Kết nối Live sắp hết hạn", message: "Không thể gia hạn token. Kiểm tra Internet và thử lại.", type: "error" });
     }
   };
-  const showDemo = () => {
-    setDemoMode(true);
-    setHostUserId("me");
-    setComments(demoHostComments);
-    setPinnedComment(null);
-    setTopGifters(getHostTopGifters(demoHostComments));
-    clearGiftEvents();
-    setCountdown(3);
-    setElapsed(0);
-    setPhase("countdown");
-  };
   const finish = async () => {
     try {
-      if (liveId && !demoMode) {
+      if (liveId) {
         const result = await endLive(liveId);
         setEndedAt(new Date(result.endedAt));
         setSummarySession(await getLive(liveId).catch(() => null));
@@ -276,15 +259,13 @@ export function LiveHostScreen() {
       comments={comments}
       pinnedComment={pinnedComment}
       hostUserId={hostUserId}
-      onCommentsChange={setComments}
       onPinComment={setLivePinnedComment}
       giftQueue={giftQueue}
       topGifters={topGifters}
       elapsed={elapsed}
       countdown={countdown}
-      demoMode={demoMode}
-      viewerCount={demoMode ? 1248 : viewerCount}
-      reactionCount={demoMode ? 8400 : reactionCount}
+      viewerCount={viewerCount}
+      reactionCount={reactionCount}
       heartBurstRef={heartBurstRef}
       onSendComment={(text) => realtimeRef.current?.sendComment(text) ?? Promise.reject(new Error("Chưa kết nối trò chuyện Live"))}
       onReportComment={(commentId, reason) => realtimeRef.current?.reportComment(commentId, reason) ?? Promise.reject(new Error("Chưa kết nối Live"))}
@@ -303,31 +284,29 @@ export function LiveHostScreen() {
       facing={facing}
       connected={connected}
       onRequestPermissions={requestOrRetryCamera}
-      onCameraToggle={() => { if (demoMode || cameraPermission?.granted) { setCameraReady(false); setCameraError(false); setCameraOn((value) => !value); } else void askPermissions(); }}
-      onMicrophoneToggle={() => demoMode || microphonePermission?.granted ? setMicrophoneOn((value) => !value) : void askPermissions()}
+      onCameraToggle={() => { if (cameraPermission?.granted) { setCameraReady(false); setCameraError(false); setCameraOn((value) => !value); } else void askPermissions(); }}
+      onMicrophoneToggle={() => microphonePermission?.granted ? setMicrophoneOn((value) => !value) : void askPermissions()}
       onFlipCamera={() => { setFacing((value) => value === "front" ? "back" : "front"); }}
       onCameraReady={() => { setCameraReady(true); setCameraError(false); }}
       onCameraError={() => { setCameraReady(false); setCameraError(true); }}
       onBack={() => setPhase("setup")}
       onStart={() => void startCountdown()}
-      onCancelCountdown={() => { if (liveId && !demoMode) { void agoraRef.current?.leave(); void endLive(liveId).catch(() => undefined); setLiveId(null); } if (demoMode) { setCameraReady(false); setCameraError(false); setCameraSession((session) => session + 1); } setDemoMode(false); setPhase("check"); }}
-      onDemo={showDemo}
-      onCloseDemo={() => { setEndRequested(false); setDemoMode(false); setCameraReady(false); setCameraError(false); setCameraSession((session) => session + 1); setElapsed(0); setStartedAt(null); setPhase("check"); }}
+      onCancelCountdown={() => { if (liveId) { void agoraRef.current?.leave(); void endLive(liveId).catch(() => undefined); setLiveId(null); } setPhase("check"); }}
       onEndRequest={() => setEndRequested(true)}
     /> : null}
-    {phase === "summary" ? <HostSummary settings={settings} duration={elapsed} startedAt={startedAt} endedAt={endedAt} liveId={demoMode ? null : liveId} session={demoMode ? null : summarySession} demoMode={demoMode} onDone={() => router.replace("/(tabs)/live")} /> : null}
-    {phase === "live" && endRequested ? <View style={[styles.confirmOverlay, width <= 767 && styles.confirmMobile]}><Pressable accessibilityLabel="Tiếp tục Live" accessibilityRole="button" onPress={() => setEndRequested(false)} style={styles.confirmBackdrop} /><HostPanel style={[styles.confirmCard, width <= 767 && styles.confirmCardMobile]}><View style={styles.confirmIcon}><Ionicons color="#FFFFFF" name="power-outline" size={29} /></View><Text style={styles.confirmTitle}>Kết thúc buổi phát trực tiếp?</Text><Text style={styles.confirmText}>{demoMode ? "Phiên giao diện mẫu sẽ dừng và hiển thị trang tổng kết." : `Hiện có ${viewerCount.toLocaleString("vi-VN")} người đang xem. Mọi người sẽ bị ngắt khỏi buổi Live.`}</Text><HostButton label="Kết thúc Live" onPress={finish} variant="danger" /><HostButton label="Tiếp tục Live" onPress={() => setEndRequested(false)} variant="secondary" /></HostPanel></View> : null}
+    {phase === "summary" ? <HostSummary settings={settings} duration={elapsed} startedAt={startedAt} endedAt={endedAt} liveId={liveId} session={summarySession} onDone={() => router.replace("/(tabs)/live")} /> : null}
+    {phase === "live" && endRequested ? <View style={[styles.confirmOverlay, width <= 767 && styles.confirmMobile]}><Pressable accessibilityLabel="Tiếp tục Live" accessibilityRole="button" onPress={() => setEndRequested(false)} style={styles.confirmBackdrop} /><HostPanel style={[styles.confirmCard, width <= 767 && styles.confirmCardMobile]}><View style={styles.confirmIcon}><Ionicons color="#FFFFFF" name="power-outline" size={29} /></View><Text style={styles.confirmTitle}>Kết thúc buổi phát trực tiếp?</Text><Text style={styles.confirmText}>{`Hiện có ${viewerCount.toLocaleString("vi-VN")} người đang xem. Mọi người sẽ bị ngắt khỏi buổi Live.`}</Text><HostButton label="Kết thúc Live" onPress={finish} variant="danger" /><HostButton label="Tiếp tục Live" onPress={() => setEndRequested(false)} variant="secondary" /></HostPanel></View> : null}
   </SafeAreaView>;
 }
 
-function HostSummary({ settings, duration, startedAt, endedAt, session, liveId, demoMode, onDone }: { settings: HostSettings; duration: number; startedAt: Date | null; endedAt: Date | null; session: LiveSession | null; liveId: string | null; demoMode: boolean; onDone: () => void }) {
+function HostSummary({ settings, duration, startedAt, endedAt, session, liveId, onDone }: { settings: HostSettings; duration: number; startedAt: Date | null; endedAt: Date | null; session: LiveSession | null; liveId: string | null; onDone: () => void }) {
   const { width } = useWindowDimensions();
   const wide = width >= 768;
   const started = startedAt?.toLocaleString("vi-VN") ?? "—";
   const ended = endedAt?.toLocaleString("vi-VN") ?? "—";
   return <ScrollView contentContainerStyle={styles.summaryScroll} style={styles.summaryRoot}><View style={styles.summaryContainer}>
     <HostHeading title="Tổng kết buổi Live" onBack={onDone} />
-    <HostPanel style={styles.summaryPanel}><View style={styles.successIcon}><Ionicons color="#09221B" name="checkmark" size={28} /></View><Text style={styles.summaryTitle}>Buổi phát đã kết thúc</Text><Text style={styles.summaryLead}>{demoMode ? "Bạn vừa xem thử giao diện chủ phòng. Không có buổi phát hay số liệu thật." : session ? "Số liệu lượt xem được ghi nhận từ máy chủ Live." : "Chưa tải được thống kê từ máy chủ. Không hiển thị số liệu chưa xác thực."}</Text>
+    <HostPanel style={styles.summaryPanel}><View style={styles.successIcon}><Ionicons color="#09221B" name="checkmark" size={28} /></View><Text style={styles.summaryTitle}>Buổi phát đã kết thúc</Text><Text style={styles.summaryLead}>{session ? "Số liệu lượt xem được ghi nhận từ máy chủ Live." : "Chưa tải được thống kê từ máy chủ. Không hiển thị số liệu chưa xác thực."}</Text>
       <View style={[styles.summaryDetails, wide && styles.summaryDetailsWide]}><LiveCoverImage source={settings.coverUri} borderRadius={12} style={styles.summaryImage} /><View style={styles.summaryCopy}><Text style={styles.summaryLiveTitle}>{settings.title}</Text><Text style={styles.summaryMeta}>{settings.topic} · {settings.privacy === "public" ? "Công khai" : settings.privacy === "followers" ? "Người theo dõi" : "Chỉ bạn bè"}</Text><Text style={styles.summaryMeta}>Bắt đầu: {started}</Text><Text style={styles.summaryMeta}>Kết thúc: {ended}</Text><Text style={styles.summaryMeta}>Thời lượng: {formatHostDuration(duration)}</Text></View></View>
       {session ? <><Text style={styles.statsHeading}>Thống kê buổi Live</Text><View style={styles.summaryStats}><SummaryStat icon="eye" value={session.totalViews.toLocaleString("vi-VN")} label="Lượt xem" mobile={!wide} /><SummaryStat icon="people" value={session.peakViewerCount.toLocaleString("vi-VN")} label="Cao nhất" mobile={!wide} /><SummaryStat icon="person" value={session.uniqueViewers.toLocaleString("vi-VN")} label="Người xem" mobile={!wide} /></View></> : null}
       {liveId ? <LiveHostGiftIncomeSummary liveId={liveId} /> : null}

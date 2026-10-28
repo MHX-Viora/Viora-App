@@ -30,15 +30,15 @@ function Preview() {
     <View style={styles.room}>
       {mode === "setup" ? <LiveHostSetup settings={settings} onChange={setSettings} onContinue={() => setMode("check")} onBack={noop} activeLive={null} checkingActive={false} endingActive={false} onEndActive={noop} /> : <LiveHostRoom
         mode={mode} settings={settings} comments={[]} pinnedComment={null} hostUserId="host"
-        onCommentsChange={noop} onPinComment={resolved} giftQueue={giftQueue} topGifters={[]}
-        elapsed={90} countdown={3} demoMode viewerCount={1} reactionCount={1} heartBurstRef={heartBurstRef}
+        onPinComment={resolved} giftQueue={giftQueue} topGifters={[]}
+        elapsed={90} countdown={3} viewerCount={1} reactionCount={1} heartBurstRef={heartBurstRef}
         onReportComment={resolved} onMuteUser={resolved} onDeleteComment={resolved} onSendComment={resolved}
         cameraGranted cameraReady cameraError={false} cameraSession={0} agoraAppId="" agoraRef={agoraRef}
         onTokenWillExpire={noop} microphoneGranted cameraOn={cameraOn} microphoneOn={microphoneOn} facing={facing} connected
         onRequestPermissions={noop} onCameraToggle={() => setCameraOn(value => !value)} onMicrophoneToggle={() => setMicrophoneOn(value => !value)}
         onFlipCamera={() => { setFacing(value => value === "front" ? "back" : "front"); action(); }}
         onCameraReady={noop} onCameraError={noop} onBack={() => setMode("setup")} onStart={() => setMode("live")}
-        onCancelCountdown={() => setMode("check")} onDemo={() => setMode("live")} onCloseDemo={() => setMode("check")}
+        onCancelCountdown={() => setMode("check")}
         onEndRequest={() => setMode("check")}
       />}
     </View>

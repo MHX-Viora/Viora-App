@@ -63,11 +63,3 @@ export function formatHostDuration(seconds: number): string {
   const remaining = seconds % 60;
   return [hours, minutes, remaining].map((value) => String(value).padStart(2, "0")).join(":");
 }
-
-export const demoHostComments: HostComment[] = [
-  { id: "c1", userId: "an", name: "Nguyễn An", text: "Xin chào bạn 👋", time: "Vừa xong" },
-  { id: "c2", userId: "minh", name: "Minh Trần", text: "Hay quá ❤️", time: "1 phút trước" },
-  { id: "c3", userId: "phuong", name: "Phương Linh", text: "Giọng hay quá!", time: "2 phút trước" },
-  { id: "c4", userId: "nam", name: "Hoàng Nam", text: "đã gửi Hoa hồng x1", time: "3 phút trước", gift: true, giftEmoji: "🌹", giftCount: 1, giftPrice: 1 },
-  { id: "c5", userId: "thao", name: "Thảo Vy", text: "Live lâu nữa nhé ❤️", time: "5 phút trước" },
-];
