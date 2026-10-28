@@ -1,0 +1,25 @@
+[Unit]
+Description=ANKT Developer account BFF
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/viora/frontend
+EnvironmentFile=/var/www/viora/frontend/.env
+Environment=NODE_ENV=production
+Environment=DEVELOPER_BFF_PORT=4319
+Environment=ANKT_BFF_TRUST_LOOPBACK_PROXY=true
+ExecStart=/usr/bin/node /var/www/viora/frontend/server/developer/serve.cjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

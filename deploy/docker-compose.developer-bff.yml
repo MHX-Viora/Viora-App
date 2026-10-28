@@ -1,0 +1,25 @@
+# Merge this service into /var/www/viora/docker-compose.yml under services,
+# or use as the second -f file after that existing Compose file.
+# Relative paths resolve from the existing /var/www/viora Compose directory.
+services:
+  developer-bff:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["node", "server/developer/serve.cjs"]
+    # Linux VPS: Node binds only host loopback, reachable by the host's nginx.
+    # Do not add ports: alongside network_mode: host.
+    network_mode: host
+    env_file:
+      - ./frontend/.env
+    environment:
+      NODE_ENV: production
+      DEVELOPER_SITE_ORIGIN: https://mxh.ankt.vn
+      ANKT_API_BASE_URL: https://api.mxh.ankt.vn
+      DEVELOPER_BFF_PORT: "4319"
+      ANKT_BFF_TRUST_LOOPBACK_PROXY: "true"
+    volumes:
+      - ./frontend:/app:ro
+    read_only: true
+    security_opt:
+      - no-new-privileges:true

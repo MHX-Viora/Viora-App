@@ -74,7 +74,7 @@ test('BFF forwards no ANKT credentials and clears revoked cookies', async () => 
 });
 test('BFF preserves bodyless 401 and 429 errors instead of turning them into outages', async () => {
   for (const status of [401, 429]) await fixture(async origin => {
-    const response = await fetch(`${origin}/developers/api/account/auth/me`);
+    const response = await fetch(`${origin}/developers/api/account/auth/me`, { headers: { Cookie: 'ankt_developer_local=' + 'y'.repeat(43) } });
     assert.equal(response.status, status);
     assert.ok((await response.json()).error);
     if (status === 401) assert.match(response.headers.get('set-cookie'), /Max-Age=0/);

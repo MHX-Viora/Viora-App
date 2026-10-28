@@ -206,6 +206,7 @@ jobs:
             echo "Health check thành công."
 
             curl --fail --silent --show-error --location --output /dev/null --max-time 15 "$HEALTH_URL/developers/"
+            node scripts/check-developer-session.mjs "$HEALTH_URL"
             curl --fail --silent --show-error --output /dev/null --max-time 15 'https://api.mxh.ankt.vn/api/mini-apps?page=1&pageSize=20'
 
             echo
