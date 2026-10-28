@@ -24,8 +24,8 @@ export const advertisementCtaLabel = (type: AdvertisementCtaType) => ({
 
 export const advertisementStatusLabel = (status: AdvertisementStatus) => ({
   [AdvertisementStatus.Draft]: "Bản nháp",
-  [AdvertisementStatus.Pending]: "Chờ duyệt",
-  [AdvertisementStatus.Approved]: "Đã duyệt",
+  [AdvertisementStatus.Pending]: "Đang xử lý",
+  [AdvertisementStatus.Approved]: "Đã lên lịch",
   [AdvertisementStatus.Active]: "Đang chạy",
   [AdvertisementStatus.Paused]: "Tạm dừng",
   [AdvertisementStatus.Completed]: "Hoàn tất",

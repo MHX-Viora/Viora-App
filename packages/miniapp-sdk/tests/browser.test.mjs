@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import vm from 'node:vm';
+test('download is a self-contained classic script, metadata matches bytes, standalone fails closed',async()=>{
+  const root=new URL('../../../public/sdk/',import.meta.url);
+  const manifest=JSON.parse(readFileSync(new URL('manifest.json',root),'utf8'));
+  const bytes=readFileSync(new URL(manifest.filename,root));
+  assert.equal(bytes.length,manifest.bytes);assert.equal(createHash('sha256').update(bytes).digest('hex'),manifest.sha256);
+  assert.ok(!bytes.toString().includes('sourceMappingURL'));
+  assert.ok(!bytes.toString().includes('onrender.com'),'current SDK download must use the canonical API domain');
+  const previous=readFileSync(new URL('ankt-miniapp.v0.4.0.min.js',root));
+  assert.equal(createHash('sha256').update(previous).digest('hex'),'363c60854a1141a8ee9f985760cfc928b537d01d729d786c049b234804f8d0f1','released SDK 0.4.0 must remain unchanged');
+  const context=vm.createContext({URL,AbortController,setTimeout,clearTimeout});
+  vm.runInContext(bytes.toString(),context);
+  assert.equal(context.ANKTMiniApp.VERSION,manifest.version);
+  const sdk=context.ANKTMiniApp.create({clientId:'app_'+'a'.repeat(43)});
+  await assert.rejects(sdk.init(),{code:'HOST_UNAVAILABLE'});sdk.dispose();
+});

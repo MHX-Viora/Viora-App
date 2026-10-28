@@ -46,7 +46,7 @@ function render({ theme = modernTheme, width = 1440, measuredWidth = 0, hidden =
   const calls = [];
   let frame;
   const overrides = {
-    "../../assets/images/wallet-card-background.png": { uri: "wallet-card-background.png", width: 1855, height: 848 },
+    "../../assets/images/wallet-card-navy-gold.png": { uri: "wallet-card-navy-gold.png", width: 1853, height: 849 },
     react: { ...React, useState: (initial) => React.useState(initial === false ? hidden : initial === 0 ? measuredWidth : initial) },
     "react-native": {
       ...native,
@@ -150,9 +150,8 @@ test("wallet text and primary CTA meet AA contrast in all three themes", () => {
     assert.ok(contrast(theme.colors.textMuted, secondary) >= 4.5, theme.mode + " coin label");
     const { controls } = render({ theme });
     const deposit = controls.find(control => control.accessibilityLabel === "Nạp tiền");
-    const background = composite(native.StyleSheet.flatten(deposit.style({ pressed: false })).backgroundColor, surface);
-    const text = deposit.children.find(child => child?.type === native.Text);
-    assert.ok(contrast(text.props.style.color, background) >= 4.5, theme.mode + " deposit text");
+    const background = composite(native.StyleSheet.flatten(deposit.style({ pressed: false })).backgroundColor, rgba('#071A2A'));
+    assert.ok(contrast('#F4F8FC', background) >= 4.5, theme.mode + " deposit icon");
   }
 });
 
@@ -168,22 +167,36 @@ test("controls have large targets and visible keyboard, hover and press feedback
   }
 });
 
-test("mobile actions stack and a narrow card in a wide viewport follows its actual width", () => {
+test("wallet keeps handheld aspect ratio and icon actions at every card width", () => {
   for (const options of [{ width: 320 }, { width: 375 }, { width: 1440, measuredWidth: 360 }]) {
     const { frame } = render(options);
     const [heading, funds, actions] = frame.children.slice(-3);
     assert.ok(heading);
-    assert.equal(native.StyleSheet.flatten(actions.props.style).flexDirection, "column");
+    assert.equal(native.StyleSheet.flatten(frame.style).aspectRatio,1853/849);
+    assert.equal(native.StyleSheet.flatten(actions.props.style).flexDirection, "row");
     assert.notEqual(native.StyleSheet.flatten(funds.props.style).flexDirection, "row");
-    assert.equal(actions.props.children[0].props.fullWidth, true);
+    const {markup}=render(options);assert.match(markup,/Xu ANKT/);assert.doesNotMatch(markup,/ANKT coin|>Nạp tiền<|>Rút tiền<|>Lịch sử</);
   }
 });
 
-test("tablet and desktop use a row for actions and side-by-side balances", () => {
+test("coins remain directly under money on desktop too", () => {
   for (const width of [768, 820, 1024, 1440]) {
     const { frame } = render({ width });
     const [, funds, actions] = frame.children.slice(-3);
     assert.equal(native.StyleSheet.flatten(actions.props.style).flexDirection, "row");
-    assert.equal(native.StyleSheet.flatten(funds.props.style).flexDirection, "row");
+    assert.notEqual(native.StyleSheet.flatten(funds.props.style).flexDirection, "row");
+  }
+});
+
+test("wallet caps desktop size and offers three matching actions without a gear button", () => {
+  for (const props of [{}, { loading: true, wallet: null }, { error: "offline", wallet: null }]) {
+    const { frame, controls } = render(props);
+    assert.equal(native.StyleSheet.flatten(frame.style).maxWidth, 420);
+    assert.equal(controls.some(control => control.accessibilityLabel === "Quản lý ví"), false);
+    const actions = controls.filter(control => ["Nạp tiền", "Rút tiền", "Lịch sử"].includes(control.accessibilityLabel));
+    assert.equal(actions.length, 3);
+    const styles = actions.map(control => native.StyleSheet.flatten(control.style({ pressed: false })));
+    assert.deepEqual(styles[0], styles[1]);
+    assert.deepEqual(styles[1], styles[2]);
   }
 });

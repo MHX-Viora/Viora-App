@@ -1,16 +1,27 @@
-# Viora
+# ANKT — Expo / React Native
 
-## ANKT Developer
+## Developer tích hợp Mini App
 
-Developer là một tính năng trong FE này, dùng chung Expo, React, dependencies và bản build. Chạy `npm run web`, rồi mở `http://localhost:8081/developers`; các trang đăng nhập, tài liệu và Console nằm ngay dưới đường dẫn này. Không có project con, iframe hoặc server Next.js.
+Hướng dẫn chuẩn dùng ANKT production tại https://mxh.ankt.vn/developers. Đối tác
+đăng ký website HTTPS, tải SDK đã phát hành, cấu hình backend và kiểm thử trên Portal;
+không cần clone repository, build SDK hoặc tự chạy ANKT.
 
-- Routes: `app/developers/`; giao diện web và CSS được giới hạn phạm vi: `features/developer/`.
-- Tài khoản Developer vẫn độc lập với tài khoản mạng xã hội ANKT. API phía server giữ cookie HttpOnly và không chuyển tiếp thông tin đăng nhập ANKT.
-- Metro chạy API này cùng cổng khi phát triển; Vercel triển khai `api/developer.js` cùng FE bằng các rewrite trong `vercel.json`.
-- Cấu hình server ở `.env.example`; không đưa `ANKT_BFF_SHARED_SECRET` vào biến `EXPO_PUBLIC_`. Production cần `DEVELOPER_SITE_ORIGIN`, `ANKT_API_BASE_URL` và khóa ký khớp BE.
-- Kiểm tra: `npm run test:developer`, `npx tsc --noEmit`, `npm run build:web`.
+- [Hướng dẫn production tiếng Việt](docs/miniapp-sdk-integration.vi.md)
+- [SDK 0.4.1 và hợp đồng đăng nhập backend](packages/miniapp-sdk/README.md)
+- Tài liệu công khai: https://mxh.ankt.vn/developers/docs
 
-Hướng dẫn cấu hình, kiểm thử và giới hạn: [Developer tích hợp](docs/handoffs/developer-integrated-fe.md).
+## Kỹ sư phát triển ANKT
+
+Developer Portal là tính năng trong cùng frontend Expo, phục vụ dưới /developers.
+Lệnh npm run web và địa chỉ loopback chỉ là quy trình kỹ sư nền tảng kiểm thử,
+không phải yêu cầu setup cho developer đối tác. Xem
+[hướng dẫn nội bộ](docs/operations/miniapp-local-development.md).
+
+Tài liệu dùng nguồn features/developer/docs/content và reference. Chạy
+npm run docs:check, npm run test:docs và npm run docs:build để kiểm tra/xuất artifact.
+SDK được build/kiểm thử từ packages/miniapp-sdk; không sửa bytes đã phát hành cùng version.
+Production BFF dùng cấu hình server riêng theo .env.example; không đưa secret vào EXPO_PUBLIC.
+Các handoff lịch sử mô tả từng giai đoạn, không thay thế hướng dẫn production hiện hành.
 
 Ứng dụng mạng xã hội mobile xây dựng bằng Expo Router và React Native.
 

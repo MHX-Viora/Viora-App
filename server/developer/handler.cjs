@@ -33,9 +33,13 @@ async function bodyText(request, maximum = 16384, binary = false) {
 }
 function routeFor(request) {
   const url = new URL(request.url, 'http://localhost');
+  const query = new URLSearchParams(url.searchParams);
   if (url.pathname === '/developers/api/health') return { health: true };
-  if (url.pathname.startsWith('/developers/api/account/')) return { path: url.pathname.slice('/developers/api/account/'.length), page: url.searchParams.get('page') };
-  if (url.pathname === '/api/developer') return url.searchParams.get('kind') === 'health' ? { health: true } : { path: url.searchParams.get('path') || '', page: url.searchParams.get('page') };
+  if (url.pathname.startsWith('/developers/api/account/')) return { path: url.pathname.slice('/developers/api/account/'.length), page: url.searchParams.get('page'), query };
+  if (url.pathname === '/api/developer') {
+    query.delete('path');query.delete('kind');
+    return url.searchParams.get('kind') === 'health' ? { health: true } : { path: url.searchParams.get('path') || '', page: url.searchParams.get('page'), query };
+  }
   return null;
 }
 function environmentConfig(request) {
@@ -72,10 +76,11 @@ function createDeveloperHandler(configuration = environmentConfig, fetcher = fet
         if (config.clientIp) headers.set('X-ANKT-Client-IP', config.clientIp);
         const write = !['GET', 'HEAD'].includes(request.method);
         const logo = route.path === 'mini-apps/logo';
-        const body = write ? await bodyText(request, logo ? 2097152 : route.path.startsWith('mini-apps') ? 65536 : 16384, logo) : undefined;
+        const body = write ? await bodyText(request, logo ? 2097152 : route.path.includes('/sandbox/') ? 1024 : route.path.startsWith('mini-apps') ? 65536 : 16384, logo) : undefined;
         if (body === null) output = error(413, 'REQUEST_TOO_LARGE', 'Yêu cầu quá lớn.');
         else {
-          const upstream = await proxyAccountRequest(new Request(`${config.siteOrigin}/developers/api/account/${route.path}${route.page ? '?page=' + encodeURIComponent(route.page) : ''}`, {
+          const query = route.path.endsWith('/sandbox/diagnostics') || route.path.endsWith('/sandbox/test-runs') || route.path.endsWith('/sandbox/readiness') || /^review-notifications(?:\/|$)|\/(?:versions|reviews)(?:\/|$)|\/(?:review-readiness|publication-readiness|publications|publish|unpublish)$/.test(route.path) ? '?' + route.query.toString() : route.page ? '?page=' + encodeURIComponent(route.page) : '';
+          const upstream = await proxyAccountRequest(new Request(`${config.siteOrigin}/developers/api/account/${route.path}${query}`, {
             method: request.method, headers, body,
           }), route.path, { ...config, token }, fetcher);
           let data = null;

@@ -76,41 +76,90 @@ test('Notification listing and read actions match the backend routes', async () 
   assert.equal(requests[2].method, 'PUT');
 });
 
-function screen() {
+function screen({ failInitially = true, markFailure = null, pendingMark = null } = {}) {
   const state = [], effects = [], buttons = [], requests = [];
-  let index = 0, fail = true;
+  const refs = [], alerts = [];
+  let index = 0, refIndex = 0, fail = failInitially, header, list, markCalls = 0, allRead = false, badge = 0, nextList = null;
   const load = loader({
     react: { ...React,
       useState: initial => { const id = index++; if (!(id in state)) state[id] = initial; return [state[id], next => { state[id] = typeof next === 'function' ? next(state[id]) : next; }]; },
       useEffect: effect => { effects.push(effect); },
+      useRef: initial => { const id = refIndex++; return refs[id] ??= { current: initial }; },
     },
     'react-native': { ...native,
       Pressable: props => { buttons.push(props); return React.createElement(native.Pressable, props); },
-      FlatList: props => React.createElement(native.View, {}, props.ListHeaderComponent,
-        props.data.length ? props.data.map(item => React.createElement('div', { key: item.id }, item.title)) : props.ListEmptyComponent),
+      FlatList: props => { list = props; return React.createElement(native.View, {}, props.ListHeaderComponent,
+        props.data.length ? props.data.map(item => React.createElement('div', { key: item.id }, item.title)) : props.ListEmptyComponent); },
     },
     'expo-router': { router: {} },
     '@expo/vector-icons/Ionicons': () => null,
     '@/components/layout/responsive-content': { ResponsiveContent: props => React.createElement('main', {}, props.children) },
     '@/components/layout/responsive-layout': { getResponsiveBottomPadding: () => 0 },
-    '@/components/notifications/notification-header': { NotificationHeader: () => React.createElement('h1', {}, 'Thông báo') },
+    '@/components/notifications/notification-header': { NotificationHeader: props => { header = props; return React.createElement('h1', {}, 'Thông báo'); } },
     '@/components/notifications/notification-skeleton': { NotificationSkeleton: () => null },
     '@/components/notifications/notification-item': { NotificationItem: () => null },
     '@/features/notifications/notification-events': { subscribeRealtimeNotifications: () => () => {} },
     '@/features/notifications/notification-navigation': { navigateNotification: () => {} },
     '@/hooks/use-responsive': { useResponsive: () => ({ isDesktopWeb: true }) },
-    '@/utils/notification-unread-count': { setNotificationUnreadCount: () => {} },
+    '@/utils/notification-unread-count': { setNotificationUnreadCount: value => { badge = value; }, getNotificationUnreadCount: () => badge },
+    '@/features/auth/auth-alert': { AuthAlert: () => null, useAuthAlert: () => ({ alert: alerts.at(-1) ?? null, showAlert: value => alerts.push(value), closeAlert() {}, handleAlertAction() {} }) },
     '@/theme': { spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 }, layout: {}, useTheme: () => ({ theme: { notifications: { primary: '#008aad', background: '#fff', text: '#111', textMuted: '#666' } } }) },
-    '@/services/notification.service': { getNotifications: async query => {
+    '@/services/notification.service': { markAllNotificationsRead: async () => {
+      markCalls++; if (pendingMark) await pendingMark; if (markFailure) throw markFailure; allRead = true;
+    }, getNotifications: async query => {
       requests.push(query);
+      if (nextList) { const result = nextList; nextList = null; return result; }
       if (fail) throw new Error('Không thể kết nối đến máy chủ thông báo. Vui lòng thử lại.');
-      return { page: 1, totalPages: 1, unreadCount: 1, items: [{ id: 'notification-1', title: 'Lời mời kết bạn' }] };
+      return { page: 1, totalPages: 1, unreadCount: allRead ? 0 : 1, items: [{ id: 'notification-1', title: 'Lời mời kết bạn', isRead: allRead }] };
     } },
   });
   const { NotificationsScreen } = load('features/notifications/notifications-screen.tsx');
-  const render = () => { index = 0; buttons.length = 0; return renderToStaticMarkup(React.createElement(NotificationsScreen)); };
-  return { effects, buttons, requests, render, recover: () => { fail = false; } };
+  const render = () => { index = 0; refIndex = 0; buttons.length = 0; return renderToStaticMarkup(React.createElement(NotificationsScreen)); };
+  return { effects, buttons, requests, render, recover: () => { fail = false; }, deferNextList: value => { nextList = value; },
+    get header() { return header; }, get list() { return list; }, get alert() { return alerts.at(-1); }, get markCalls() { return markCalls; }, get badge() { return badge; } };
 }
+
+const drain = () => new Promise(resolve => setImmediate(resolve));
+async function loadedScreen(options) {
+  const h = screen({ failInitially: false, ...options }); h.render(); await h.effects[0](); await drain(); h.render(); return h;
+}
+
+test('mark all read on web opens a working confirmation and updates server, items and badge', async () => {
+  const h = await loadedScreen();
+  h.header.onMarkAllRead();
+  assert.ok(h.alert?.onAction, 'Confirmation must work on React Native Web, whose Alert.alert is a no-op');
+  assert.equal(h.markCalls, 0);
+  h.alert.onAction(); await drain(); h.render();
+  assert.equal(h.markCalls, 1); assert.equal(h.badge, 0);
+  assert.ok(h.list.data.every(item => item.isRead));
+});
+
+test('mark all read locks duplicate actions until the request finishes', async () => {
+  let complete; const pendingMark = new Promise(resolve => { complete = resolve; });
+  const h = await loadedScreen({ pendingMark }); h.header.onMarkAllRead();
+  const confirm = h.alert?.onAction; assert.ok(confirm);
+  confirm(); confirm(); h.render();
+  assert.equal(h.markCalls, 1); assert.equal(h.header.isMarkingAllRead, true);
+  complete(); await drain(); h.render(); assert.equal(h.header.isMarkingAllRead, false);
+});
+
+test('mark-all failure preserves unread items and shows an actionable error', async () => {
+  const h = await loadedScreen({ markFailure: new Error('Phiên đăng nhập đã hết hạn.') });
+  h.header.onMarkAllRead(); assert.ok(h.alert?.onAction); h.alert.onAction(); await drain(); h.render();
+  assert.equal(h.markCalls, 1); assert.equal(h.badge, 1); assert.equal(h.list.data[0].isRead, false);
+  assert.equal(h.alert.kind, 'error'); assert.match(h.alert.message, /hết hạn/);
+  assert.equal(h.header.isMarkingAllRead, false);
+});
+
+test('an older notification fetch cannot restore unread state after mark-all succeeds', async () => {
+  const h = await loadedScreen(); let release;
+  h.deferNextList(new Promise(resolve => { release = resolve; }));
+  const pending = h.list.onRefresh();
+  h.header.onMarkAllRead(); assert.ok(h.alert?.onAction); h.alert.onAction(); await drain();
+  release({ page: 1, totalPages: 1, unreadCount: 1, items: [{ id: 'notification-1', title: 'Old snapshot', isRead: false }] });
+  await pending; await drain(); h.render();
+  assert.equal(h.badge, 0); assert.ok(h.list.data.every(item => item.isRead));
+});
 
 test('The notification page can recover from fetch failure with a visible retry button', async () => {
   const h = screen();

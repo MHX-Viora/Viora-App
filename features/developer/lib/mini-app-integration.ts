@@ -3,7 +3,7 @@ import { AccountApiError, DEVELOPER_SESSION_EVENT } from './account-client';
 
 export type IntegrationConfiguration = {
   websiteUrl: string; supportEmail: string; shortDescription: string; description: string;
-  privacyPolicyUrl: string; termsOfServiceUrl: string; ssoEnabled: boolean; redirectUris: string[];
+  privacyPolicyUrl: string; termsOfServiceUrl: string;
 };
 export type DomainVerification = {
   hostname: string | null; status: 'Pending' | 'Verified' | 'Failed' | 'Expired' | 'Revoked'; fileName: string | null;

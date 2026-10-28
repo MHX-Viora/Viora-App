@@ -23,7 +23,7 @@ export function FeedCategoryHeader({
 }) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, theme.isDark), [colors, theme.isDark]);
   const { isDesktopWeb, width } = useResponsive();
   const desktopLayout = getFeedCategorySidebarLayout({
     feedMaxWidth: layout.feedMaxWidth,
@@ -35,25 +35,29 @@ export function FeedCategoryHeader({
   const items = [
     {
       active: activeCategory === "community",
-      icon: "people-outline" as const,
+      icon: "people" as const,
+      color: "#1971C2", darkColor: "#74C0FC",
       label: "Cộng đồng",
       onPress: onCommunityPress,
     },
     {
       active: activeCategory === "reels",
-      icon: "play-circle-outline" as const,
+      icon: "play-circle" as const,
+      color: "#7048E8", darkColor: "#B197FC",
       label: "Video ngắn",
       onPress: onReelsPress,
     },
     {
       active: activeCategory === "articles",
-      icon: "newspaper-outline" as const,
+      icon: "newspaper" as const,
+      color: "#D9480F", darkColor: "#FFA94D",
       label: "Báo",
       onPress: onArticlesPress,
     },
     {
       active: activeCategory === "live",
-      icon: "radio-outline" as const,
+      icon: "radio" as const,
+      color: "#D6336C", darkColor: "#FF7096",
       label: "Live",
       onPress: onLivePress,
     },
@@ -84,7 +88,7 @@ export function FeedCategoryHeader({
           ]}
         >
           <Ionicons
-            color={item.active ? colors.primary : colors.textMuted}
+            color={theme.isDark ? item.darkColor : item.color}
             name={item.icon}
             size={24}
             style={[styles.icon, usesDesktopSideRails && styles.desktopIcon]}
@@ -96,7 +100,7 @@ export function FeedCategoryHeader({
   );
 }
 
-const createStyles = (colors: ThemeColors) =>
+const createStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
     activeItem: { borderBottomColor: colors.primary },
     container: {
@@ -112,14 +116,19 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomColor: "transparent",
     },
     desktopContainer: {
-      backgroundColor: "transparent",
-      borderBottomWidth: 0,
+      backgroundColor: isDark ? "transparent" : "#FFFFFF",
+      borderColor: colors.borderSubtle,
+      borderWidth: isDark ? 0 : 1,
+      borderBottomWidth: isDark ? 0 : 1,
+      borderRadius: 16,
       flexDirection: "column",
       gap: spacing.xs,
       height: "auto",
-      paddingHorizontal: 0,
+      paddingHorizontal: isDark ? 0 : spacing.sm,
+      paddingVertical: isDark ? 0 : spacing.sm,
       position: "absolute",
       top: spacing.lg,
+      ...(!isDark && Platform.OS === "web" ? { boxShadow: "0 4px 16px rgba(16, 24, 40, 0.06)" } : {}),
     },
     desktopIcon: { transform: [] },
     desktopItem: {

@@ -6,19 +6,8 @@ const config = { siteOrigin: origin, apiOrigin: 'http://127.0.0.1:5318', token: 
 const app = 'mini-apps/app_' + 'x'.repeat(43);
 const headers = { Origin: origin, 'X-ANKT-Developer': '1', 'Content-Type': 'application/json' };
 
-test('SSO BFF forwards owned configuration with CSRF but never backend credentials',async()=>{
-  let calls=0;const upstream=async()=>{calls++;return Response.json({clients:[]});};
-  for(const [method,suffix] of [['GET','/sso'],['PUT','/sso/Sandbox'],['PUT','/sso/Production']])
-    assert.equal((await proxyAccountRequest(new Request(origin,{method,headers,...(method==='PUT'?{body:'{}'}:{})}),app+suffix,config,upstream)).status,200);
-  assert.equal(calls,3);
-  assert.equal((await proxyAccountRequest(new Request(origin,{method:'POST',headers,body:'{}'}),app+'/sso/Production/credential/rotate',config,upstream)).status,404);
-  for(const suffix of ['/sso/Sandbox/credential','/sso/Production/credential','/sso/1','/sso/production','/sso/Sandbox/consent'])
-    assert.equal((await proxyAccountRequest(new Request(origin,{headers}),app+suffix,config,upstream)).status,404);
-  assert.equal((await proxyAccountRequest(new Request(origin,{method:'PUT',headers:{...headers,Origin:'https://evil.example'},body:'{}'}),app+'/sso/Sandbox',config,upstream)).status,403);
-  assert.equal(calls,3);
-});
-test('Mini App BFF allowlists CRUD, credentials, rotation, callbacks and activity', async () => {
-  const routes = [['GET', 'mini-apps'], ['POST', 'mini-apps'], ['GET', app], ['PATCH', app], ['DELETE', app], ['GET', app + '/credentials'], ['POST', app + '/credentials/rotate'], ['GET', app + '/redirect-uris'], ['PUT', app + '/redirect-uris'], ['GET', app + '/activity']];
+test('Mini App BFF allowlists CRUD and activity', async () => {
+  const routes = [['GET', 'mini-apps'], ['POST', 'mini-apps'], ['GET', app], ['PATCH', app], ['DELETE', app], ['GET', app + '/activity']];
   for (const [method, path] of routes) {
     const response = await proxyAccountRequest(new Request(`${origin}/${path}`, { method, headers, ...(method === 'GET' ? {} : { body: '{}' }) }), path, config, async (url, init) => {
       assert.equal(init.headers.get('Authorization'), `DeveloperSession ${config.token}`);

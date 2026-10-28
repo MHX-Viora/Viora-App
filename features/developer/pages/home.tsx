@@ -28,7 +28,7 @@ const steps: { icon: LandingIconName; title: string; copy: string; status: strin
 const questions = [
   ['Tôi có thể tạo Mini App chưa?', 'Có. Sau khi đăng ký và xác minh email Developer, bạn có thể tạo Mini App, quản lý thông tin tích hợp, thông tin xác thực, callback và xác minh domain. Việc tạo Mini App chưa đồng nghĩa với được phát hành trong ANKT.'],
   ['Có cần tài khoản để đọc tài liệu không?', 'Không. Bạn có thể đọc tài liệu, hướng dẫn bắt đầu và lộ trình nền tảng mà không cần đăng nhập. Tài khoản Developer dùng để quản lý Mini App và cấu hình tích hợp.'],
-  ['Đăng nhập ANKT và Sandbox hoạt động thế nào?', 'SSO ANKT, SDK và Sandbox runtime sẽ được triển khai ở các giai đoạn tiếp theo. Hiện bạn có thể chuẩn bị callback và kiểm tra cấu hình; checklist đầy đủ chưa kích hoạt SSO, Sandbox hay gửi kiểm duyệt.'],
+  ['Đăng nhập ANKT và Sandbox hoạt động thế nào?', 'Mini App dùng Auth Bridge để tự động nhận tài khoản thật trong ANKT hoặc tài khoản test trong Developer Sandbox. Xác minh domain, tải SDK từ tab Tích hợp, đổi mã tại backend của bạn để tạo phiên riêng và kiểm tra toàn bộ luồng trước khi gửi xét duyệt.'],
   ['Phạm vi sử dụng chung hệ thống ANKT ra sao?', 'Developer Portal nằm tại /developers và dùng backend, database chung của ANKT. Tài khoản và phiên đăng nhập Developer độc lập với tài khoản mạng xã hội. Kiểm tra kết nối API bên dưới chỉ phản ánh kết nối dịch vụ.'],
 ];
 
@@ -51,7 +51,7 @@ export default function Home() {
         <h1 id="landing-title">Ý tưởng của bạn.<br />Trải nghiệm mới<br /><span>cùng ANKT.</span></h1>
         <p className="landing-description">Đưa dịch vụ, sản phẩm và ý tưởng của bạn đến gần hơn với cộng đồng ANKT. Bắt đầu hành trình tích hợp an toàn, linh hoạt và cùng phát triển.</p>
         <div className="landing-actions"><Link href={startHref} className="button">Bắt đầu tích hợp <LandingIcon name="arrow" /></Link><Link href="/docs/getting-started" className="button button-secondary"><LandingIcon name="book" />Đọc tài liệu</Link></div>
-        <ul className="landing-assurances"><li><LandingIcon name="check" />Cấu hình Mini App</li><li><LandingIcon name="check" />SSO trong lộ trình</li><li><LandingIcon name="check" />Hỗ trợ tận tâm</li></ul>
+        <ul className="landing-assurances"><li><LandingIcon name="check" />Cấu hình Mini App</li><li><LandingIcon name="check" />Auth Bridge</li><li><LandingIcon name="check" />Hỗ trợ tận tâm</li></ul>
       </div>
       <figure className="landing-hero-art"><img src={`${BASE_PATH}/landing/mini-app-hero.webp`} srcSet={`${BASE_PATH}/landing/mini-app-hero-small.webp 640w, ${BASE_PATH}/landing/mini-app-hero.webp 1200w`} sizes="(max-width: 767px) 100vw, 54vw" width="1200" height="900" alt="Minh họa điện thoại ANKT với các Mini App và biểu tượng dịch vụ 3D." fetchPriority="high" /><figcaption>Minh họa trải nghiệm Mini App</figcaption></figure>
     </div></section>

@@ -73,7 +73,7 @@
 .developer-landing .landing-journey li { position: relative; min-width: 0; }
 .developer-landing .landing-step-icon { display: flex; align-items: center; justify-content: center; width: 76px; height: 76px; border-radius: 50%; background: #f0f7ff; color: #0866ff; margin-bottom: 20px; }
 .developer-landing .landing-step-icon svg { width: 30px; height: 30px; }
-.developer-landing .landing-journey li:not(:last-child)::after { content: '→'; position: absolute; top: 36px; left: 100px; width: calc(100% - 82px); height: 1px; border-top: 1px dashed #bed2ed; color: #8aa6c8; line-height: 0; text-align: right; font-size: 19px; }
+.developer-landing .landing-journey li:not(:last-child)::after { content: ''; position: absolute; top: 36px; left: 100px; width: calc(100% - 82px); height: 1px; border-top: 1px dashed #bed2ed; color: #8aa6c8; line-height: 0; text-align: right; font-size: 19px; }
 .developer-landing .landing-step-number { font-size: 15px; font-weight: 700; color: #0866ff; font-variant-numeric: tabular-nums; }
 .developer-landing .landing-journey h3 { font-size: 17px; line-height: 1.4; margin: 5px 0 9px; font-weight: 700; }
 .developer-landing .landing-journey h3 a:hover { color: #005ce6; text-decoration: underline; text-underline-offset: 4px; }

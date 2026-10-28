@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState, type FormEvent,
 import Link from '../navigation.web';
 import { accountRequest } from '../lib/account-client';
 import { categories, statusLabel, uploadLogo, type Logo, type MiniApp } from '../lib/mini-app-client';
+import { ConsolePageHeader, CreateAppButton, MiniAppEmptyState } from './console-ui';
+import { LandingIcon } from './landing-icon';
 
 const CreateContext = createContext<() => void>(() => {});
 export const useCreateMiniApp = () => useContext(CreateContext);
@@ -77,7 +79,7 @@ function CreateMiniApp({ close }: { close: () => void }) {
   </Dialog>;
 }
 
-export function MiniAppDashboard() {
+export function MiniAppDashboard({ overview = false }: { overview?: boolean }) {
   const create = useCreateMiniApp(); const [apps, setApps] = useState<MiniApp[]>([]); const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -87,13 +89,15 @@ export function MiniAppDashboard() {
     }).catch(e => { if (active) setError(e instanceof Error ? e.message : 'Không thể tải Mini App.'); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [page, retry]);
-  return <><p className="eyebrow">DEVELOPER CONSOLE</p><div className="mini-page-heading"><div><h1>Mini App của tôi</h1><p className="muted">Quản lý ứng dụng và thông tin tích hợp của bạn.</p></div><button className="button" onClick={create}>+ Tạo Mini App</button></div>
+  return <><ConsolePageHeader title={overview ? 'Tổng quan Developer' : 'Mini App của tôi'} description={overview ? 'Không gian quản lý ứng dụng và theo dõi quá trình phát triển cùng ANKT.' : 'Quản lý các Mini App, xem thông tin tích hợp, cấu hình và theo dõi trạng thái hoạt động.'} action={<CreateAppButton onClick={create} />} />
+    {overview && !loading && !error && <section className="console-overview-summary" aria-label="Tổng quan ứng dụng"><span className="console-overview-icon"><LandingIcon name="grid" /></span><div><span>Mini App thuộc tài khoản</span><strong>{total}</strong></div><Link href="/console/apps">Quản lý Mini App <LandingIcon name="arrow" /></Link></section>}
     {loading ? <div aria-label="Đang tải Mini App" role="status" className="mini-skeletons">{[1, 2, 3].map(n => <div key={n} className="mini-skeleton" />)}</div>
       : error ? <div className="notice" role="alert"><p>{error}</p><button className="button" onClick={() => setRetry(n => n + 1)}>Thử lại</button></div>
-      : !apps.length ? <section className="empty-apps"><span className="empty-symbol" aria-hidden="true">◇</span><h2>Bạn chưa có Mini App nào.</h2><p>Tạo ứng dụng đầu tiên để nhận App ID và thông tin tích hợp.</p><button className="button" onClick={create}>Tạo Mini App</button></section>
+      : !apps.length ? <MiniAppEmptyState create={create} />
       : <div className="mini-app-list">{apps.map(app => <Link key={app.appId} className="mini-app-card" href={`/console/apps/${app.appId}`}>
-        {app.logoUrl ? <img className="mini-logo" src={app.logoUrl} alt="" /> : <span className="mini-logo mini-logo-placeholder" aria-hidden="true">◇</span>}
-        <div className="mini-app-card-content"><strong>{app.name}</strong><code>{app.appId}</code><span className="mini-status">{statusLabel(app.status)}</span></div><span aria-hidden="true">→</span>
+        <div className="console-app-card-heading">{app.logoUrl ? <img className="mini-logo" src={app.logoUrl} alt="" /> : <span className="mini-logo mini-logo-placeholder" aria-hidden="true"><LandingIcon name="grid" /></span>}<div><strong>{app.name}</strong><span className="mini-status" data-status={app.status}>{statusLabel(app.status)}</span></div></div>
+        <div className="mini-app-card-content"><span className="console-field-label">APP ID</span><code>{app.appId}</code></div>
+        <div className="console-app-card-footer"><span>Ngày tạo <time dateTime={app.createdAt}>{Number.isNaN(Date.parse(app.createdAt)) ? '—' : new Date(app.createdAt).toLocaleDateString('vi-VN')}</time></span><span className="console-card-link">Quản lý <LandingIcon name="arrow" /></span></div>
       </Link>)}</div>}
     {!loading && total > 20 && <nav className="mini-actions" aria-label="Phân trang"><button className="button button-secondary" disabled={page === 1} onClick={() => setPage(n => n - 1)}>Trước</button><span>Trang {page} / {Math.ceil(total / 20)}</span><button className="button button-secondary" disabled={page * 20 >= total} onClick={() => setPage(n => n + 1)}>Sau</button></nav>}
   </>;

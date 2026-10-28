@@ -29,6 +29,7 @@ import { searchHashtags } from "@/services/reel.service";
 import { spacing } from "@/theme";
 import type { Hashtag } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
+import { playVideoPreview } from "@/utils/video-preview-playback";
 
 
 export type SelectedVideo = {
@@ -56,7 +57,7 @@ export function CreateReelModal({
   visible: boolean;
 }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isDesktopWeb } = useResponsive();
   const dialogLayout = getResponsiveDialogLayout({
@@ -158,7 +159,7 @@ function VideoSelectionStep({
   selectedVideo: SelectedVideo | null;
 }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const cameraRef = useRef<CameraView>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -171,6 +172,7 @@ function VideoSelectionStep({
   const [countdown, setCountdown] = useState(0);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [previewDuration, setPreviewDuration] = useState<{ uri: string; duration: number } | null>(null);
 
   useEffect(
     () => () => {
@@ -263,10 +265,10 @@ function VideoSelectionStep({
           onPress={onClose}
           style={styles.roundButton}
         >
-          <Ionicons color={colors.white} name="close" size={26} />
+          <Ionicons color={colors.text} name="close" size={26} />
         </Pressable>
         <View style={styles.soundPill}>
-          <Ionicons color={colors.white} name="musical-notes" size={15} />
+          <Ionicons color={colors.text} name="musical-notes" size={15} />
           <Text style={styles.soundText}>Thêm âm thanh</Text>
         </View>
         <View style={styles.headerSpacer} />
@@ -274,7 +276,11 @@ function VideoSelectionStep({
 
       <View style={styles.previewStage}>
         {selectedVideo ? (
-          <SelectedVideoPreview video={selectedVideo} />
+          <SelectedVideoPreview
+            key={selectedVideo.uri}
+            onLoadedDuration={(duration) => setPreviewDuration({ uri: selectedVideo.uri, duration })}
+            video={selectedVideo}
+          />
         ) : cameraPermission?.granted && microphonePermission?.granted ? (
           <CameraView
             enableTorch={torchEnabled && facing === "back"}
@@ -292,7 +298,7 @@ function VideoSelectionStep({
             style={styles.emptyPreview}
           >
             <Ionicons
-              color={colors.visuals.rgb_255_255_255_0_7}
+              color={colors.textMuted}
               name="videocam-outline"
               size={54}
             />
@@ -332,9 +338,9 @@ function VideoSelectionStep({
         {countdown > 0 && <Text style={styles.countdown}>{countdown}</Text>}
         {selectedVideo && (
           <View style={styles.selectedBadge}>
-            <Ionicons color={colors.white} name="checkmark" size={15} />
+            <Ionicons color={colors.text} name="checkmark" size={15} />
             <Text style={styles.selectedText}>
-              {formatDuration(selectedVideo.duration)}
+              {formatDuration(previewDuration?.uri === selectedVideo.uri ? previewDuration.duration : selectedVideo.duration)}
             </Text>
           </View>
         )}
@@ -360,16 +366,24 @@ function VideoSelectionStep({
         <Pressable
           accessibilityLabel={isRecording ? "Dừng quay video" : "Quay video"}
           accessibilityRole="button"
+          accessibilityState={{ disabled: Boolean(selectedVideo) || countdown > 0 }}
           disabled={Boolean(selectedVideo) || countdown > 0}
           onPress={toggleRecording}
-          style={[styles.captureOuter, isRecording && styles.captureOuterActive]}
+          style={({ pressed }) => [
+            styles.captureOuter,
+            isRecording && styles.captureOuterActive,
+            (Boolean(selectedVideo) || countdown > 0) && styles.disabled,
+            pressed && { opacity: 0.8 },
+          ]}
         >
           <View
             style={[
               styles.captureInner,
               isRecording && styles.captureInnerRecording,
             ]}
-          />
+          >
+            {!isRecording && <Ionicons color={colors.primaryContrast} name="videocam" size={28} />}
+          </View>
         </Pressable>
         <Pressable
           accessibilityLabel="Tiếp tục chỉnh sửa bài đăng"
@@ -379,7 +393,7 @@ function VideoSelectionStep({
           style={styles.sideAction}
         >
           <View style={[styles.nextIcon, !selectedVideo && styles.disabled]}>
-            <Ionicons color={colors.white} name="chevron-forward" size={24} />
+            <Ionicons color={colors.primaryContrast} name="chevron-forward" size={24} />
           </View>
           <Text style={[styles.sideLabel, !selectedVideo && styles.mutedLabel]}>
             Tiếp
@@ -404,7 +418,7 @@ function CameraTool({
   onPress: () => void;
 }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
@@ -419,7 +433,7 @@ function CameraTool({
       ]}
     >
       <Ionicons
-        color={active ? colors.primary : colors.white}
+        color={active ? colors.primary : colors.text}
         name={icon}
         size={22}
       />
@@ -428,9 +442,85 @@ function CameraTool({
   );
 }
 
-function SelectedVideoPreview({ video }: { video: SelectedVideo }) {
+function SelectedVideoPreview(props: { video: SelectedVideo; onLoadedDuration: (duration: number) => void }) {
+  return Platform.OS === "web" ? <WebSelectedVideoPreview {...props} /> : <NativeSelectedVideoPreview {...props} />;
+}
+
+function WebSelectedVideoPreview({ video, onLoadedDuration }: { video: SelectedVideo; onLoadedDuration: (duration: number) => void }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    const element = videoRef.current;
+    if (!element) return;
+    let disposed = false;
+    void playVideoPreview(element).catch(() => {
+      if (!disposed) setIsPlaying(false);
+    });
+    return () => {
+      disposed = true;
+      element.pause();
+    };
+  }, [video.uri]);
+
+  const resumePlayback = () => {
+    const element = videoRef.current;
+    if (element) void element.play().catch(() => setIsPlaying(false));
+  };
+
+  return <>
+    <video
+      autoPlay
+      loop
+      playsInline
+      preload="auto"
+      ref={videoRef}
+      src={video.uri}
+      onLoadedMetadata={(event) => {
+        const duration = event.currentTarget.duration;
+        if (Number.isFinite(duration) && duration > 0) onLoadedDuration(duration * 1000);
+      }}
+      onPlaying={() => setIsPlaying(true)}
+      onPause={() => setIsPlaying(false)}
+      onError={() => setHasError(true)}
+      onVolumeChange={(event) => setIsMuted(event.currentTarget.muted)}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', objectFit: 'contain', backgroundColor: colors.reelBackground }}
+    />
+    {!isPlaying && <Pressable
+      accessibilityLabel={hasError ? "Không thể phát video này" : "Phát video xem trước"}
+      accessibilityRole="button"
+      disabled={hasError}
+      onPress={resumePlayback}
+      style={styles.previewPlaybackButton}
+    >
+      <Ionicons color={colors.text} name={hasError ? "alert-circle-outline" : "play"} size={30} />
+      {hasError && <Text style={styles.sideLabel}>Không thể phát video này</Text>}
+    </Pressable>}
+    <Pressable
+      accessibilityLabel={isMuted ? "Bật âm thanh video" : "Tắt âm thanh video"}
+      accessibilityRole="button"
+      onPress={() => {
+        const element = videoRef.current;
+        if (!element) return;
+        element.muted = !element.muted;
+        setIsMuted(element.muted);
+        resumePlayback();
+      }}
+      style={styles.previewSoundButton}
+    >
+      <Ionicons color={colors.text} name={isMuted ? "volume-mute" : "volume-high"} size={22} />
+    </Pressable>
+  </>;
+}
+
+function NativeSelectedVideoPreview({ video, onLoadedDuration }: { video: SelectedVideo; onLoadedDuration: (duration: number) => void }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [isMuted, setIsMuted] = useState(false);
   const player = useVideoPlayer(video.uri, (instance) => {
@@ -450,8 +540,11 @@ function SelectedVideoPreview({ video }: { video: SelectedVideo }) {
       <VideoView
         contentFit="contain"
         nativeControls={false}
+        onFirstFrameRender={() => {
+          if (Number.isFinite(player.duration) && player.duration > 0) onLoadedDuration(player.duration * 1000);
+        }}
         player={player}
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, { backgroundColor: colors.reelBackground }]}
       />
       <Pressable
         accessibilityLabel={isMuted ? "Bật âm thanh video" : "Tắt âm thanh video"}
@@ -460,7 +553,7 @@ function SelectedVideoPreview({ video }: { video: SelectedVideo }) {
         style={styles.previewSoundButton}
       >
         <Ionicons
-          color={colors.white}
+          color={colors.text}
           name={isMuted ? "volume-mute" : "volume-high"}
           size={22}
         />
@@ -495,7 +588,7 @@ function VideoDetailsStep({
   selectedVideo: SelectedVideo | null;
 }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [suggestions, setSuggestions] = useState<Hashtag[]>([]);
   const [isLoadingTags, setIsLoadingTags] = useState(false);
@@ -593,7 +686,7 @@ function VideoDetailsStep({
             style={styles.videoSummary}
           >
             <View style={styles.summaryIcon}>
-              <Ionicons color={colors.white} name="play" size={22} />
+              <Ionicons color={colors.text} name="play" size={22} />
             </View>
             <View style={styles.summaryCopy}>
               <Text numberOfLines={1} style={styles.summaryName}>
@@ -719,9 +812,9 @@ function VideoDetailsStep({
             ]}
           >
             {isSubmitting ? (
-              <ActivityIndicator color={colors.white} size="small" />
+              <ActivityIndicator color={colors.primaryContrast} size="small" />
             ) : (
-              <Ionicons color={colors.white} name="paper-plane" size={18} />
+              <Ionicons color={colors.primaryContrast} name="paper-plane" size={18} />
             )}
             <Text style={styles.publishText}>
               {isSubmitting ? "Đang đăng..." : "Đăng video"}
@@ -736,7 +829,7 @@ function VideoDetailsStep({
           style={styles.submittingOverlay}
         >
           <View style={styles.submittingPanel}>
-            <ActivityIndicator color={colors.white} size="large" />
+            <ActivityIndicator color={colors.primary} size="large" />
             <Text style={styles.submittingTitle}>Đang đăng video</Text>
             <Text style={styles.submittingText}>
               Vui lòng chờ phản hồi, không thoát khỏi màn hình này.
@@ -771,7 +864,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
   },
-  cameraScreen: { backgroundColor: colors.reelBackground, flex: 1 },
+  cameraScreen: { backgroundColor: colors.surface, flex: 1 },
   cameraHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -800,12 +893,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  soundText: { color: colors.white, fontSize: 14, fontWeight: "700" },
+  soundText: { color: colors.text, fontSize: 14, fontWeight: "700" },
   headerSpacer: { width: 44 },
   previewStage: {
     alignSelf: "center",
     aspectRatio: 9 / 16,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: 12,
     borderWidth: 1,
@@ -816,13 +909,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   emptyPreview: { alignItems: "center", flex: 1, justifyContent: "center" },
   emptyTitle: {
-    color: colors.white,
+    color: colors.text,
     fontSize: 20,
     fontWeight: "800",
     marginTop: spacing.md,
   },
   emptyText: {
-    color: colors.visuals.rgb_255_255_255_0_6,
+    color: colors.textMuted,
     fontSize: 14,
     marginTop: spacing.xs,
   },
@@ -840,7 +933,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     position: "absolute",
     top: spacing.md,
   },
-  selectedText: { color: colors.white, fontSize: 12, fontWeight: "700" },
+  selectedText: { color: colors.text, fontSize: 12, fontWeight: "700" },
   previewSoundButton: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
@@ -854,14 +947,25 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     top: spacing.md,
     width: 40,
   },
+  previewPlaybackButton: {
+    alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: spacing.md,
+    position: "absolute",
+    top: "45%",
+  },
   durationRow: {
     flexDirection: "row",
     gap: spacing.xl,
     justifyContent: "center",
     paddingVertical: spacing.md,
   },
-  durationActive: { color: colors.white, fontSize: 13, fontWeight: "800" },
-  durationMuted: { color: colors.visuals.rgb_255_255_255_0_48, fontSize: 13 },
+  durationActive: { color: colors.text, fontSize: 13, fontWeight: "800" },
+  durationMuted: { color: colors.textMuted, fontSize: 13 },
   captureRow: {
     alignItems: "center",
     flexDirection: "row",
@@ -870,7 +974,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   sideAction: { alignItems: "center", gap: 6, width: 64 },
-  sideLabel: { color: colors.white, fontSize: 12, fontWeight: "600" },
+  sideLabel: { color: colors.text, fontSize: 12, fontWeight: "600" },
   galleryIcon: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
@@ -897,7 +1001,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   captureOuterActive: { borderColor: colors.danger },
   captureInner: {
     alignItems: "center",
-    backgroundColor: colors.white,
+    backgroundColor: colors.primary,
     borderRadius: 32,
     height: 64,
     justifyContent: "center",
@@ -942,7 +1046,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.primarySoft,
     borderColor: colors.primary,
   },
-  cameraToolText: { color: colors.white, fontSize: 9, fontWeight: "700" },
+  cameraToolText: { color: colors.text, fontSize: 9, fontWeight: "700" },
   countdown: {
     alignSelf: "center",
     color: colors.white,
@@ -953,7 +1057,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   disabled: { opacity: 0.35 },
   mutedLabel: { opacity: 0.4 },
-  detailsScreen: { backgroundColor: colors.background, flex: 1 },
+  detailsScreen: { backgroundColor: colors.surface, flex: 1 },
   detailsHeader: {
     alignItems: "center",
     borderBottomColor: colors.border,
@@ -983,7 +1087,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   summaryIcon: {
     alignItems: "center",
-    backgroundColor: colors.reelBackground,
+    backgroundColor: colors.secondaryBackground,
     borderRadius: 8,
     height: 56,
     justifyContent: "center",
@@ -1093,7 +1197,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     shadowRadius: 10,
   },
   publishButtonDisabled: { opacity: 0.6 },
-  publishText: { color: colors.white, fontSize: 16, fontWeight: "800" },
+  publishText: { color: colors.primaryContrast, fontSize: 16, fontWeight: "800" },
   submittingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
@@ -1113,14 +1217,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: "100%",
   },
   submittingText: {
-    color: colors.visuals.rgb_255_255_255_0_72,
+    color: colors.textMuted,
     fontSize: 13,
     lineHeight: 19,
     textAlign: "center",
   },
-  submittingTitle: { color: colors.white, fontSize: 17, fontWeight: "800" },
+  submittingTitle: { color: colors.text, fontSize: 17, fontWeight: "800" },
   workflowBackdrop: {
-    backgroundColor: colors.reelBackground,
+    backgroundColor: colors.surface,
     flex: 1,
   },
   workflowSurface: { flex: 1 },

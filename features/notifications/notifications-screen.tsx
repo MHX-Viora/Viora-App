@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -12,6 +12,7 @@ import { NotificationEmpty } from "@/components/notifications/notification-empty
 import { NotificationHeader } from "@/components/notifications/notification-header";
 import { NotificationItem } from "@/components/notifications/notification-item";
 import { NotificationSkeleton } from "@/components/notifications/notification-skeleton";
+import { AuthAlert, useAuthAlert } from "@/features/auth/auth-alert";
 import { ResponsiveContent } from "@/components/layout/responsive-content";
 import { getResponsiveBottomPadding } from "@/components/layout/responsive-layout";
 import { subscribeRealtimeNotifications } from "@/features/notifications/notification-events";
@@ -23,7 +24,7 @@ import {
 } from "@/services/notification.service";
 import { layout, spacing } from "@/theme";
 import type { NotificationItemModel } from "@/types/notification";
-import { setNotificationUnreadCount } from "@/utils/notification-unread-count";
+import { getNotificationUnreadCount, setNotificationUnreadCount } from "@/utils/notification-unread-count";
 import { useResponsive } from "@/hooks/use-responsive";
 import { type ThemeColors, useTheme } from "@/theme";
 
@@ -39,6 +40,7 @@ const mergeNotifications = (
 };
 
 export function NotificationsScreen() {
+  const { alert, closeAlert, handleAlertAction, showAlert } = useAuthAlert();
   const { theme } = useTheme();
   const colors = theme.notifications;
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -59,6 +61,9 @@ export function NotificationsScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [markingReadId, setMarkingReadId] = useState<string | null>(null);
+  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
+  const markingAllRead = useRef(false);
+  const readRevision = useRef(0);
 
   const updateUnreadCount = useCallback((count: number) => {
     const nextCount = Math.max(0, count);
@@ -73,6 +78,7 @@ export function NotificationsScreen() {
 
   const loadNotifications = useCallback(
     async (nextPage: number, mode: "initial" | "refresh" | "more") => {
+      const revision = readRevision.current;
       if (mode === "initial") setIsLoading(true);
       if (mode === "refresh") setIsRefreshing(true);
       if (mode === "more") setIsLoadingMore(true);
@@ -82,6 +88,7 @@ export function NotificationsScreen() {
           page: nextPage,
           pageSize: PAGE_SIZE,
         });
+        if (revision !== readRevision.current) return;
 
         setNotifications((current) =>
           nextPage === 1
@@ -201,37 +208,43 @@ export function NotificationsScreen() {
     [markItemReadLocally],
   );
 
+  const handleMarkAllRead = useCallback(async () => {
+    if (markingAllRead.current) return;
+    markingAllRead.current = true;
+    setIsMarkingAllRead(true);
+    const ids = new Set(notifications.map(item => item.id));
+    const unreadAtStart = getNotificationUnreadCount();
+    try {
+      await markAllNotificationsRead();
+      // Ignore list requests that captured unread state before this mutation.
+      readRevision.current += 1;
+      setNotifications(current => current.map(item => ids.has(item.id) ? { ...item, isRead: true } : item));
+      updateUnreadCount(Math.max(0, getNotificationUnreadCount() - unreadAtStart));
+      // Reconcile notifications arriving during the mutation with server state.
+      await loadNotifications(1, "refresh");
+    } catch (error) {
+      showAlert({ kind: "error", title: "Không thể đánh dấu tất cả", message: error instanceof Error ? error.message : "Vui lòng thử lại." });
+    } finally {
+      markingAllRead.current = false;
+      setIsMarkingAllRead(false);
+    }
+  }, [loadNotifications, notifications, showAlert, updateUnreadCount]);
+
   const confirmMarkAllRead = useCallback(() => {
-    Alert.alert(
-      "Đánh dấu tất cả đã đọc?",
-      "Tất cả thông báo hiện tại sẽ chuyển sang trạng thái đã đọc.",
-      [
-        { style: "cancel", text: "Hủy" },
-        {
-          onPress: async () => {
-            try {
-              await markAllNotificationsRead();
-              setNotifications((current) =>
-                current.map((item) => ({ ...item, isRead: true })),
-              );
-              updateUnreadCount(0);
-            } catch (error) {
-              Alert.alert(
-                "Không thể đánh dấu tất cả",
-                error instanceof Error ? error.message : "Vui lòng thử lại.",
-              );
-            }
-          },
-          text: "Đánh dấu",
-        },
-      ],
-    );
-  }, [updateUnreadCount]);
+    if (markingAllRead.current || unreadCount === 0) return;
+    showAlert({
+      title: "Đánh dấu tất cả đã đọc?",
+      message: "Tất cả thông báo hiện tại sẽ chuyển sang trạng thái đã đọc.",
+      actionLabel: "Đánh dấu",
+      onAction: () => { void handleMarkAllRead(); },
+    });
+  }, [handleMarkAllRead, showAlert, unreadCount]);
 
   return (
     <View style={styles.screen}>
       <ResponsiveContent maxWidth={layout.notificationMaxWidth}>
       <NotificationHeader
+        isMarkingAllRead={isMarkingAllRead}
         onMarkAllRead={confirmMarkAllRead}
         unreadCount={unreadCount}
       />
@@ -287,6 +300,7 @@ export function NotificationsScreen() {
         />
       )}
       </ResponsiveContent>
+      <AuthAlert alert={alert} onAction={handleAlertAction} onClose={closeAlert} />
     </View>
   );
 }

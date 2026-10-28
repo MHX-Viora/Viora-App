@@ -10,6 +10,13 @@
     <meta name="apple-mobile-web-app-title" content="ANKT" />
     <meta name="theme-color" content="#24DDE4" />
     <title>ANKT</title>
+    <script>
+      // Expo serves this template without the app bundle at /index.html in development.
+      // Use the application route so Expo can inject its scripts.
+      if (window.location.pathname === "/index.html") {
+        window.location.replace("/" + window.location.search + window.location.hash);
+      }
+    </script>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/pwa-icon-192.png" />
     <style id="expo-reset">

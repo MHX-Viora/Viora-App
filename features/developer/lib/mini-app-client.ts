@@ -11,9 +11,8 @@ export type MiniApp = {
   privacyPolicyUrl: string | null; termsOfServiceUrl: string | null; supportEmail: string | null;
   createdAt: string; updatedAt: string;
 };
-export type Credentials = { appId: string; clientKey: string; clientSecret: string; clientType: string; createdAt: string };
 export type Logo = { uploadId: string; url: string };
-export const statusLabel = (status: string) => ({ Draft: 'Bản nháp', ConfigurationIncomplete: 'Chưa đủ cấu hình' }[status] ?? status);
+export const statusLabel = (status: string) => ({ Draft: 'Bản nháp', ConfigurationIncomplete: 'Chưa đủ cấu hình', PendingReview: 'Chờ xét duyệt', ChangesRequested: 'Cần chỉnh sửa', Rejected: 'Đã từ chối', Approved: 'Đã duyệt', Published: 'Đang phát hành', Suspended: 'Đã đình chỉ' }[status] ?? status);
 export async function uploadLogo(file: File): Promise<Logo> {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 2097152 || !file.size)
     throw new Error('Chọn ảnh PNG, JPG hoặc WebP, tối đa 2 MB.');

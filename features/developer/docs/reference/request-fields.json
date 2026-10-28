@@ -1,0 +1,59 @@
+{
+  "MiniAppCreateRequest": {
+    "name": "string; 2–120 ký tự",
+    "category": "utilities | shopping | education | services | entertainment | other",
+    "requestId": "UUID khác rỗng",
+    "logoUploadId": "UUID | null; có thể bỏ qua"
+  },
+  "MiniAppUpdateRequest": {
+    "name": "string | null",
+    "category": "string | null",
+    "shortDescription": "string | null",
+    "description": "string | null",
+    "websiteUrl": "string | null",
+    "supportEmail": "string | null",
+    "privacyPolicyUrl": "string | null",
+    "termsOfServiceUrl": "string | null",
+    "logoUploadId": "UUID | null; các trường đều có thể bỏ qua"
+  },
+  "MiniAppIntegrationRequest": {
+    "websiteUrl": "HTTPS public, cổng 443",
+    "supportEmail": "string",
+    "shortDescription": "string",
+    "description": "string",
+    "privacyPolicyUrl": "HTTPS URL",
+    "termsOfServiceUrl": "HTTPS URL"
+  },
+  "MiniAppVersionCreateRequest": {
+    "requestId": "UUID",
+    "appVersion": "UUID revision app",
+    "versionName": "string"
+  },
+  "MiniAppVersionUpdateRequest": {
+    "requestId": "UUID",
+    "concurrencyToken": "UUID revision version",
+    "versionName": "string"
+  },
+  "MiniAppReviewSubmitRequest": {
+    "requestId": "UUID",
+    "versionId": "UUID",
+    "concurrencyToken": "UUID revision version",
+    "appVersion": "UUID revision app"
+  },
+  "MiniAppPublishRequest": {
+    "requestId": "UUID",
+    "concurrencyToken": "UUID app revision",
+    "versionId": "UUID",
+    "publicationId": "UUID | null, có thể bỏ qua",
+    "publicationRevision": "UUID | null, có thể bỏ qua",
+    "operationalRevision": "UUID | null, có thể bỏ qua"
+  },
+  "MiniAppUnpublishRequest": {
+    "requestId": "UUID",
+    "concurrencyToken": "UUID app revision",
+    "reason": "string | null",
+    "publicationId": "UUID",
+    "publicationRevision": "UUID",
+    "operationalRevision": "UUID | null, có thể bỏ qua"
+  }
+}

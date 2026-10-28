@@ -117,7 +117,7 @@ const SORT_EMPTY_MESSAGES: Record<
 
 export function ReelsScreen() {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isDesktopWeb, isLargeDesktop, isWeb } = useResponsive();
   const reelsOverlayLayout = getReelsOverlayLayout({
@@ -540,7 +540,6 @@ export function ReelsScreen() {
       <ResponsiveContent
         maxWidth={reelContentWidth}
         style={{
-          paddingBottom: isDesktopWeb ? 0 : REEL_BOTTOM_INSET,
           paddingTop: categoryTopBarLayout.height,
         }}
       >
@@ -597,6 +596,7 @@ export function ReelsScreen() {
                 onSave={handleSaveReel}
                 onShare={handleShareReel}
                 reel={item}
+                safeBottomInset={isDesktopWeb ? 0 : REEL_BOTTOM_INSET}
                 videoTopOffset={reelsOverlayLayout.videoTopOffset}
                 videoVerticalShift={0}
               />
@@ -611,6 +611,7 @@ export function ReelsScreen() {
       <ReelsHeader
         activeSort={sort}
         height={reelsOverlayLayout.headerHeight}
+        overlay={!isLoadingReels && reelItems.length > 0}
         onCreatePress={() => setCreateVisible(true)}
         onSearchPress={() => setSearchVisible(true)}
         onSortChange={setSort}
@@ -654,13 +655,13 @@ export function ReelsScreen() {
 
 function EmptyReels({ message, sort }: { message: string; sort: ReelSort }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const emptyMessage = SORT_EMPTY_MESSAGES[sort];
 
   return (
     <View style={styles.centerState}>
-      <Ionicons color={colors.white} name="videocam-outline" size={40} />
+      <Ionicons color={colors.textMuted} name="videocam-outline" size={40} />
       <Text style={styles.centerTitle}>{message || emptyMessage.title}</Text>
       <Text style={styles.centerText}>
         {message
@@ -673,7 +674,7 @@ function EmptyReels({ message, sort }: { message: string; sort: ReelSort }) {
 
 function ReelsLoadingSkeleton({ height }: { height: number }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.42)).current;
 
@@ -730,19 +731,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: spacing.xl,
   },
   centerText: {
-    color: colors.visuals.rgb_255_255_255_0_72,
+    color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
   },
   centerTitle: {
-    color: colors.white,
+    color: colors.text,
     fontSize: 17,
     fontWeight: "700",
     textAlign: "center",
   },
-  container: { backgroundColor: colors.reelBackground, flex: 1 },
-  page: { backgroundColor: colors.reelBackground, flex: 1 },
+  container: { backgroundColor: colors.background, flex: 1 },
+  page: { backgroundColor: colors.background, flex: 1 },
   skeletonAvatar: {
     backgroundColor: colors.visuals.rgb_255_255_255_0_18,
     borderRadius: 24,
@@ -793,7 +794,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   skeletonRail: { alignItems: "center", gap: spacing.md, width: 52 },
   skeletonScreen: {
     alignItems: "center",
-    backgroundColor: colors.reelBackground,
+    backgroundColor: colors.background,
     flex: 1,
     justifyContent: "center",
     overflow: "hidden",

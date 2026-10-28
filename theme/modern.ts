@@ -90,7 +90,8 @@ const notificationColors: ThemeColors = {
   reaction: "rgba(34, 221, 230, 0.14)",
 };
 
-export const modernTheme: AppTheme = {
+// Legacy palette for components still importing colors.ts; no longer selectable.
+export const modernTheme: Omit<AppTheme, "mode"> & { mode: "modern" } = {
   colors: communityColors,
   effects: {
     blurEnabled: true,

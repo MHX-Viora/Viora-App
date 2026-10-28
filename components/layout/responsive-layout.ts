@@ -151,13 +151,13 @@ export const getReelsOverlayLayout = ({
       } as const)
     : isCompactWeb
       ? ({
-          headerHeight: 74,
-          headerPaddingTop: 16,
+          headerHeight: 56,
+          headerPaddingTop: 0,
           videoTopOffset: 0,
         } as const)
     : ({
-        headerHeight: 62,
-        headerPaddingTop: 12,
+        headerHeight: 56,
+        headerPaddingTop: 0,
         videoTopOffset: 0,
       } as const);
 

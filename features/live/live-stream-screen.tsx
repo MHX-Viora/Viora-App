@@ -13,6 +13,7 @@ import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 import { getLiveCategories, getLives } from "@/services/live.service";
 
 import { toLiveStreamPreview, type LiveStreamPreview } from "./live-stream-model";
+import { LiveDiscoveryBanner } from './live-discovery-banner';
 
 type LiveTopicFilter = string;
 
@@ -106,16 +107,7 @@ export function LiveStreamScreen() {
       ListEmptyComponent={<View style={styles.empty}><Ionicons color={colors.textMuted} name="radio-outline" size={30} /><Text style={styles.emptyText}>Chưa có buổi live trong chủ đề này.</Text></View>}
       ListHeaderComponent={
         <View style={[styles.content, getResponsiveContentLayout({ isDesktopWeb, maxWidth: 1200 })]}>
-          <View style={styles.hero}>
-            <View style={[styles.heroImage, width < 520 && styles.heroImageNarrow]}><LiveCoverImage fill /></View>
-            <View style={[styles.heroCopy, width < 520 && styles.heroCopyNarrow]}>
-              <View style={styles.heroEyebrow}><Ionicons color={colors.white} name="radio" size={15} /><Text style={styles.heroEyebrowText}>LIVE TRÊN ANKT</Text></View>
-              <Text style={[styles.heroTitle, width < 520 && styles.heroTitleNarrow]}>Khám phá những buổi live đang diễn ra</Text>
-              <Text style={[styles.heroDescription, width < 520 && styles.heroDescriptionNarrow]}>Gặp gỡ, trò chuyện và ủng hộ những nhà sáng tạo bạn yêu thích.</Text>
-              {liveStreams.length ? <View style={styles.heroPeople}><View style={styles.avatarStack}>{liveStreams.slice(0, 3).map((stream) => <LiveCreatorAvatar key={stream.id} size={27} stream={stream} />)}</View><Text style={styles.heroPeopleText}>Cộng đồng đang lên sóng</Text></View> : null}
-            </View>
-            <View style={styles.heroLiveTag}><Ionicons color={colors.white} name="radio" size={13} /><Text style={styles.liveText}>LIVE</Text></View>
-          </View>
+          <LiveDiscoveryBanner />
 
           <View style={styles.sectionHeading}>
             <View><Text style={styles.sectionTitle}>Đang live</Text><Text style={styles.sectionSubtitle}>{filteredStreams.length} buổi phát đang diễn ra</Text></View>
@@ -161,21 +153,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   centeredScreen: { alignSelf: "center", maxWidth: 1200, width: "100%" },
   listContent: { alignSelf: "center", paddingBottom: spacing.xl, paddingHorizontal: spacing.md, width: "100%" },
   content: { alignSelf: "center", paddingTop: spacing.lg, width: "100%" },
-  hero: { backgroundColor: "#201344", borderColor: "#56318A", borderRadius: 18, borderWidth: 1, flexDirection: "row", minHeight: 188, overflow: "hidden", position: "relative" },
-  heroImage: { height: "100%", opacity: 0.96, position: "absolute", right: 0, top: 0, width: "40%" },
-  heroImageNarrow: { width: "34%" },
-  heroCopy: { justifyContent: "center", maxWidth: "67%", minHeight: 188, padding: spacing.lg, zIndex: 1 },
-  heroCopyNarrow: { maxWidth: "62%", minHeight: 168, padding: spacing.md },
-  heroEyebrow: { alignItems: "center", flexDirection: "row", gap: 6, marginBottom: spacing.xs },
-  heroEyebrowText: { color: "#68F0D0", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
-  heroTitle: { color: "#FFFFFF", fontSize: 25, fontWeight: "800", lineHeight: 31, maxWidth: 540 },
-  heroTitleNarrow: { fontSize: 21, lineHeight: 26 },
-  heroDescription: { color: "#DED6F4", fontSize: 14, lineHeight: 20, marginTop: 6, maxWidth: 500 },
-  heroDescriptionNarrow: { fontSize: 12, lineHeight: 17 },
-  heroPeople: { alignItems: "center", flexDirection: "row", gap: 9, marginTop: spacing.md },
-  avatarStack: { flexDirection: "row" },
-  heroPeopleText: { color: "#DED6F4", fontSize: 12, fontWeight: "600" },
-  heroLiveTag: { alignItems: "center", backgroundColor: colors.danger, borderRadius: 7, flexDirection: "row", gap: 5, paddingHorizontal: 9, paddingVertical: 6, position: "absolute", right: 12, top: 12 },
   liveText: { color: colors.white, fontSize: 10, fontWeight: "900", letterSpacing: 0.4 },
   sectionHeading: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginBottom: spacing.md, marginTop: spacing.xl },
   sectionTitle: { color: colors.text, fontSize: 20, fontWeight: "800" },

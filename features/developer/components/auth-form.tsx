@@ -3,6 +3,8 @@ import Link, { useRouter } from "../navigation.web";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { accountRequest } from "../lib/account-client";
 import { validateAuthForm, type AuthMode } from "../lib/auth-validation";
+import { LandingIcon } from './landing-icon';
+import './auth-form.css';
 
 const titles: Record<AuthMode, [string, string]> = {
   register: ["Tạo tài khoản Developer", "Một tài khoản độc lập để phát triển cùng ANKT."],
@@ -59,8 +61,13 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   }
   const fieldError = (name: string) => errors[name] && <span className="field-error" id={`${name}-error`}>{errors[name]}</span>;
   const action = { register: "Đăng ký", login: "Đăng nhập", forgot: "Gửi hướng dẫn", verify: "Xác nhận email", reset: "Đổi mật khẩu" }[mode];
-  return <section className="auth-page container"><div className="auth-context"><p className="eyebrow">ANKT / DEVELOPER ACCOUNTS</p><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p><Link className="inline-link" href="/docs/getting-started">Khám phá hướng dẫn tích hợp ↗</Link><div className="auth-note"><strong>Không gian riêng cho nhà phát triển.</strong><p>Tài khoản Developer tách biệt với tài khoản mạng xã hội ANKT. Quản lý Mini App, cấu hình tích hợp và xác minh domain trong Developer Console.</p></div></div>
-    <div className="auth-panel">{failure && <p className="form-alert error" role="alert">{failure}</p>}{message && <div className="form-alert success" role="status"><p>{message}</p>{mode === "register" && <Link className="inline-link" href="/verify-email">Mở trang xác minh / gửi lại email →</Link>}</div>}
+  const refined = mode === 'login' || mode === 'register';
+  return <section className={`auth-page container${refined ? ' auth-refined' : ''}`}><div className="auth-context">
+      {refined && <span className="auth-symbol"><LandingIcon name="code" /></span>}
+      <p className="eyebrow">ANKT / DEVELOPER ACCOUNTS</p><h1>{titles[mode][0]}</h1><p>{titles[mode][1]}</p>
+      {refined && <ul className="auth-benefits"><li><LandingIcon name="grid" /><span>Tạo và quản lý Mini App</span></li><li><LandingIcon name="code" /><span>Tích hợp SDK và ANKT Login</span></li><li><LandingIcon name="book" /><span>Hướng dẫn từng bước cho Developer</span></li></ul>}
+      <Link className="inline-link" href="/docs/getting-started">Khám phá hướng dẫn tích hợp ↗</Link><div className="auth-note"><strong>Không gian riêng cho nhà phát triển.</strong><p>Tài khoản Developer tách biệt với tài khoản mạng xã hội ANKT. Quản lý Mini App, cấu hình tích hợp và xác minh domain trong Developer Console.</p></div></div>
+    <div className="auth-panel">{refined && <div className="auth-panel-heading"><h2>{mode === 'login' ? 'Đăng nhập Developer' : 'Đăng ký Developer'}</h2><p>{mode === 'login' ? 'Tiếp tục xây dựng Mini App của bạn.' : 'Điền thông tin để tạo tài khoản của bạn.'}</p></div>}{failure && <p className="form-alert error" role="alert">{failure}</p>}{message && <div className="form-alert success" role="status"><p>{message}</p>{mode === "register" && <Link className="inline-link" href="/verify-email">Mở trang xác minh / gửi lại email →</Link>}</div>}
       {!completed && <form ref={form} onSubmit={submit} noValidate aria-label={titles[mode][0]}><fieldset disabled={pending}>
         {mode === "register" && <div className="form-field"><label htmlFor="fullName">Họ và tên</label><input id="fullName" name="fullName" autoComplete="name" maxLength={120} required aria-invalid={!!errors.fullName} aria-describedby={errors.fullName ? "fullName-error" : undefined} />{fieldError("fullName")}</div>}
         {["register", "login", "forgot"].includes(mode) && <div className="form-field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" autoComplete="email" maxLength={254} required aria-invalid={!!errors.email} aria-describedby={errors.email ? "email-error" : undefined} />{fieldError("email")}</div>}
@@ -73,6 +80,6 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       </fieldset></form>}
       {completed && <Link className="button form-submit" href="/login">Đăng nhập →</Link>}
       {mode === "verify" && !completed && <form className="resend-form" onSubmit={resend}><h2>Chưa nhận được email?</h2><label htmlFor="resendEmail">Email đăng ký</label><input id="resendEmail" name="resendEmail" type="email" autoComplete="email" maxLength={254} required disabled={pending} /><button className="text-button" disabled={pending || cooldown > 0}>{cooldown ? `Gửi lại sau ${cooldown}s` : "Gửi lại email xác minh"}</button></form>}
-      {["login", "register"].includes(mode) && <><div className="form-divider">hoặc</div><button className="button button-secondary form-submit" disabled aria-describedby="ankt-unavailable">Tiếp tục bằng ANKT</button><p id="ankt-unavailable" className="field-help">Chưa khả dụng: ANKT chưa cung cấp OAuth/OIDC cho Developer.</p><p className="auth-switch">{mode === "login" ? "Chưa có tài khoản? " : "Đã có tài khoản? "}<Link href={mode === "login" ? "/register" : "/login"}>{mode === "login" ? "Đăng ký" : "Đăng nhập"}</Link></p>{mode === "login" && <Link className="inline-link" href="/verify-email">Gửi lại email xác minh →</Link>}</>}
+      {["login", "register"].includes(mode) && <><div className="form-divider">hoặc</div><button className="button button-secondary form-submit" disabled aria-describedby="ankt-unavailable">Tiếp tục bằng ANKT</button><p id="ankt-unavailable" className="field-help">Đăng nhập bằng ANKT hiện chưa khả dụng. Vui lòng sử dụng email và mật khẩu.</p><p className="auth-switch">{mode === "login" ? "Chưa có tài khoản? " : "Đã có tài khoản? "}<Link href={mode === "login" ? "/register" : "/login"}>{mode === "login" ? "Đăng ký" : "Đăng nhập"}</Link></p>{mode === "login" && <Link className="inline-link" href="/verify-email">Gửi lại email xác minh →</Link>}</>}
     </div></section>;
 }

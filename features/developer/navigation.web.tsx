@@ -1,6 +1,7 @@
 import { router as expoRouter, usePathname as expoPathname, type Href } from "expo-router";
 import { useCallback, useMemo, type AnchorHTMLAttributes } from "react";
 import { useDeveloperSession } from "./session.web";
+import { requiresDeveloperDocumentNavigation } from './lib/navigation-policy';
 
 function developerPath(path: string) {
   return path.startsWith("/developers") || !path.startsWith("/") ? path : `/developers${path === "/" ? "" : path}`;
@@ -9,8 +10,7 @@ export default function Link({ href, onClick, ...props }: AnchorHTMLAttributes<H
   const target = developerPath(href);
   return <a {...props} href={target} onClick={event => {
     onClick?.(event);
-    // Document navigation into editors lets browser Back honor beforeunload.
-    const editor = /^\/developers\/console\/apps\/app_[A-Za-z0-9_-]{43}$/.test(target);
+    const editor = requiresDeveloperDocumentNavigation(window.location.pathname, target);
     if (!editor && !event.defaultPrevented && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && !props.target && target.startsWith("/developers")) {
       event.preventDefault(); expoRouter.push(target as Href);
     }

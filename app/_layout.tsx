@@ -1,5 +1,5 @@
 import { Stack, router, useSegments, type Href } from "expo-router";
-import { pendingSsoReturn } from "@/utils/sso-return";
+import { isPublicMiniAppRoute, miniAppsEnabled } from "@/features/mini-apps/lib/host-controller";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import {
@@ -137,9 +137,9 @@ function RootLayoutContent() {
   useEffect(() => {
     let cancelled = false;
     const checkLoginStatus = async () => {
-      if ((segments[0] as string) === "sso") return;
       // This route only opens the independent portal; it needs no ANKT session.
       if (segments[0] === "developers") return;
+      if (Platform.OS === "web" && isPublicMiniAppRoute(segments, miniAppsEnabled)) return;
       const session = await ensureFreshSession();
       if (cancelled) return;
       const currentRoute = segments[0];
@@ -179,8 +179,6 @@ function RootLayoutContent() {
       }
 
       // Đã đăng nhập và có user thì không ở lại các màn auth nữa.
-      const ssoReturn = pendingSsoReturn();
-      if (ssoReturn) { router.replace(ssoReturn as Href); return; }
       if (isAuthRoute) {
         router.replace("/");
       }

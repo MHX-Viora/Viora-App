@@ -3,7 +3,7 @@ import { classicVisuals } from "./visuals";
 
 const classicColors: ThemeColors = {
   avatarBorder: "#E4E6EB",
-  background: "#F0F2F5",
+  background: "#F1F3F5",
   badge: "#168AAD",
   black: "#000000",
   border: "#D8DADF",
@@ -118,7 +118,7 @@ export const classicTheme: AppTheme = {
     accent: "#168AAD", accentContrast: "#FFFFFF", bannerAccent: "#168AAD",
     bannerBackground: "#E7F5F8", bannerBorder: "#CDE8EE", cardBackground: "#FFFFFF",
     cardBorder: "#E4E6EB", coinBackground: "#FFC94A", coinBorder: "#FFE79A",
-    coinText: "#8A4B08", glow: "transparent", historyBackground: "#F0F2F5",
+    coinText: "#8A4B08", glow: "transparent", historyBackground: classicColors.background,
     iconBackground: "#E7F5F8", miniAccent: "#168AAD", miniBackground: "#F7F8FA",
     miniBorder: "#E4E6EB", miniSoft: "#E7F5F8", moreAccent: "#168AAD",
     moreBackground: "#F7F8FA", moreBorder: "#E4E6EB", moreSoft: "#E7F5F8",

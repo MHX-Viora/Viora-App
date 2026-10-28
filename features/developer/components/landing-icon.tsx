@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 
 const paths = {
+  home: <><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9" /></>,
+  plusCircle: <><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>,
+  clipboard: <><rect x="5" y="4" width="14" height="17" rx="2" /><rect x="9" y="2" width="6" height="4" rx="1" /><path d="m8 13 3 3 5-6" /></>,
+  chevron: <path d="m9 5 7 7-7 7" />,
   arrow: <><path d="M4 12h16m-6-6 6 6-6 6" /></>,
   book: <><path d="M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15" /></>,
   users: <><circle cx="9" cy="8" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m2 4a5 5 0 0 1 3 5" /></>,

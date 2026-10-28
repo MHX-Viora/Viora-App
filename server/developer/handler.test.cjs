@@ -11,10 +11,36 @@ async function fixture(run, upstream) {
   finally { await new Promise(resolve => server.close(resolve)); }
 }
 const headers = { Origin: 'http://localhost:8081', 'Content-Type': 'application/json', 'X-ANKT-Developer': '1' };
+test('readiness routes preserve query rejection through direct and Vercel routing',async()=>{
+  const path='mini-apps/app_'+'x'.repeat(43)+'/sandbox/readiness';let calls=0;
+  await fixture(async origin=>{
+    for(const route of ['/developers/api/account/'+path,'/api/developer?path='+path]){
+      assert.equal((await fetch(origin+route)).status,200);
+      assert.equal((await fetch(origin+route+(route.includes('?')?'&':'?')+'environment=Production')).status,400);
+    }
+    assert.equal(calls,2);
+  },async url=>{calls++;assert.equal(url,'http://127.0.0.1:5318/api/developer/'+path);return Response.json({readyForReview:false});});
+});
 test('Mini App pagination survives the deployed Vercel function rewrite', async () => {
   await fixture(async origin => {
     assert.equal((await fetch(`${origin}/api/developer?path=mini-apps&page=2`)).status, 200);
   }, async (url) => { assert.equal(url, 'http://127.0.0.1:5318/api/developer/mini-apps?page=2'); return Response.json({ items: [], page: 2 }); });
+});
+
+test('Sandbox diagnostic filters survive both direct routing and the Vercel rewrite', async () => {
+  const path='mini-apps/app_'+'x'.repeat(43)+'/sandbox/diagnostics';const query='sessionId=11111111-1111-4111-8111-111111111111&category=Bridge&limit=20';
+  await fixture(async origin=>{
+    assert.equal((await fetch(origin+'/developers/api/account/'+path+'?'+query)).status,200);
+    assert.equal((await fetch(origin+'/api/developer?path='+path+'&'+query)).status,200);
+  },async url=>{assert.equal(url,'http://127.0.0.1:5318/api/developer/'+path+'?'+query);return Response.json({items:[]});});
+});
+
+test('test-run pagination survives direct and Vercel rewritten paths',async()=>{
+  const path='mini-apps/app_'+'x'.repeat(43)+'/sandbox/test-runs';const query='sessionId=11111111-1111-4111-8111-111111111111&limit=20';
+  await fixture(async origin=>{
+    assert.equal((await fetch(origin+'/developers/api/account/'+path+'?'+query)).status,200);
+    assert.equal((await fetch(origin+'/api/developer?path='+path+'&'+query)).status,200);
+  },async url=>{assert.equal(url,'http://127.0.0.1:5318/api/developer/'+path+'?'+query);return Response.json({items:[]});});
 });
 test('BFF strips session tokens and issues only its HttpOnly scoped cookie', async () => {
   await fixture(async origin => {

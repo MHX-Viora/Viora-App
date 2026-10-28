@@ -4,6 +4,7 @@ import { useRouter } from "../navigation.web";
 import { accountRequest } from "../lib/account-client";
 import type { DeveloperAccount, DeveloperSession, LinkedIdentity } from "../lib/developer-types";
 import { validateAuthForm } from "../lib/auth-validation";
+import { ConsolePageHeader } from './console-ui';
 
 export function AccountSettings({ account }: { account: DeveloperAccount }) {
   const router = useRouter(); const [pending, setPending] = useState(""); const [error, setError] = useState(""); const [message, setMessage] = useState("");
@@ -36,7 +37,7 @@ export function AccountSettings({ account }: { account: DeveloperAccount }) {
   }
   function logoutAll() { return run("logout", async () => { await accountRequest("auth/logout-all", "POST"); router.replace("/login"); router.refresh(); }); }
   function revoke(session: DeveloperSession) { return run(session.id, async () => { await accountRequest(`sessions/${session.id}`, "DELETE"); if (session.current) { router.replace("/login"); router.refresh(); } else { setMessage("Đã thu hồi phiên."); await load(); } }); }
-  return <><p className="eyebrow">TÀI KHOẢN</p><h1>Cài đặt Developer</h1><p className="muted">Quản lý hồ sơ, bảo mật và các phiên đăng nhập của bạn.</p>
+  return <><ConsolePageHeader title="Cài đặt Developer" description="Quản lý hồ sơ, bảo mật và các phiên đăng nhập của bạn." />
     {error && <p className="form-alert error" role="alert">{error}</p>}{message && <p className="form-alert success" role="status">{message}</p>}
     <section className="settings-section"><h2>Thông tin cá nhân</h2><form onSubmit={saveProfile}><fieldset disabled={!!pending}>
       <div className="profile-summary"><span className="avatar large">{account.avatarUrl ? <img src={account.avatarUrl} alt="Ảnh đại diện" referrerPolicy="no-referrer" /> : account.fullName[0]}</span><div><strong>{account.fullName}</strong><p className="verified-label">✓ Email đã xác minh</p></div></div>
@@ -51,7 +52,7 @@ export function AccountSettings({ account }: { account: DeveloperAccount }) {
     <section className="settings-section"><h2>Phiên đăng nhập</h2>{!loaded ? <div role="status">Đang tải phiên… <button className="text-button" onClick={() => void load()}>Thử lại</button></div> : <ul className="sessions-list">{sessions.map(session => <li key={session.id}><div><strong>{session.current ? "Thiết bị hiện tại" : "Phiên đăng nhập"}</strong><p>{session.deviceInfo || "Không có thông tin thiết bị"}</p><small>Hết hạn: {new Date(session.expiresAt).toLocaleString("vi-VN")}</small></div><button className="text-button" disabled={!!pending} onClick={() => void revoke(session)}>{pending === session.id ? "Đang thu hồi…" : session.current ? "Đăng xuất" : "Thu hồi"}</button></li>)}</ul>}
       {!confirmation ? <button className="button button-secondary" onClick={() => setConfirmation(true)} disabled={!!pending}>Đăng xuất tất cả thiết bị</button> : <div className="notice"><p>Bạn sẽ cần đăng nhập lại trên tất cả thiết bị.</p><div className="actions"><button className="button" onClick={() => void logoutAll()} disabled={!!pending}>Xác nhận đăng xuất tất cả</button><button className="button button-secondary" onClick={() => setConfirmation(false)} disabled={!!pending}>Hủy</button></div></div>}
     </section>
-    <section className="settings-section"><h2>Tài khoản liên kết</h2><p><strong>ANKT</strong> · {links.some(i => i.provider === "ankt") ? "Đã liên kết" : "Chưa liên kết"}</p><button className="button button-secondary" disabled>Liên kết tài khoản ANKT</button><p className="field-help">Đang chờ OAuth/OIDC Provider ANKT. Không chia sẻ mật khẩu hoặc access token ANKT với portal.</p>
+    <section className="settings-section"><h2>Tài khoản liên kết</h2><p><strong>ANKT</strong> · {links.some(i => i.provider === "ankt") ? "Đã liên kết" : "Chưa liên kết"}</p><button className="button button-secondary" disabled>Liên kết tài khoản ANKT</button><p className="field-help">Không chia sẻ mật khẩu hoặc access token ANKT với portal.</p>
       {links.map(identity => <form key={identity.id} onSubmit={event => { event.preventDefault(); const password = String(new FormData(event.currentTarget).get("unlinkPassword") ?? ""); void run("unlink", async () => { await accountRequest(`linked-accounts/${identity.id}`, "DELETE", { currentPassword: password }); router.replace("/login"); router.refresh(); }); }}><p>Nhà cung cấp: {identity.provider}</p><label htmlFor={`unlink-${identity.id}`}>Mật khẩu hiện tại để hủy liên kết</label><input id={`unlink-${identity.id}`} type="password" name="unlinkPassword" autoComplete="current-password" required maxLength={128} /><button className="text-button" disabled={!!pending || !account.hasPassword}>Hủy liên kết và đăng xuất</button>{!account.hasPassword && <p className="field-help">Không thể hủy phương thức đăng nhập cuối cùng.</p>}</form>)}
     </section></>;
 }

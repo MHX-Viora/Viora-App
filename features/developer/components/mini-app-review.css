@@ -1,0 +1,22 @@
+.developer-site .review-workspace { display:grid; gap:24px; min-width:0; }
+.developer-site .review-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; }
+.developer-site .review-heading h2 { margin-top:0; }
+.developer-site .review-state-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-block:1px solid var(--border); }
+.developer-site .review-state-row>div { padding:16px; min-width:0; }
+.developer-site .review-state-row h3 { margin:0 0 8px; font-size:1rem; }
+.developer-site .review-state-row p { margin:0; color:var(--secondary); overflow-wrap:anywhere; }
+.developer-site .review-snapshot .mini-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 32px; }
+.developer-site .review-snapshot .mini-facts>div { display:block; min-width:0; }
+.developer-site .review-snapshot dd { margin:4px 0 0; overflow-wrap:anywhere; white-space:pre-wrap; }
+.developer-site .review-blockers { border-left:3px solid var(--warning); padding:8px 8px 8px 32px; }
+.developer-site .review-history-list { list-style:none; padding:0; }
+.developer-site .review-history-list li { display:flex; gap:16px; align-items:center; justify-content:space-between; padding-block:16px; border-bottom:1px solid var(--border); }
+.developer-site .review-history-list time,.developer-site .review-timeline time { display:block; color:var(--secondary); font-size:.875rem; margin-top:4px; }
+.developer-site .review-reason { padding:16px; background:var(--surface); white-space:pre-wrap; overflow-wrap:anywhere; }
+.developer-site .review-decision { padding-top:24px; border-top:1px solid var(--border); }
+.developer-site .review-workspace details { padding-block:16px; border-top:1px solid var(--border); }
+.developer-site .review-workspace summary { cursor:pointer; font-weight:600; }
+.developer-site .review-workspace select { width:100%; max-width:480px; padding:12px; border:1px solid var(--border); border-radius:var(--radius); background:var(--background); color:var(--text); }
+.developer-site .review-workspace fieldset { display:grid; gap:12px; min-width:0; }
+.developer-site .review-timeline li { padding:8px; }
+@media(max-width:767px) { .developer-site .review-state-row,.developer-site .review-snapshot .mini-facts { grid-template-columns:1fr; } .developer-site .review-heading,.developer-site .review-history-list li { flex-direction:column; align-items:stretch; } }

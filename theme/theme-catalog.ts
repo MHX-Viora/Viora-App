@@ -1,5 +1,4 @@
 import { classicTheme } from "./classic";
-import { modernTheme } from "./modern";
 import { premiumOceanTheme } from "./premium-ocean";
 import type { ThemeMode } from "./theme-mode";
 import type { AppTheme } from "./types";
@@ -12,12 +11,6 @@ export type ThemeDefinition = {
 };
 
 const definitions: Record<ThemeMode, ThemeDefinition> = {
-  modern: {
-    description: "Dark Navy và Cyan ANKT",
-    id: "modern",
-    name: "Modern Dark",
-    theme: modernTheme,
-  },
   "premium-ocean": {
     description: "Dark Navy, Ocean Cyan và chiều sâu tinh tế",
     id: "premium-ocean",
@@ -34,7 +27,6 @@ const definitions: Record<ThemeMode, ThemeDefinition> = {
 
 export const themeCatalog: readonly ThemeDefinition[] = [
   definitions.classic,
-  definitions.modern,
   definitions["premium-ocean"],
 ];
 
