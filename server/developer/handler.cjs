@@ -51,7 +51,10 @@ function environmentConfig(request) {
     siteOrigin = local.origin;
   }
   // Trust platform attribution only when actually deployed as a Vercel function.
-  const peer = process.env.VERCEL === '1' ? request.headers['x-vercel-forwarded-for'] : request.socket.remoteAddress;
+  const socketPeer = request.socket.remoteAddress?.replace(/^::ffff:/, '');
+  const trustedNginx = process.env.ANKT_BFF_TRUST_LOOPBACK_PROXY === 'true' && ['127.0.0.1', '::1'].includes(socketPeer);
+  const peer = process.env.VERCEL === '1' ? request.headers['x-vercel-forwarded-for']
+    : trustedNginx ? request.headers['x-real-ip'] : request.socket.remoteAddress;
   const clientIp = typeof peer === 'string' ? peer.replace(/^::ffff:/, '') : undefined;
   return { siteOrigin, apiOrigin: process.env.ANKT_API_BASE_URL || process.env.EXPO_PUBLIC_API_URL,
     production, bffSecret: process.env.ANKT_BFF_SHARED_SECRET, clientIp: clientIp && isIP(clientIp) ? clientIp : undefined };
@@ -66,6 +69,9 @@ function createDeveloperHandler(configuration = environmentConfig, fetcher = fet
       else if (route.health) {
         if (request.method !== 'GET') output = error(405, 'METHOD_NOT_ALLOWED', 'Phương thức không hợp lệ.');
         else { const health = await checkDeveloperHealth(config.apiOrigin, fetcher); output = Response.json(health, { status: health.ok ? 200 : 503 }); }
+      } else if (route.path === 'auth/me' && request.method === 'GET' &&
+          !sessionCookie(request.headers.cookie, developerCookiePolicy(config.siteOrigin).name)) {
+        output = error(401, 'UNAUTHENTICATED', 'Vui lòng đăng nhập tài khoản Developer.');
       } else {
         const policy = developerCookiePolicy(config.siteOrigin);
         const token = sessionCookie(request.headers.cookie, policy.name);
