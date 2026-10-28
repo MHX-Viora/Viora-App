@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url), ts = require('typescript');
 const mod = new Module('banner-validation');
 mod._compile(ts.transpileModule(readFileSync('types/utility-banner.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, 'banner-validation');
 const { parseUtilityBanners, safeBannerTarget } = mod.exports;
-const slide = { id: 'one', title: 'First', imageUrl: 'https://images.example.test/banner.png', targetUrl: '/wallet', sortOrder: 1 };
+const slide = { id: 'one', imageUrl: 'https://images.example.test/banner.png', targetUrl: '/wallet' };
 test('rejects malformed feed, duplicate ids and unsafe links', () => {
   assert.deepEqual(parseUtilityBanners({ items: [slide] }), []);
   assert.equal(parseUtilityBanners([null, {}, slide, slide, { ...slide, id: 'bad', imageUrl: 'javascript:alert(1)' }]).length, 1);
@@ -14,9 +14,9 @@ test('rejects malformed feed, duplicate ids and unsafe links', () => {
   assert.equal(safeBannerTarget('/wallet'), true);
   assert.equal(safeBannerTarget('https://example.test/promo'), true);
 });
-test('sorts valid slides and limits the carousel to twenty', () => {
-  const values = Array.from({ length: 25 }, (_, i) => ({ ...slide, id: String(i), sortOrder: 25 - i }));
+test('accepts image-only slides, preserves API order and limits the carousel to twenty', () => {
+  const values = Array.from({ length: 25 }, (_, i) => ({ ...slide, id: String(25 - i) }));
   const parsed = parseUtilityBanners(values);
   assert.equal(parsed.length, 20);
-  assert.ok(parsed.every((item, i) => !i || item.sortOrder >= parsed[i - 1].sortOrder));
+  assert.deepEqual(parsed.map(item => item.id), values.slice(0, 20).map(item => item.id));
 });

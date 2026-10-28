@@ -57,7 +57,7 @@ export function UtilityBannerCarousel({ items, active = true, onOpen, onImageErr
       style={[styles.slide, { pointerEvents: incoming ? 'none' : 'auto', transform: [{ translateX: incoming
         ? progress.interpolate({ inputRange: [0, 1], outputRange: [width, 0] })
         : progress.interpolate({ inputRange: [0, 1], outputRange: [0, -width] }) }] }]}>
-      <Pressable accessibilityRole={item.targetUrl ? 'button' : 'image'} accessibilityLabel={item.title}
+      <Pressable accessibilityRole={item.targetUrl ? 'button' : 'image'} accessibilityLabel={`Banner tiện ích ${slideIndex + 1}`}
         disabled={!item.targetUrl || incoming} onPress={() => { if (item.targetUrl) onOpen(item.targetUrl); }} style={styles.imageButton}>
         <Image source={{ uri: item.imageUrl }} accessible={false} resizeMode="cover" onError={() => onImageError(item.id)} style={styles.image} />
       </Pressable>
@@ -70,7 +70,7 @@ export function UtilityBannerCarousel({ items, active = true, onOpen, onImageErr
       {next !== null ? slide(next, true) : null}
       {items.length > 1 ? <View style={styles.controls}>
         <View style={styles.dots}>{items.map((item, i) => i < firstIndicator || i >= firstIndicator + 5 ? null : <Pressable key={item.id} accessibilityRole="button"
-          accessibilityLabel={`Xem banner ${i + 1}: ${item.title}`} accessibilityState={{ selected: i === currentIndex }}
+          accessibilityLabel={`Xem banner ${i + 1}`} accessibilityState={{ selected: i === currentIndex }}
           onPress={() => goTo(i)} style={({ pressed }) => [styles.dotButton, pressed && styles.pressed]}>
           <View style={[styles.dot, i === currentIndex && styles.dotActive]} />
         </Pressable>)}</View>

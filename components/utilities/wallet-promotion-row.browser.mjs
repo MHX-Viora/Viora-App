@@ -18,10 +18,10 @@ const result = await build({
     const act=name=>()=>{document.getElementById('result').textContent=name};
     function Fixture(){const [slides,setSlides]=React.useState([]);return <div style={{padding:16,maxWidth:1008,margin:'auto'}}>
       <button id="loadBanners" style={{position:'fixed',right:0,bottom:0,zIndex:10}} onClick={()=>setSlides([
-        {id:'one',title:'First image',imageUrl:firstImage,targetUrl:'/wallet',sortOrder:0},
-        {id:'two',title:'Second image',imageUrl:secondImage,targetUrl:'/wallet/deposit',sortOrder:1}
+        {id:'one',imageUrl:firstImage,targetUrl:'/wallet'},
+        {id:'two',imageUrl:secondImage,targetUrl:'/wallet/deposit'}
       ])}>Load slideshow</button>
-      <button id="loadBroken" style={{position:'fixed',right:0,bottom:30,zIndex:10}} onClick={()=>setSlides([{id:'broken',title:'Broken',imageUrl:'/missing.png',targetUrl:null,sortOrder:0}])}>Broken image</button>
+      <button id="loadBroken" style={{position:'fixed',right:0,bottom:30,zIndex:10}} onClick={()=>setSlides([{id:'broken',imageUrl:'/missing.png',targetUrl:null}])}>Broken image</button>
       <WalletPromotionRow banners={slides} onBannerOpen={target=>act(target)()} onExplore={act('explore')}><WalletSummaryCard wallet={wallet}
         onDeposit={act('deposit')} onWithdraw={act('withdraw')} onHistory={act('history')}/></WalletPromotionRow>
       <div style={{width:288,marginTop:24}}><WalletPromotionRow onExplore={act('narrow')}>
@@ -104,15 +104,15 @@ try {
   await browser.wait('!!document.querySelector("[data-testid=utility-banner-carousel]")');
   await browser.wait('!!document.querySelector("[data-testid=banner-incoming]")');
   assert.equal(await browser.read(`(()=>{const current=document.querySelector('[data-testid=banner-current]').getBoundingClientRect();const incoming=document.querySelector('[data-testid=banner-incoming]').getBoundingClientRect();return incoming.x>current.x})()`), true, 'incoming slide enters from right');
-  await browser.wait('document.querySelector("[data-testid=banner-current] [aria-label]")?.getAttribute("aria-label")==="Second image" && !document.querySelector("[data-testid=banner-incoming]")');
+  await browser.wait('document.querySelector("[data-testid=banner-current] [aria-label]")?.getAttribute("aria-label")==="Banner tiện ích 2" && !document.querySelector("[data-testid=banner-incoming]")');
   await browser.click('[aria-label="Tạm dừng chuyển banner"]');
   await browser.wait('!!document.querySelector(\'[aria-label="Tiếp tục chuyển banner"]\')');
   await browser.rpc('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
   await browser.read('new Promise(resolve=>setTimeout(resolve,4500))');
-  assert.equal(await browser.read('document.querySelector("[data-testid=banner-current] [aria-label]").getAttribute("aria-label")'), 'Second image');
-  await browser.click('[aria-label="Xem banner 1: First image"]');
-  await browser.wait('document.querySelector("[data-testid=banner-current] [aria-label]")?.getAttribute("aria-label")==="First image" && !document.querySelector("[data-testid=banner-incoming]")');
-  await browser.click('[aria-label="First image"]');
+  assert.equal(await browser.read('document.querySelector("[data-testid=banner-current] [aria-label]").getAttribute("aria-label")'), 'Banner tiện ích 2');
+  await browser.click('[aria-label="Xem banner 1"]');
+  await browser.wait('document.querySelector("[data-testid=banner-current] [aria-label]")?.getAttribute("aria-label")==="Banner tiện ích 1" && !document.querySelector("[data-testid=banner-incoming]")');
+  await browser.click('[aria-label="Banner tiện ích 1"]');
   assert.equal(await browser.read('document.getElementById("result").textContent'), '/wallet');
   await browser.rpc('Emulation.setDeviceMetricsOverride', { width: 375, height: 900, deviceScaleFactor: 1, mobile: false });
   await browser.wait('getComputedStyle(document.querySelector("[data-testid=wallet-promotion-row]")).flexDirection==="column" && document.querySelector("[data-testid=utility-banner-carousel]").getBoundingClientRect().width<376');
@@ -126,7 +126,7 @@ try {
   await browser.rpc('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
   await browser.key('Tab');
   await browser.read('new Promise(resolve=>setTimeout(resolve,4500))');
-  assert.equal(await browser.read('document.querySelector("[data-testid=banner-current] [aria-label]").getAttribute("aria-label")'), 'First image');
+  assert.equal(await browser.read('document.querySelector("[data-testid=banner-current] [aria-label]").getAttribute("aria-label")'), 'Banner tiện ích 1');
   const screenshot = await browser.rpc('Page.captureScreenshot', { format: 'png' });
   await writeFile('.codex-tmp/utilities-banner-carousel-1440.png', Buffer.from(screenshot.data, 'base64'));
   await browser.click('#loadBroken');
