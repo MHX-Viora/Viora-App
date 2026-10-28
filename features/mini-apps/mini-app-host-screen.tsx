@@ -54,10 +54,10 @@ export function MiniAppHostScreen({ appId }: { appId: string }) {
       <Text accessibilityRole="header" numberOfLines={1} style={[styles.title, { color: colors.text }]}>{state.detail?.app.name ?? 'Mini App'}</Text>
       {iconButton('Hỗ trợ Mini App', 'headset-outline', () => router.push('/support'))}
     </View>
-    <View accessibilityLiveRegion="polite" style={styles.status}>
+    {(!supported || state.phase !== 'running') && <View accessibilityLiveRegion="polite" style={styles.status}>
       <Text style={[styles.statusText, { color: colors.textMuted }]}>{supported ? statuses[state.status] ?? statuses.starting : 'Mini App chưa khả dụng trên thiết bị này.'}</Text>
       {supported && (state.phase === 'loading' || state.phase === 'idle') ? <ActivityIndicator accessibilityLabel="Đang mở Mini App" color={colors.primary} /> : null}
-    </View>
+    </View>}
     {supported && state.phase === 'running' ? <View style={styles.content}>
       <MiniAppHost key={state.attempt} appId={appId} attempt={state.attempt} onStatus={controller.hostStatus} />
     </View> : null}
