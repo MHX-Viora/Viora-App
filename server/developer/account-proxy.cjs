@@ -22,7 +22,7 @@ function versionRoute(path) {
     return !match ? null : match[1] ? 'detail' : 'list';
 }
 function allowed(method, path) {
-    if (/^mini-apps\/app_[A-Za-z0-9_-]{43}\/auth-bridge\/credentials\/reveal$/.test(path)) return method === 'POST';
+    if (/^mini-apps\/app_[A-Za-z0-9_-]{43}\/auth-bridge\/credentials\/(?:reveal|rotate|revoke)$/.test(path)) return method === 'POST';
     if (/^mini-apps\/app_[A-Za-z0-9_-]{43}\/auth-bridge$/.test(path)) return method === 'GET';
     if (/^mini-apps\/app_[A-Za-z0-9_-]{43}\/auth-bridge\/(launch|revoke)$/.test(path)) return method === 'POST';
     const inbox = notificationRoute(path);
@@ -184,7 +184,7 @@ async function proxyAccountRequest(request, path, config, fetcher = fetch) {
         const result = await fetcher(`${accountApiOrigin(config.apiOrigin)}/api/developer/${path}${query}`, {
             method: request.method, headers, body, cache: "no-store", credentials: "omit", redirect: "error", signal: AbortSignal.timeout(logo ? 60000 : path.endsWith('/sandbox/readiness') ? 35000 : reviewPreflight ? 45000 : 15000),
         });
-        if (path.endsWith('/auth-bridge/credentials/reveal')) {
+        if (/\/auth-bridge\/credentials\/(reveal|rotate|revoke)$/.test(path)) {
             const privateHeaders = new Headers(result.headers);
             privateHeaders.set('Cache-Control', 'no-store');
             privateHeaders.set('Pragma', 'no-cache');

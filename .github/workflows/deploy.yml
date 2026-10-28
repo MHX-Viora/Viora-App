@@ -41,7 +41,7 @@ jobs:
         run: npm run lint
 
       - name: Verify VPS web entry
-        run: node --test scripts/prepare-vps-web.test.cjs scripts/web-entry.test.cjs
+        run: node --test scripts/prepare-vps-web.test.cjs scripts/web-entry.test.cjs scripts/verify-production-api.test.mjs
 
 
   deploy:

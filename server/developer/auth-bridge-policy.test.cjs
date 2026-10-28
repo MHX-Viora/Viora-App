@@ -30,3 +30,15 @@ test('credential reveal is an authenticated same-origin POST-only route',async()
   assert.equal((await proxyAccountRequest(request('POST','https://other.example'),path,config,fetcher)).status,403);
   assert.equal(calls,1);
 });
+
+for (const operation of ['rotate','revoke']) test(`credential ${operation} is POST-only, same-origin and no-store`,async()=>{
+  const siteOrigin='https://portal.example',path='mini-apps/app_'+'a'.repeat(43)+'/auth-bridge/credentials/'+operation;
+  const config={siteOrigin,apiOrigin:'https://api.example',token:'t'.repeat(43)};let calls=0;
+  const request=(method='POST',origin=siteOrigin)=>new Request(siteOrigin,{method,headers:{Origin:origin,'X-ANKT-Developer':'1','Content-Type':'application/json'},...(method==='POST'?{body:'{}'}:{})});
+  const fetcher=async()=>{calls++;return Response.json({});};
+  const response=await proxyAccountRequest(request(),path,config,fetcher);
+  assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
+  assert.equal((await proxyAccountRequest(request('GET'),path,config,fetcher)).status,404);
+  assert.equal((await proxyAccountRequest(request('POST','https://other.example'),path,config,fetcher)).status,403);
+  assert.equal(calls,1);
+});
