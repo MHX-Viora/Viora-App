@@ -29,7 +29,7 @@ export function LiveOverlayComment({ name, text, avatarUrl, stickerUrl, isHost =
         {isHost ? <Text style={styles.hostBadge}>Chủ phòng</Text> : null}
         {isPinned ? <View style={styles.pinnedBadge}><Ionicons color="#FFD36A" name="pin" size={10} /><Text style={styles.pinnedText}>Đã ghim</Text></View> : null}
       </View>
-      {stickerUrl ? <Image contentFit="contain" source={{ uri: stickerUrl }} style={styles.sticker} /> : <Text numberOfLines={1} style={styles.message}>{text}</Text>}
+      {stickerUrl ? <Image contentFit="contain" source={{ uri: stickerUrl }} style={styles.sticker} /> : <Text testID="live-comment-message" style={styles.message}>{text}</Text>}
     </View>
   </Pressable>;
 }
@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
   name: { color: "#FFFFFF", flexShrink: 1, fontSize: 11, fontWeight: "800" },
   hostName: { color: "#FFD16A" },
   hostBadge: { backgroundColor: "#F5BC48", borderRadius: 4, color: "#3C2706", fontSize: 9, fontWeight: "800", overflow: "hidden", paddingHorizontal: 5, paddingVertical: 2 },
-  message: { color: "#EDF3FA", fontSize: 11, lineHeight: 15, marginTop: 2 },
+  message: { color: "#EDF3FA", fontSize: 13, lineHeight: 19, marginTop: 2 },
   sticker: { height: 30, marginTop: 2, width: 30 },
 });

@@ -1,6 +1,5 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, AppState, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, AppState, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { UtilityBanner } from '@/types/utility-banner';
 
 export function UtilityBannerCarousel({ items, active = true, onOpen, onImageError }: {
@@ -8,10 +7,10 @@ export function UtilityBannerCarousel({ items, active = true, onOpen, onImageErr
 }) {
   const [index, setIndex] = useState(0);
   const [next, setNext] = useState<number | null>(null);
+  const [direction, setDirection] = useState(1);
   const [width, setWidth] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [foreground, setForeground] = useState(AppState.currentState !== 'background');
   const [visible, setVisible] = useState(Platform.OS !== 'web' || !document.hidden);
   const [reducedMotion, setReducedMotion] = useState(true);
@@ -30,11 +29,20 @@ export function UtilityBannerCarousel({ items, active = true, onOpen, onImageErr
     return () => { alive = false; motion.remove(); app.remove(); if (Platform.OS === 'web') document.removeEventListener('visibilitychange', visibility); };
   }, []);
 
-  const goTo = useCallback((target: number) => {
+  const goTo = useCallback((target: number, slideDirection = 1) => {
     if (next !== null || target === currentIndex) return;
     if (reducedMotion || !width) { setIndex(target); return; }
-    progress.setValue(0); setNext(target);
+    setDirection(slideDirection); progress.setValue(0); setNext(target);
   }, [currentIndex, next, progress, reducedMotion, width]);
+
+  const swipe = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, gesture) => items.length > 1 && Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+    onPanResponderRelease: (_, gesture) => {
+      if (Math.abs(gesture.dx) < 32) return;
+      const step = gesture.dx < 0 ? 1 : -1;
+      goTo((currentIndex + step + items.length) % items.length, step);
+    },
+  }), [currentIndex, goTo, items.length]);
 
   useEffect(() => {
     if (next === null) return;
@@ -44,10 +52,10 @@ export function UtilityBannerCarousel({ items, active = true, onOpen, onImageErr
   }, [next, progress]);
 
   useEffect(() => {
-    if (items.length < 2 || !active || !foreground || !visible || hovered || focused || paused || reducedMotion || next !== null) return;
+    if (items.length < 2 || !active || !foreground || !visible || hovered || focused || reducedMotion || next !== null) return;
     const timer = setTimeout(() => goTo((currentIndex + 1) % items.length), 4000);
     return () => clearTimeout(timer);
-  }, [active, currentIndex, focused, foreground, goTo, hovered, items.length, next, paused, reducedMotion, visible]);
+  }, [active, currentIndex, focused, foreground, goTo, hovered, items.length, next, reducedMotion, visible]);
 
   const slide = (slideIndex: number, incoming: boolean) => {
     const item = items[slideIndex];
@@ -55,30 +63,28 @@ export function UtilityBannerCarousel({ items, active = true, onOpen, onImageErr
       accessibilityElementsHidden={incoming}
       importantForAccessibility={incoming ? 'no-hide-descendants' : 'auto'}
       style={[styles.slide, { pointerEvents: incoming ? 'none' : 'auto', transform: [{ translateX: incoming
-        ? progress.interpolate({ inputRange: [0, 1], outputRange: [width, 0] })
-        : progress.interpolate({ inputRange: [0, 1], outputRange: [0, -width] }) }] }]}>
+        ? progress.interpolate({ inputRange: [0, 1], outputRange: [width * direction, 0] })
+        : progress.interpolate({ inputRange: [0, 1], outputRange: [0, -width * direction] }) }] }]}>
       <Pressable accessibilityRole={item.targetUrl ? 'button' : 'image'} accessibilityLabel={`Banner tiện ích ${slideIndex + 1}`}
         disabled={!item.targetUrl || incoming} onPress={() => { if (item.targetUrl) onOpen(item.targetUrl); }} style={styles.imageButton}>
-        <Image source={{ uri: item.imageUrl }} accessible={false} resizeMode="cover" onError={() => onImageError(item.id)} style={styles.image} />
+        <Image testID="banner-backdrop" source={{ uri: item.imageUrl }} accessible={false} accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants" resizeMode="cover" blurRadius={18} style={[styles.image, styles.backdrop]} />
+        <Image testID="banner-artwork" source={{ uri: item.imageUrl }} accessible={false} resizeMode="contain" onError={() => onImageError(item.id)} style={styles.image} />
       </Pressable>
     </Animated.View>;
   };
-  return <View testID="utility-banner-carousel" onLayout={event => setWidth(event.nativeEvent.layout.width)} style={styles.frame}>
+  return <View testID="utility-banner-carousel" {...swipe.panHandlers} onLayout={event => setWidth(event.nativeEvent.layout.width)} style={styles.frame}>
     <Pressable accessible={false} style={StyleSheet.absoluteFill} onHoverIn={() => setHovered(true)} onHoverOut={() => setHovered(false)}
       onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}>
       {slide(currentIndex, false)}
       {next !== null ? slide(next, true) : null}
-      {items.length > 1 ? <View style={styles.controls}>
+      {items.length > 1 ? <View style={styles.controls}><View testID="banner-page-control" style={styles.pageControl}>
         <View style={styles.dots}>{items.map((item, i) => i < firstIndicator || i >= firstIndicator + 5 ? null : <Pressable key={item.id} accessibilityRole="button"
           accessibilityLabel={`Xem banner ${i + 1}`} accessibilityState={{ selected: i === currentIndex }}
-          onPress={() => goTo(i)} style={({ pressed }) => [styles.dotButton, pressed && styles.pressed]}>
+          onPress={() => goTo(i, i < currentIndex ? -1 : 1)} style={({ pressed }) => [styles.dotButton, pressed && styles.pressed]}>
           <View style={[styles.dot, i === currentIndex && styles.dotActive]} />
         </Pressable>)}</View>
-        <Pressable accessibilityRole="button" accessibilityLabel={paused ? 'Tiếp tục chuyển banner' : 'Tạm dừng chuyển banner'}
-          onPress={() => setPaused(value => !value)} style={styles.pause}>
-          <Ionicons name={paused ? 'play' : 'pause'} color="#fff" size={16} />
-        </Pressable>
-      </View> : null}
+      </View></View> : null}
     </Pressable>
     <Text accessibilityLiveRegion="none" style={styles.srOnly}>{`${currentIndex + 1} / ${items.length}`}</Text>
   </View>;
@@ -87,10 +93,12 @@ export function UtilityBannerCarousel({ items, active = true, onOpen, onImageErr
 const styles = StyleSheet.create({
   frame: { flex: 1, height: '100%', overflow: 'hidden', borderRadius: 18, backgroundColor: '#EDF6FF' },
   slide: { ...StyleSheet.absoluteFillObject },
-  imageButton: { flex: 1 }, image: { width: '100%', height: '100%' },
-  controls: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(7,26,42,0.72)' },
-  dots: { flexDirection: 'row', flexShrink: 1 }, dotButton: { height: 44, width: 44, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 6, height: 6, borderRadius: 4, backgroundColor: '#B7C9DA' }, dotActive: { width: 18, backgroundColor: '#fff' },
-  pause: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }, pressed: { opacity: 0.6 },
+  imageButton: { flex: 1, overflow: 'hidden' }, image: { width: '100%', height: '100%' },
+  backdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.6, transform: [{ scale: 1.12 }] },
+  controls: { position: 'absolute', bottom: 0, left: 0, right: 0, alignItems: 'center', pointerEvents: 'box-none' },
+  pageControl: { flexDirection: 'row', alignItems: 'center' },
+  dots: { flexDirection: 'row', flexShrink: 1 }, dotButton: { height: 20, width: 20, alignItems: 'center', justifyContent: 'center' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.45)' }, dotActive: { width: 16, backgroundColor: '#fff' },
+  pressed: { opacity: 0.6 },
   srOnly: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
 });

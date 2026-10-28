@@ -32,13 +32,11 @@ type Props = {
   comments: HostComment[];
   pinnedComment: HostComment | null;
   hostUserId: string | null;
-  onCommentsChange: (comments: HostComment[]) => void;
   onPinComment: (commentId: string | null) => Promise<void>;
   giftQueue: LiveGiftQueueManager;
   topGifters: readonly LiveTopGifter[];
   elapsed: number;
   countdown: number;
-  demoMode: boolean;
   viewerCount: number;
   reactionCount: number;
   heartBurstRef: React.RefObject<LiveHeartBurstHandle | null>;
@@ -67,8 +65,6 @@ type Props = {
   onBack: () => void;
   onStart: () => void;
   onCancelCountdown: () => void;
-  onDemo: () => void;
-  onCloseDemo: () => void;
   onEndRequest: () => void;
 };
 
@@ -100,32 +96,23 @@ export function LiveHostRoom(props: Props) {
   const sendComment = () => {
     const text = draft.trim();
     if (!text || !props.settings.allowComments) return;
-    if (props.demoMode) {
-      props.onCommentsChange([...props.comments, { id: `mine-${Date.now()}`, userId: "me", name: "Bạn", text, time: "Vừa xong" }]);
-      setDraft("");
-    } else void props.onSendComment(text).then(() => setDraft("")).catch((error) => showAppToast({ title: "Không gửi được bình luận", message: liveCommentErrorMessage(error), type: "error" }));
+    void props.onSendComment(text).then(() => setDraft("")).catch((error) => showAppToast({ title: "Không gửi được bình luận", message: liveCommentErrorMessage(error), type: "error" }));
   };
   const openModeration = (comment: HostComment) => { setSelectedComment(comment); setSelectingReportReason(false); };
   const closeModeration = () => { setSelectedComment(null); setSelectingReportReason(false); };
   const reportSelected = (reason: number) => {
     if (!selectedComment) return;
-    if (props.demoMode) showAppToast({ title: "Bản xem trước", message: "Báo cáo chỉ được gửi trong Live thật." });
-    else void props.onReportComment(selectedComment.id, reason).then(() => showAppToast({ title: "Đã báo cáo", message: "Bình luận đã được gửi để xem xét.", type: "success" })).catch(() => showAppToast({ title: "Không thể báo cáo", message: "Vui lòng thử lại.", type: "error" }));
+    void props.onReportComment(selectedComment.id, reason).then(() => showAppToast({ title: "Đã báo cáo", message: "Bình luận đã được gửi để xem xét.", type: "success" })).catch(() => showAppToast({ title: "Không thể báo cáo", message: "Vui lòng thử lại.", type: "error" }));
     closeModeration();
   };
   const muteSelected = () => {
     if (!selectedComment) return;
-    if (props.demoMode) props.onCommentsChange(props.comments.map((comment) => comment.userId === selectedComment.userId ? { ...comment, hidden: true } : comment));
-    else void props.onMuteUser(selectedComment.userId).then(() => showAppToast({ title: "Đã tắt quyền bình luận", message: `${selectedComment.name} không thể bình luận trong Live này.`, type: "success" })).catch(() => showAppToast({ title: "Không thể tắt quyền bình luận", message: "Vui lòng thử lại.", type: "error" }));
+    void props.onMuteUser(selectedComment.userId).then(() => showAppToast({ title: "Đã tắt quyền bình luận", message: `${selectedComment.name} không thể bình luận trong Live này.`, type: "success" })).catch(() => showAppToast({ title: "Không thể tắt quyền bình luận", message: "Vui lòng thử lại.", type: "error" }));
     closeModeration();
   };
   const deleteSelected = () => {
     if (!selectedComment) return;
-    if (props.demoMode) {
-      props.onCommentsChange(props.comments.filter((comment) => comment.id !== selectedComment.id));
-      if (props.pinnedComment?.id === selectedComment.id) void props.onPinComment(null);
-    }
-    else void props.onDeleteComment(selectedComment.id).catch(() => showAppToast({ title: "Không thể xóa bình luận", message: "Vui lòng thử lại.", type: "error" }));
+    void props.onDeleteComment(selectedComment.id).catch(() => showAppToast({ title: "Không thể xóa bình luận", message: "Vui lòng thử lại.", type: "error" }));
     closeModeration();
   };
   const pinSelected = () => {
@@ -136,19 +123,19 @@ export function LiveHostRoom(props: Props) {
   };
 
   const controls = <View style={[styles.controls, mobile && styles.mobileControls, props.mode === "check" && mobile && styles.mobileCheckControls, live && !mobile && styles.desktopControls]}>
-    <HostIconButton compact={compactControls} small={smallControls} icon={(props.demoMode || props.microphoneGranted) && props.microphoneOn ? "mic-outline" : "mic-off-outline"} label={(props.demoMode || props.microphoneGranted) && props.microphoneOn ? "Tắt mic" : "Bật mic"} onPress={props.onMicrophoneToggle} />
-    <HostIconButton compact={compactControls} small={smallControls} icon={(props.demoMode || props.cameraGranted) && props.cameraOn ? "videocam-outline" : "videocam-off-outline"} label={(props.demoMode || props.cameraGranted) && props.cameraOn ? "Tắt camera" : "Bật camera"} onPress={props.onCameraToggle} />
+    <HostIconButton compact={compactControls} small={smallControls} icon={props.microphoneGranted && props.microphoneOn ? "mic-outline" : "mic-off-outline"} label={props.microphoneGranted && props.microphoneOn ? "Tắt mic" : "Bật mic"} onPress={props.onMicrophoneToggle} />
+    <HostIconButton compact={compactControls} small={smallControls} icon={props.cameraGranted && props.cameraOn ? "videocam-outline" : "videocam-off-outline"} label={props.cameraGranted && props.cameraOn ? "Tắt camera" : "Bật camera"} onPress={props.onCameraToggle} />
     <HostIconButton compact={compactControls} small={smallControls} icon="camera-reverse-outline" label="Đổi camera" onPress={props.onFlipCamera} />
     {live ? <HostIconButton compact={compactControls} small={smallControls} danger icon="power-outline" label="Kết thúc" onPress={props.onEndRequest} /> : null}
   </View>;
 
   const media = <View style={[styles.stage, mobileFullscreen ? styles.mobileStage : width >= 768 ? styles.wideStage : styles.portraitStage]}>
-    {props.demoMode ? props.cameraOn ? <LiveCoverBackdrop source={previewImage} /> : null : props.cameraGranted && props.agoraAppId ? <><HostAgoraPreview appId={props.agoraAppId} cameraOn={props.cameraOn} facing={props.facing} key={props.cameraSession} microphoneOn={props.microphoneOn} onError={props.onCameraError} onReady={props.onCameraReady} onTokenWillExpire={props.onTokenWillExpire} ref={props.agoraRef} style={StyleSheet.absoluteFillObject} />{!props.cameraOn || !props.cameraReady ? <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}</> : <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} />}
+    {props.cameraGranted && props.agoraAppId ? <><HostAgoraPreview appId={props.agoraAppId} cameraOn={props.cameraOn} facing={props.facing} key={props.cameraSession} microphoneOn={props.microphoneOn} onError={props.onCameraError} onReady={props.onCameraReady} onTokenWillExpire={props.onTokenWillExpire} ref={props.agoraRef} style={StyleSheet.absoluteFillObject} />{!props.cameraOn || !props.cameraReady ? <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}</> : <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} />}
     <View style={styles.stageShade} />
-    {live ? <View pointerEvents="none" style={[styles.reactionHearts, mobile && styles.mobileReactionHearts]}><LiveHeartBurst ref={props.heartBurstRef} /></View> : null}
-    {!props.cameraOn || (!props.demoMode && (!props.cameraGranted || props.cameraError)) ? <View style={styles.cameraMessage}><Ionicons color={hostColors.text} name="videocam-off-outline" size={36} /><Text style={styles.cameraMessageText}>{!props.cameraOn ? "Camera đang tắt" : props.cameraError ? "Không thể mở camera" : "Cần cấp quyền camera để xem trước"}</Text></View> : null}
+    {live ? <View style={[styles.reactionHearts, mobile && styles.mobileReactionHearts, { pointerEvents: "none" }]}><LiveHeartBurst ref={props.heartBurstRef} /></View> : null}
+    {!props.cameraOn || !props.cameraGranted || props.cameraError ? <View style={styles.cameraMessage}><Ionicons color={hostColors.text} name="videocam-off-outline" size={36} /><Text style={styles.cameraMessageText}>{!props.cameraOn ? "Camera đang tắt" : props.cameraError ? "Không thể mở camera" : "Cần cấp quyền camera để xem trước"}</Text></View> : null}
 
-    {live ? <View style={[styles.liveTop, mobile && { top: insets.top + 10 }]}><View style={[styles.liveTopLeft, mobile && styles.mobileLiveTopLeft]}><View style={[styles.livePill, mobile && styles.mobileLivePill]}><Ionicons color="#FFFFFF" name="radio" size={mobile ? 10 : 12} /><Text style={[styles.livePillText, mobile && styles.mobileLivePillText]}>{props.demoMode ? "LIVE · DEMO" : "LIVE"}</Text></View><StatPill compact={mobile} icon="time-outline" value={formatHostDuration(props.elapsed)} /><StatPill compact={mobile} icon="eye-outline" value={formatLiveCount(props.viewerCount)} /><StatPill compact={mobile} icon="heart" value={formatLiveCount(props.reactionCount)} /></View>{props.demoMode ? <Pressable accessibilityLabel="Thoát giao diện mẫu" accessibilityRole="button" onPress={props.onCloseDemo} style={styles.closeButton}><Ionicons color="#FFFFFF" name="close" size={21} /></Pressable> : <View style={[styles.connectionBadge, mobile && styles.mobileConnectionBadge]}><Ionicons color={props.connected ? hostColors.green : hostColors.yellow} name={props.connected ? "checkmark-circle" : "warning-outline"} size={14} /><Text style={styles.connectionText}>{props.connected ? "Thiết bị sẵn sàng" : "Mất kết nối mạng"}</Text></View>}</View> : props.mode === "countdown" && mobile ? null : <View style={styles.previewBadge}><Text style={styles.previewBadgeText}>{props.mode === "check" ? "PREVIEW · CHƯA PHÁT LIVE" : "CHUẨN BỊ"}</Text></View>}
+    {live ? <View style={[styles.liveTop, mobile && { top: insets.top + 10 }]}><View style={[styles.liveTopLeft, mobile && styles.mobileLiveTopLeft]}><View style={[styles.livePill, mobile && styles.mobileLivePill]}><Ionicons color="#FFFFFF" name="radio" size={mobile ? 10 : 12} /><Text style={[styles.livePillText, mobile && styles.mobileLivePillText]}>LIVE</Text></View><StatPill compact={mobile} icon="time-outline" value={formatHostDuration(props.elapsed)} /><StatPill compact={mobile} icon="eye-outline" value={formatLiveCount(props.viewerCount)} /><StatPill compact={mobile} icon="heart" value={formatLiveCount(props.reactionCount)} /></View><View style={[styles.connectionBadge, mobile && styles.mobileConnectionBadge]}><Ionicons color={props.connected ? hostColors.green : hostColors.yellow} name={props.connected ? "checkmark-circle" : "warning-outline"} size={14} /><Text style={styles.connectionText}>{props.connected ? "Thiết bị sẵn sàng" : "Mất kết nối mạng"}</Text></View></View> : props.mode === "countdown" && mobile ? null : <View style={styles.previewBadge}><Text style={styles.previewBadgeText}>{props.mode === "check" ? "PREVIEW · CHƯA PHÁT LIVE" : "CHUẨN BỊ"}</Text></View>}
     {live && mobile ? <View style={[styles.mobileGifters, { top: insets.top + 40 }]}><LiveTopGifters gifters={props.topGifters} mode="mobile" /></View> : null}
 
     {live ? <LiveGiftOverlay compact={mobile} manager={props.giftQueue} /> : null}
@@ -179,8 +166,6 @@ export function LiveHostRoom(props: Props) {
           <StatusRow icon="shield-checkmark-outline" label="Thiết bị" ok={ready} detail={ready ? "Sẵn sàng xem trước" : "Cần kiểm tra"} />
           {(!props.cameraGranted || !props.microphoneGranted || props.cameraError) ? <HostButton label={!props.cameraGranted || !props.microphoneGranted ? "Cho phép camera và micro" : "Thử lại camera"} icon={props.cameraError ? "refresh-outline" : "lock-open-outline"} onPress={props.onRequestPermissions} variant="secondary" style={styles.statusButton} /> : null}
           <HostButton disabled={!ready} label="Bắt đầu live" icon="radio-outline" onPress={props.onStart} style={styles.statusButton} />
-          <HostButton label="Xem giao diện chủ phòng mẫu" onPress={props.onDemo} variant="secondary" style={styles.statusButton} />
-          <Text style={styles.statusHint}>Chỉ nút “Xem giao diện chủ phòng mẫu” dùng dữ liệu minh họa.</Text>
         </HostPanel> : null}
         {live && !mobile ? <HostPanel style={[styles.chatPanel, sideBySide && { width: Math.min(390, width * 0.28) }]}>
           <View style={styles.roomTabs}>
@@ -255,7 +240,7 @@ function MobileCountdownOverlay({ active, countdown, onCancel, onHidden, topInse
     return () => { cancelAnimationFrame(frame); numberAnimation.stop(); };
   }, [active, countdown, numberProgress, opacity]);
 
-  return <Animated.View pointerEvents={active ? "auto" : "none"} style={[styles.mobileCountdownOverlay, { opacity }]}>
+  return <Animated.View style={[styles.mobileCountdownOverlay, { opacity, pointerEvents: active ? "auto" : "none" }]}>
     <View style={[styles.mobileCountdownBadge, { top: topInset + 18 }]}><View style={styles.mobileCountdownDot} /><Text style={styles.mobileCountdownBadgeText}>CHUẨN BỊ LIVE</Text></View>
     <View style={styles.mobileCountdownCenter}>
       <View style={[styles.mobileCountdownRing, { height: size, width: size }]}>
@@ -277,7 +262,7 @@ function HostChatLine({ comment, isHost, onFlag }: { comment: HostComment; isHos
   if (isHost) return <View style={styles.hostSidebarComment}><LiveOverlayComment avatarUrl={comment.avatarUrl} isHost name={comment.name} onPress={() => onFlag(comment)} text={comment.text} /></View>;
   return <View style={styles.chatRow}>
     <UserAvatar displayName={comment.name} imageUrl={comment.avatarUrl} size={23} />
-    <View style={styles.chatCopy}><Text numberOfLines={3} style={styles.chatText}><Text style={styles.chatName}>{comment.name}</Text>{" · "}{comment.text}</Text>{comment.pinned ? <Text style={styles.pinned}>📌 Đã ghim</Text> : null}</View>
+    <View style={styles.chatCopy}><Text numberOfLines={1} style={styles.chatName}>{comment.name}</Text><Text testID="live-chat-message" style={styles.chatText}>{comment.text}</Text>{comment.pinned ? <Text style={styles.pinned}>📌 Đã ghim</Text> : null}</View>
     {comment.userId !== "me" ? <Pressable accessibilityLabel={`Quản lý bình luận của ${comment.name}`} accessibilityRole="button" onPress={() => onFlag(comment)} style={styles.commentFlag}><Ionicons color="#DAE5F1" name="flag-outline" size={16} /></Pressable> : null}
   </View>;
 }
@@ -316,7 +301,6 @@ const styles = StyleSheet.create({
   statusName: { color: hostColors.text, flex: 1, fontSize: 12, fontWeight: "700" },
   statusValue: { fontSize: 10, fontWeight: "700", textAlign: "right" },
   statusButton: { marginTop: 4 },
-  statusHint: { color: hostColors.muted, fontSize: 11, lineHeight: 16, textAlign: "center" },
   countdownOverlay: { alignItems: "center", backgroundColor: "rgba(2, 7, 13, 0.72)", gap: 14, justifyContent: "center", ...StyleSheet.absoluteFillObject },
   countdownRing: { alignItems: "center", borderColor: hostColors.purple, borderRadius: 80, borderWidth: 5, height: 144, justifyContent: "center", width: 144 },
   countdownNumber: { color: hostColors.text, fontSize: 66, fontWeight: "900" },
@@ -339,7 +323,6 @@ const styles = StyleSheet.create({
   liveTop: { alignItems: "flex-start", flexDirection: "row", justifyContent: "space-between", left: 10, position: "absolute", right: 10, top: 10, zIndex: 4 },
   liveTopLeft: { flexDirection: "row", flexWrap: "wrap", gap: 4, maxWidth: "76%" },
   mobileLiveTopLeft: { flexWrap: "nowrap", maxWidth: "86%" },
-  closeButton: { alignItems: "center", backgroundColor: "rgba(8, 17, 29, 0.62)", borderRadius: 18, height: 35, justifyContent: "center", width: 35 },
   mobileGifters: { left: 10, position: "absolute", zIndex: 4 },
   livePill: { alignItems: "center", backgroundColor: hostColors.pink, borderRadius: 7, flexDirection: "row", gap: 4, paddingHorizontal: 8, paddingVertical: 6 },
   mobileLivePill: { gap: 3, paddingHorizontal: 5, paddingVertical: 5 },
@@ -359,11 +342,11 @@ const styles = StyleSheet.create({
   roomTabText: { color: hostColors.muted, fontSize: 11, fontWeight: "700" },
   roomTabTextActive: { color: hostColors.text },
   chatScroll: { flex: 1, maxHeight: 540, minHeight: 180 },
-  chatList: { padding: 10 },
+  chatList: { padding: 10, gap: 8 },
   pinnedSidebar: { padding: 8 },
-  hostSidebarComment: { marginVertical: 4 },
+  hostSidebarComment: { maxWidth: "100%" },
   chatRow: { alignItems: "flex-start", flexDirection: "row", gap: 7, paddingVertical: 4 },
-  chatCopy: { flex: 1 },
+  chatCopy: { flex: 1, minWidth: 0 },
   commentFlag: { alignItems: "center", justifyContent: "center", minHeight: 26, minWidth: 26 },
   moderationOverlay: { alignItems: "center", backgroundColor: "rgba(0,0,0,0.65)", flex: 1, justifyContent: "center", padding: 20 },
   moderationCard: { backgroundColor: hostColors.surface, borderColor: hostColors.border, borderRadius: 18, borderWidth: 1, gap: 4, maxWidth: 380, padding: 18, width: "100%" },
@@ -374,12 +357,12 @@ const styles = StyleSheet.create({
   moderationCancel: { alignItems: "center", marginTop: 5, padding: 9 },
   moderationCancelText: { color: hostColors.muted, fontSize: 13, fontWeight: "700" },
   chatName: { color: hostColors.text, fontSize: 12, fontWeight: "800" },
-  chatText: { color: "#DAE5F1", fontSize: 12, lineHeight: 17 },
+  chatText: { color: "#DAE5F1", fontSize: 13, lineHeight: 19, marginTop: 2 },
   pinned: { color: hostColors.pink, fontSize: 10, marginTop: 3 },
   chatComposer: { alignItems: "center", flexDirection: "row", padding: 8 },
   chatInput: { color: hostColors.text, flex: 1, fontSize: 12, minHeight: 40, paddingHorizontal: 10 },
   send: { alignItems: "center", height: 44, justifyContent: "center", width: 44 },
-  mobileComments: { gap: 4, left: 8, maxWidth: "82%", position: "absolute", right: 8, zIndex: 4 },
+  mobileComments: { gap: 8, left: 8, maxWidth: "82%", position: "absolute", right: 8, zIndex: 4 },
   mobileBottom: { left: 8, position: "absolute", right: 8, zIndex: 4 },
   mobileCompose: { alignItems: "center", backgroundColor: "rgba(4, 14, 25, 0.88)", borderRadius: 22, flexDirection: "row", marginBottom: 8 },
   networkWarning: { color: hostColors.yellow, fontSize: 12, marginTop: 10, textAlign: "center" },

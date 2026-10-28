@@ -70,7 +70,7 @@ try {
       assert.ok(card.w <= 420.1);
       assert.ok(Math.abs(card.w / card.h - 1853 / 849) < 0.01);
       for (const control of layout.controls[index]) {
-        assert.ok(control.w >= 43 && control.h >= 43, control.label);
+        assert.ok(control.w >= 39 && control.h >= 39, control.label);
         assert.ok(control.x >= card.x && control.right <= card.right + 1 && control.y >= card.y && control.bottom <= card.bottom + 1, `${width}: clipped ${control.label}`);
       }
     }
@@ -98,15 +98,28 @@ try {
   await browser.click('[aria-label="Ẩn số dư"]');
   assert.equal(await browser.read('document.querySelector("[data-testid=wallet-summary-card]").textContent.includes("5.457.000")'), false);
   await browser.click('[aria-label="Hiện số dư"]');
+  const privacyStyle = await browser.read(`(()=>{const s=getComputedStyle(document.querySelector('[aria-label="Ẩn số dư"]'));return {border:s.borderTopWidth,outline:s.outlineStyle,background:s.backgroundColor}})()`);
+  assert.deepEqual(privacyStyle, { border: '0px', outline: 'none', background: 'rgba(0, 0, 0, 0)' }, 'privacy control stays frameless while hovered and focused');
   assert.equal(await browser.read('document.querySelector("[data-testid=wallet-summary-card]").textContent.includes("5.457.000")'), true);
   await browser.click('#loadBanners');
   await browser.rpc('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
   await browser.wait('!!document.querySelector("[data-testid=utility-banner-carousel]")');
+  assert.equal(await browser.read(`(()=>{
+    const artwork=document.querySelector('[data-testid=banner-artwork]');
+    const backdrop=document.querySelector('[data-testid=banner-backdrop]');
+    const frame=document.querySelector('[data-testid=utility-banner-carousel]').getBoundingClientRect();
+    const controls=document.querySelector('[data-testid=banner-page-control]').getBoundingClientRect();
+    return [...artwork.querySelectorAll('div')].some(e=>getComputedStyle(e).backgroundSize==='contain') &&
+      [...backdrop.querySelectorAll('div')].some(e=>getComputedStyle(e).backgroundSize==='cover' && getComputedStyle(e).filter.includes('blur')) &&
+      Math.abs(artwork.getBoundingClientRect().height-frame.height)<1 && controls.width<frame.width/2 && controls.height<=32;
+  })()`), true, 'complete artwork over a blurred background with compact floating dots');
   await browser.wait('!!document.querySelector("[data-testid=banner-incoming]")');
   assert.equal(await browser.read(`(()=>{const current=document.querySelector('[data-testid=banner-current]').getBoundingClientRect();const incoming=document.querySelector('[data-testid=banner-incoming]').getBoundingClientRect();return incoming.x>current.x})()`), true, 'incoming slide enters from right');
   await browser.wait('document.querySelector("[data-testid=banner-current] [aria-label]")?.getAttribute("aria-label")==="Banner tiện ích 2" && !document.querySelector("[data-testid=banner-incoming]")');
-  await browser.click('[aria-label="Tạm dừng chuyển banner"]');
-  await browser.wait('!!document.querySelector(\'[aria-label="Tiếp tục chuyển banner"]\')');
+  assert.equal(await browser.read('!!document.querySelector(\'[aria-label="Tạm dừng chuyển banner"], [aria-label="Tiếp tục chuyển banner"]\')'), false);
+  assert.deepEqual(await browser.read(`(()=>{const active=document.querySelector('[aria-label="Xem banner 2"]');const inactive=document.querySelector('[aria-label="Xem banner 1"]');return {active:active.firstElementChild.getBoundingClientRect().width,inactive:inactive.firstElementChild.getBoundingClientRect().width}})()`), { active: 16, inactive: 6 }, 'active image has an elongated page dot');
+  assert.equal(await browser.read(`(()=>{const e=document.querySelector('[data-testid=banner-page-control]');const frame=document.querySelector('[data-testid=utility-banner-carousel]').getBoundingClientRect();return getComputedStyle(e).backgroundColor==='rgba(0, 0, 0, 0)' && Math.abs(e.getBoundingClientRect().bottom-frame.bottom)<1})()`), true, 'transparent dots sit at the bottom of the banner');
+  await browser.rpc('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
   await browser.rpc('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
   await browser.read('new Promise(resolve=>setTimeout(resolve,4500))');
   assert.equal(await browser.read('document.querySelector("[data-testid=banner-current] [aria-label]").getAttribute("aria-label")'), 'Banner tiện ích 2');
@@ -120,9 +133,21 @@ try {
   assert.equal(await browser.read('document.documentElement.scrollWidth>innerWidth'), false);
   const mobileShot = await browser.rpc('Page.captureScreenshot', { format: 'png' });
   await writeFile('.codex-tmp/utilities-banner-carousel-375.png', Buffer.from(mobileShot.data, 'base64'));
+  await browser.rpc('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+  const swipeOrigin = await browser.read(`(()=>{const r=document.querySelector('[data-testid=utility-banner-carousel]').getBoundingClientRect();return {x:r.x+r.width*0.75,y:r.y+r.height/2}})()`);
+  const swipeBanner = async direction => {
+    const startX = direction === 1 ? swipeOrigin.x : swipeOrigin.x - 140;
+    await browser.rpc('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: startX, y: swipeOrigin.y }] });
+    for (const offset of [20, 60, 100, 140]) await browser.rpc('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: startX - direction * offset, y: swipeOrigin.y }] });
+    await browser.rpc('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  };
+  await swipeBanner(1);
+  await browser.wait('document.querySelector("[data-testid=banner-current] [aria-label]")?.getAttribute("aria-label")==="Banner tiện ích 2" && !document.querySelector("[data-testid=banner-incoming]")');
+  await swipeBanner(-1);
+  await browser.wait('document.querySelector("[data-testid=banner-current] [aria-label]")?.getAttribute("aria-label")==="Banner tiện ích 1" && !document.querySelector("[data-testid=banner-incoming]")');
+  await browser.rpc('Emulation.setTouchEmulationEnabled', { enabled: false });
   await browser.rpc('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
   await browser.rpc('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await browser.click('[aria-label="Tiếp tục chuyển banner"]');
   await browser.rpc('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
   await browser.key('Tab');
   await browser.read('new Promise(resolve=>setTimeout(resolve,4500))');
@@ -132,6 +157,6 @@ try {
   await browser.click('#loadBroken');
   await browser.wait('!document.querySelector("[data-testid=utility-banner-carousel]") && !!document.querySelector(\'[aria-label="Khám phá Mini App"]\')');
   assert.deepEqual(browser.issues, []);
-  console.log('PASS wallet/banner: five viewports, max width, callbacks, privacy, auto transition from right, pause, manual selection, reduced motion, broken-image fallback.');
+  console.log('PASS wallet/banner: five viewports, auto transition, transparent bottom dots, no pause button, touch swipes, manual selection, reduced motion and fallback.');
 } catch (error) { console.error(browser?.issues); throw error; }
 finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

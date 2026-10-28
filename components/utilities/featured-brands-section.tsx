@@ -25,7 +25,7 @@ export function FeaturedBrandsSection() {
 
   return <View testID="featured-brands-section" style={[styles.section, { backgroundColor: theme.colors.card, borderColor: theme.colors.borderSubtle }]}>
     <View style={styles.heading}>
-      <View accessible={false} importantForAccessibility="no-hide-descendants"><Ionicons name="star" size={28} color="#F5AA00" /></View>
+      <View accessible={false} importantForAccessibility="no-hide-descendants"><Ionicons name="star" size={24} color="#F5AA00" /></View>
       <View style={styles.copy}>
         <Text accessibilityRole="header" style={[styles.title, { color: theme.colors.text }]}>Thương hiệu và đối tác</Text>
         <Text style={[styles.description, { color: theme.colors.textMuted }]}>Các thương hiệu và dịch vụ được nhiều người dùng quan tâm.</Text>
@@ -46,10 +46,10 @@ export function FeaturedBrandsSection() {
 }
 
 const styles = StyleSheet.create({
-  section: { borderRadius: 18, borderWidth: 1, padding: spacing.lg, gap: spacing.lg },
-  heading: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  copy: { flex: 1, minWidth: 0, gap: spacing.xs }, title: { fontSize: 20, fontWeight: '700', lineHeight: 28 },
-  description: { fontSize: 14, lineHeight: 21 }, status: { gap: spacing.sm },
+  section: { borderRadius: 18, borderWidth: 1, padding: spacing.md, gap: spacing.md },
+  heading: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  copy: { flex: 1, minWidth: 0, gap: spacing.xs }, title: { fontSize: 18, fontWeight: '700', lineHeight: 24 },
+  description: { fontSize: 13, lineHeight: 18 }, status: { gap: spacing.sm },
   retry: { minHeight: 44, paddingHorizontal: 16, alignSelf: 'flex-start', justifyContent: 'center', borderRadius: 10 },
   empty: { fontSize: 14, lineHeight: 21, paddingVertical: spacing.sm },
 });
