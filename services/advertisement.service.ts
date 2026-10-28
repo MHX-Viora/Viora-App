@@ -86,7 +86,7 @@ export const advertisementToFeedPost = (advertisement: Advertisement, isPreview 
     isSaved: false,
     reactionType: 0,
   } as ApiPost);
-  return { ...post, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, isPreview } };
+  return { ...post, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, headline: advertisement.headline, description: advertisement.description, isPreview } };
 };
 
 export const advertisementToReel = (advertisement: Advertisement, isPreview = false): Reel => {
@@ -100,7 +100,7 @@ export const advertisementToReel = (advertisement: Advertisement, isPreview = fa
     hashtags: content.hashtags ?? [],
     user: { ...content.user, avatarUrl: content.user.avatarUrl ?? "", isFollowing: false },
   } as ApiReel);
-  return { ...reel, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, isPreview } };
+  return { ...reel, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, headline: advertisement.headline, description: advertisement.description, isPreview } };
 };
 
 export const createAdvertisementEventId = (prefix: string, advertisementId: string) =>

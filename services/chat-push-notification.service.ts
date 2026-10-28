@@ -10,15 +10,16 @@ import {
   mapChatPushNotification,
   type ChatPushNotificationModel,
 } from "@/services/chat-push-notification-data";
+import { CHAT_SOUND_CHANNEL_ID, NOTIFICATION_SOUND_ANDROID, NOTIFICATION_SOUND_FILE } from "./notification-sound";
 
-export const CHAT_NOTIFICATION_CHANNEL_ID = "messages";
+export const CHAT_NOTIFICATION_CHANNEL_ID = CHAT_SOUND_CHANNEL_ID;
 
 const ensureChatNotificationChannel = () =>
   notifee.createChannel({
     id: CHAT_NOTIFICATION_CHANNEL_ID,
     importance: AndroidImportance.HIGH,
     name: "Tin nhắn",
-    sound: "default",
+    sound: NOTIFICATION_SOUND_ANDROID,
     vibration: true,
   });
 
@@ -35,9 +36,11 @@ const buildNotification = (
   };
 
   return {
+    ios: { sound: NOTIFICATION_SOUND_FILE },
     android: {
       ...imageProps.android,
       channelId: CHAT_NOTIFICATION_CHANNEL_ID,
+      sound: NOTIFICATION_SOUND_ANDROID,
       circularLargeIcon: true,
       color: "#2868D7",
       pressAction: {

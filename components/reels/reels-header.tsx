@@ -20,6 +20,8 @@ export function ReelsHeader({
   onSearchPress,
   onSortChange,
   paddingTop = 40,
+  overlay = false,
+  top = 0,
 }: {
   activeSort: ReelSort;
   height?: number;
@@ -27,13 +29,15 @@ export function ReelsHeader({
   onSearchPress: () => void;
   onSortChange: (sort: ReelSort) => void;
   paddingTop?: number;
+  overlay?: boolean;
+  top?: number;
 }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = overlay ? theme.reels : theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <View style={[styles.container, { height, paddingTop }]}>
-      <View style={styles.row}>
+    <View style={[styles.container, { height, paddingTop, top }, overlay && styles.overlay]}>
+      <View style={[styles.row, overlay && styles.overlayRow]}>
         <Pressable
           accessibilityHint="Mở màn hình tạo bài đăng video mới"
           accessibilityLabel="Tạo bài đăng video mới"
@@ -41,10 +45,11 @@ export function ReelsHeader({
           onPress={onCreatePress}
           style={({ pressed }) => [
             styles.createButton,
+            overlay && styles.overlayCreateButton,
             pressed && styles.createButtonPressed,
           ]}
         >
-          <Ionicons color={colors.white} name="add" size={22} />
+          <Ionicons color={colors.text} name="add" size={22} />
         </Pressable>
         {SORT_TABS.map((tab) => {
           const active = activeSort === tab.value;
@@ -57,7 +62,7 @@ export function ReelsHeader({
               onPress={() => onSortChange(tab.value)}
               style={styles.tab}
             >
-              <Text style={active ? styles.active : styles.inactive}>
+              <Text style={[active ? styles.active : styles.inactive, overlay && !active && styles.overlayText]}>
                 {tab.label}
               </Text>
               {active && <View style={styles.underline} />}
@@ -70,7 +75,7 @@ export function ReelsHeader({
           hitSlop={8}
           onPress={onSearchPress}
         >
-          <Ionicons color={colors.white} name="search" size={24} />
+          <Ionicons color={colors.text} name="search" size={24} />
         </Pressable>
       </View>
     </View>
@@ -84,6 +89,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: "700",
   },
   container: {
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
     left: 0,
     position: "absolute",
@@ -91,6 +97,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     top: 0,
     zIndex: 10,
   },
+  overlay: { backgroundColor: "transparent", justifyContent: "center" },
+  overlayRow: { alignItems: "center", paddingBottom: 0 },
+  overlayCreateButton: { marginTop: 0 },
+  overlayText: { color: colors.text },
   createButton: {
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,

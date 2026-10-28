@@ -40,6 +40,7 @@ jobs:
       - name: Run lint
         run: npm run lint
 
+
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
@@ -124,7 +125,8 @@ jobs:
 
             rm -rf dist
 
-            npx expo export --platform web
+            npx expo export --platform web --clear
+            node scripts/verify-production-api.mjs dist
 
             echo
             echo "========================================"

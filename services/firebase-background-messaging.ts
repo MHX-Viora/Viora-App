@@ -5,6 +5,8 @@ import {
 } from "@react-native-firebase/messaging";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { ensureNotificationSoundChannel, notificationSoundTrigger } from "./notification-channel.service";
+import { NOTIFICATION_SOUND_FILE } from "./notification-sound";
 
 import { getCurrentNotificationData } from "@/utils/push-notification-time";
 import {
@@ -147,14 +149,15 @@ if (Platform.OS !== "web") {
       return;
     }
 
+    await ensureNotificationSoundChannel();
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         body: body || undefined,
         data: notificationData,
-        sound: "default",
+        sound: NOTIFICATION_SOUND_FILE,
         title: title || "ANKT",
       },
-      trigger: null,
+      trigger: notificationSoundTrigger(),
     });
     console.info("[FCM background] local notification scheduled", {
       messageId: remoteMessage.messageId,

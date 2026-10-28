@@ -74,6 +74,8 @@ export type AdvertisementContent = {
 };
 
 export type Advertisement = {
+  headline?: string | null;
+  description?: string | null;
   id: string;
   postId: string;
   advertiserId: string;
@@ -111,6 +113,8 @@ export type AdvertisementPage = {
 };
 
 export type CreateAdvertisementInput = {
+  headline?: string;
+  description?: string;
   postId: string;
   objective: AdvertisementObjective;
   destinationUrl?: string;
@@ -126,6 +130,8 @@ export type CreateAdvertisementInput = {
 };
 
 export type AdvertisementPresentation = {
+  headline?: string | null;
+  description?: string | null;
   id: string;
   ctaType: AdvertisementCtaType;
   destinationUrl: string | null;

@@ -1,36 +1,41 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo, useState } from "react";
 import {
+  Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemeModeSheet } from "@/components/profile/theme-mode-sheet";
+import { showAppToast } from "@/components/common/app-toast";
+import { getDeveloperPortalUrl } from "@/utils/developer-portal";
 import { TmiSponsor } from "@/components/common/tmi-sponsor";
 import { PwaInstallAction } from "@/components/pwa/pwa-install-action";
-import { setReducedGiftEffects, useReducedGiftEffects } from "@/features/live/premium-gift-effect-preference";
 import { getThemeDefinition, spacing, type AppTheme, useTheme } from "@/theme";
 
 const SETTINGS = [
-  { action: "saved", icon: "bookmark-outline", label: "Đã lưu" },
-  { action: "reacted", icon: "heart-outline", label: "Yêu thích" },
-  { action: "support", icon: "help-circle-outline", label: "Hỗ trợ" },
-  { action: "theme", icon: "color-palette-outline", label: "Giao diện" },
+  { action: "saved", icon: "bookmark", color: "#B7791F", darkColor: "#FFD166", label: "Đã lưu" },
+  { action: "reacted", icon: "heart", color: "#D6336C", darkColor: "#FF7096", label: "Yêu thích" },
+  { action: "support", icon: "help-circle", color: "#1971C2", darkColor: "#74C0FC", label: "Hỗ trợ" },
+  { action: "theme", icon: "color-palette", color: "#7048E8", darkColor: "#B197FC", label: "Giao diện" },
   {
     action: "account-settings",
-    icon: "person-circle-outline",
+    icon: "person-circle",
+    color: "#0B7285", darkColor: "#66D9E8",
     label: "Cài đặt tài khoản",
   },
-  { action: "advertisements", icon: "megaphone-outline", label: "Quảng cáo" },
+  { action: "advertisements", icon: "megaphone", color: "#D9480F", darkColor: "#FFA94D", label: "Quảng cáo" },
+  { action: "developer", icon: "code-slash", color: "#2B8A3E", darkColor: "#8CE99A", label: "ANKT Developer" },
   {
     action: "policies-terms",
-    icon: "document-text-outline",
+    icon: "document-text",
+    color: "#4263EB", darkColor: "#91A7FF",
     label: "Chính sách & điều khoản",
   },
 ] as const;
@@ -62,9 +67,17 @@ export function ProfileSettingsSheet({
 }: ProfileSettingsSheetProps) {
   const insets = useSafeAreaInsets();
   const [showThemeMode, setShowThemeMode] = useState(false);
-  const reducedGiftEffects = useReducedGiftEffects();
   const { mode, theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const openDeveloperPortal = () => {
+    const origin = Platform.OS === "web" && typeof window !== "undefined"
+      ? window.location.origin
+      : undefined;
+    void Linking.openURL(getDeveloperPortalUrl(origin)).catch(() => {
+      showAppToast({ message: "Không thể mở ANKT Developer. Vui lòng thử lại.", type: "error" });
+    });
+  };
 
   const content = (
     <View
@@ -94,17 +107,14 @@ export function ProfileSettingsSheet({
         )}
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.row}>
-          <Ionicons color={theme.colors.icon} name="sparkles-outline" size={23} />
-          <Text style={styles.rowText}>Giảm hiệu ứng quà tặng</Text>
-          <Switch accessibilityLabel="Giảm hiệu ứng quà tặng" value={reducedGiftEffects} onValueChange={setReducedGiftEffects} />
-        </View>
         {SETTINGS.map((item) => (
           <Pressable
             accessibilityRole="button"
             key={item.label}
             onPress={
-              item.action === "theme"
+              item.action === "developer"
+                ? openDeveloperPortal
+                : item.action === "theme"
                 ? () => setShowThemeMode(true)
                 : item.action === "account-settings"
                   ? onOpenAccountSettings
@@ -123,7 +133,7 @@ export function ProfileSettingsSheet({
               pressed && styles.rowPressed,
             ]}
           >
-            <Ionicons color={theme.colors.icon} name={item.icon} size={23} />
+            <Ionicons color={theme.isDark ? item.darkColor : item.color} name={item.icon} size={23} />
             <Text style={styles.rowText}>{item.label}</Text>
             {item.action === "theme" && (
               <Text style={styles.valueText}>

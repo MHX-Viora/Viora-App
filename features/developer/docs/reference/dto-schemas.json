@@ -1,0 +1,2048 @@
+{
+  "DeveloperAccountDto": {
+    "avatarUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "email": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "emailVerifiedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "fullName": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "hasPassword": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperChangePasswordRequest": {
+    "confirmPassword": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "currentPassword": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "password": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperEmailRequest": {
+    "email": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperLoginRequest": {
+    "email": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "password": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "rememberMe": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperProfileRequest": {
+    "avatarUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "fullName": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperRegisterRequest": {
+    "acceptTerms": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "confirmPassword": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "email": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "fullName": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "password": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperResetRequest": {
+    "confirmPassword": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "password": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "token": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperSessionDto": {
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "current": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "deviceInfo": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "expiresAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "lastUsedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "DeveloperTokenRequest": {
+    "token": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppActivityDto": {
+    "action": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppCreateRequest": {
+    "category": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "logoUploadId": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "name": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requestId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppDomainDto": {
+    "errorCode": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "expiresAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "fileName": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "hostname": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "lastCheckedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "message": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "verificationUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "verifiedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppDto": {
+    "appId": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "category": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "description": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "logoUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "name": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "privacyPolicyUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "shortDescription": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "supportEmail": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "termsOfServiceUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "updatedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "websiteUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppIntegrationDto": {
+    "description": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "privacyPolicyUrl": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "shortDescription": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "supportEmail": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "termsOfServiceUrl": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "websiteUrl": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppIntegrationRequest": {
+    "description": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "privacyPolicyUrl": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "shortDescription": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "supportEmail": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "termsOfServiceUrl": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "websiteUrl": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppLogoDto": {
+    "uploadId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "url": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublicationDto": {
+    "approvedReviewRequestId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publishedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "unpublishedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionCode": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublicationPageDto": {
+    "items": {
+      "type": "MiniAppPublicationDto[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "page": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "pageSize": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "total": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublicationReadinessDto": {
+    "approvedReviewRequestId": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "appVersion": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "blockingReasons": {
+      "type": "string[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "canPublish": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "canUnpublish": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evaluatedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "operationalRevision": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publicationId": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publicationRevision": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "snapshotHash": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublicDetailDto": {
+    "app": {
+      "type": "MiniAppPublicItemDto",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "canOpen": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "capabilities": {
+      "type": "string[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "loginAvailable": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublicItemDto": {
+    "category": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "description": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "logoUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "name": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "version": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublicPageDto": {
+    "items": {
+      "type": "MiniAppPublicItemDto[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "page": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "pageSize": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "total": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublishRequest": {
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "operationalRevision": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publicationId": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publicationRevision": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requestId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppPublishResultDto": {
+    "appVersion": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "operationalRevision": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publication": {
+      "type": "MiniAppPublicationDto",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReadinessCheck": {
+    "key": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "message": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requirement": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReadinessDto": {
+    "checkedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "checks": {
+      "type": "MiniAppReadinessCheck[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "configurationReady": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "readyForReview": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "readyForSandbox": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "reviewAvailable": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "sandboxAvailable": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewActionDto": {
+    "action": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "actorType": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "afterState": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "beforeState": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "reason": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewChangeItem": {
+    "field": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "message": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewDetailDto": {
+    "actions": {
+      "type": "MiniAppReviewActionDto[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "changes": {
+      "type": "MiniAppReviewChangeItem[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evidence": {
+      "type": "MiniAppReviewEvidenceAttestation",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "reason": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "review": {
+      "type": "MiniAppReviewSummaryDto",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "snapshot": {
+      "type": "MiniAppVersionSnapshot",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "snapshotHash": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionName": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewEvidenceAttestation": {
+    "checks": {
+      "type": "SandboxReadinessCheck[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "configurationFingerprint": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evaluatedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "sandboxRunId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "schemaVersion": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "snapshotHash": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewPageDto": {
+    "items": {
+      "type": "MiniAppReviewSummaryDto[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "page": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "pageSize": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "total": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewReadinessDto": {
+    "appVersion": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "blockingReasons": {
+      "type": "string[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "configurationFingerprint": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evaluatedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "readyForReview": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requiredChecks": {
+      "type": "SandboxReadinessCheck[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "sandboxRunId": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "snapshotHash": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "warnings": {
+      "type": "string[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewSubmitRequest": {
+    "appVersion": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requestId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppReviewSummaryDto": {
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "decidedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "reviewStartedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "submittedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionCode": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppUnpublishRequest": {
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "operationalRevision": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publicationId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "publicationRevision": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "reason": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requestId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppUpdateRequest": {
+    "category": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "description": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "logoUploadId": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "name": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "privacyPolicyUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "shortDescription": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "supportEmail": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "termsOfServiceUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "websiteUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppVersionCreateRequest": {
+    "appVersion": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requestId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionName": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppVersionDetailDto": {
+    "snapshot": {
+      "type": "MiniAppVersionSnapshot",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "version": {
+      "type": "MiniAppVersionSummaryDto",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppVersionPageDto": {
+    "items": {
+      "type": "MiniAppVersionSummaryDto[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "page": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "pageSize": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "total": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppVersionSnapshot": {
+    "category": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "description": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "domain": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "logoUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "name": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "privacyPolicyUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "production": {
+      "type": "MiniAppVersionSsoIntent | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "sandbox": {
+      "type": "MiniAppVersionSsoIntent | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "schemaVersion": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "shortDescription": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "supportEmail": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "termsOfServiceUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "websiteUrl": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppVersionSummaryDto": {
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "snapshotHash": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "state": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "submittedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "updatedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionCode": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionName": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "MiniAppVersionUpdateRequest": {
+    "concurrencyToken": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "requestId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "versionName": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxDiagnosticDto": {
+    "category": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "code": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "count": {
+      "type": "number | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evidenceSource": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "level": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "sessionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "testRunId": {
+      "type": "UUID | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxDiagnosticsPage": {
+    "droppedCount": {
+      "type": "number",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "items": {
+      "type": "SandboxDiagnosticDto[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "nextCursor": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxReadinessCheck": {
+    "applicable": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evidenceAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evidenceSource": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "key": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "messageCode": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxReadinessDto": {
+    "blockingIssues": {
+      "type": "string[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "checks": {
+      "type": "SandboxReadinessCheck[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "configurationFingerprint": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "configurationReady": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "environment": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "evaluatedAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "readyForReview": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "readyForSandbox": {
+      "type": "boolean",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "warnings": {
+      "type": "string[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxRunPage": {
+    "items": {
+      "type": "SandboxRunSummary[]",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "nextCursor": {
+      "type": "string | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxRunRequest": {
+    "checks": {
+      "type": "string[] | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "sessionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxRunSummary": {
+    "completedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "configurationFingerprint": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "deadlineAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "environment": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "sessionId": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "startedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "status": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "summaryCode": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  },
+  "SandboxSessionDto": {
+    "appId": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "configurationFingerprint": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "createdAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "environment": {
+      "type": "string",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "expiresAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "id": {
+      "type": "UUID",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "lastActivityAt": {
+      "type": "ISO 8601 datetime",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    },
+    "revokedAt": {
+      "type": "ISO 8601 datetime | null",
+      "jsonRequired": false,
+      "validationRequired": false,
+      "minLength": null,
+      "maxLength": null
+    }
+  }
+}

@@ -85,7 +85,7 @@ Chat messages, conversation previews, and stickers now use cache-first stale-whi
 | Friends / following | Frequently changing | Tab/query changes reset before fetch; request ownership should be hardened | Deferred: keyed 60s cache + request-ID/single-flight |
 | Search | Ephemeral | Feed search already debounces and guards request order; persistence would be wasteful | Keep ephemeral; optional in-flight dedupe only |
 | Articles | Semi-static | Reader/editor refetch by ID; reading analytics must remain independent | Deferred: article-by-ID memory cache, ~5m |
-| Mini Apps / weather | Semi-static external | Weather/location refetches on mount; abort handling exists | Deferred: location-keyed 5-10m SWR cache |
+| Weather | Semi-static external | Weather/location refetches on mount; abort handling exists | Deferred: location-keyed 5-10m SWR cache |
 
 These deferred modules were not broadly rewritten because each needs mutation-aware invalidation and separate acceptance tests; a global cache would risk stale social state.
 

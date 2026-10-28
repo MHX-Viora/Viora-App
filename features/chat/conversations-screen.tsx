@@ -8,6 +8,7 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -79,6 +80,7 @@ export function ConversationsScreen({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { height: viewportHeight, isDesktopWeb } = useResponsive();
+  const qrCameraMaxSize = Math.min(480, Math.max(120, viewportHeight - insets.top - insets.bottom - 240));
   const params = useLocalSearchParams<{
     conversationId?: string | string[];
     scrollToMessageId?: string | string[];
@@ -759,9 +761,12 @@ export function ConversationsScreen({
             <View style={styles.headerIconButton} />
           </View>
           {cameraPermission?.granted ? (
-            <View style={styles.qrBody}>
+            <ScrollView
+              style={styles.qrScroll}
+              contentContainerStyle={[styles.qrBody, { paddingBottom: insets.bottom + spacing.lg }]}
+            >
               <Text style={styles.qrHelp}>Đặt mã QR nhóm vào giữa khung hình</Text>
-              <View style={styles.cameraWrap}>
+              <View style={[styles.cameraWrap, { maxWidth: qrCameraMaxSize }]}>
                 <CameraView
                   barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
                   onBarcodeScanned={qrScanning ? handleGroupQrScanned : undefined}
@@ -796,7 +801,7 @@ export function ConversationsScreen({
                   ) : null}
                 </View>
               ) : null}
-            </View>
+            </ScrollView>
           ) : (
             <View style={styles.qrPermission}>
               <Ionicons color={colors.textMuted} name="camera-outline" size={42} />
@@ -1075,6 +1080,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingTop: spacing.md,
   },
   cameraWrap: {
+    alignSelf: "center",
     aspectRatio: 1,
     backgroundColor: colors.text,
     borderRadius: 16,
@@ -1092,13 +1098,18 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 15,
     fontWeight: "900",
   },
-  qrBody: { flex: 1, gap: spacing.lg, padding: spacing.lg },
+  qrScroll: { flex: 1, minHeight: 0 },
+  qrBody: { alignSelf: "center", flexGrow: 1, gap: spacing.lg, maxWidth: 560, padding: spacing.lg, width: "100%" },
   qrHeader: {
     alignItems: "center",
+    alignSelf: "center",
+    flexShrink: 0,
     flexDirection: "row",
     justifyContent: "space-between",
+    maxWidth: 560,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
+    width: "100%",
   },
   qrHelp: {
     color: colors.textMuted,
@@ -1148,7 +1159,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
-  qrScreen: { backgroundColor: colors.background, flex: 1 },
+  qrScreen: { backgroundColor: colors.background, flex: 1, minHeight: 0 },
   qrTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
   quickMenu: {
     backgroundColor: colors.surface,

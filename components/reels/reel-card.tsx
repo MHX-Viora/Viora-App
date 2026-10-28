@@ -3,7 +3,7 @@ import { useEvent } from "expo";
 import { Image } from "expo-image";
 import { useVideoPlayer, VideoView } from "expo-video";
 import * as WebBrowser from "expo-web-browser";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, type RefObject } from "react";
 import type { GestureResponderEvent, LayoutChangeEvent } from "react-native";
 import {
   ActivityIndicator,
@@ -47,6 +47,44 @@ import { advertisementCtaLabel } from "@/utils/advertisement-format";
 import { formatReelTime } from "@/utils/reel-time";
 import { type ThemeColors, useTheme } from "@/theme";
 
+
+function ReelWebBackdrop({ active, source, videoRef }: { active: boolean; source: string; videoRef: RefObject<VideoView | null> }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current?.nativeRef.current;
+    if (!canvas || !(video instanceof HTMLVideoElement)) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    let frame = 0;
+    let lastPaint = -Infinity;
+    const paint = (time: number) => {
+      if (video.readyState >= 2 && video.videoWidth > 0 && time - lastPaint >= 100) {
+        const height = Math.max(1, Math.round(160 * video.videoHeight / video.videoWidth));
+        if (canvas.width !== 160 || canvas.height !== height) {
+          canvas.width = 160;
+          canvas.height = height;
+        }
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        lastPaint = time;
+      }
+    };
+    const tick = (time: number) => {
+      paint(time);
+      frame = requestAnimationFrame(tick);
+    };
+    const paintLoadedFrame = () => paint(performance.now());
+    video.addEventListener("loadeddata", paintLoadedFrame);
+    paintLoadedFrame();
+    if (active) frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      video.removeEventListener("loadeddata", paintLoadedFrame);
+    };
+  }, [active, source, videoRef]);
+
+  return <canvas aria-hidden="true" ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: "blur(28px)", transform: "scale(1.12)", opacity: 0.65, pointerEvents: "none" }} />;
+}
 
 export function ReelCard({
   active,
@@ -224,7 +262,7 @@ export function ReelCard({
   const progress = duration > 0 ? Math.min(displayedTime / duration, 1) : 0;
   const containedVideoSize = videoSourceSize
     ? getContainedVideoSize({
-        containerHeight: videoViewportSize.height,
+        containerHeight: Math.max(0, videoViewportSize.height - safeBottomInset),
         containerWidth: getReelVideoContentWidth({
           containerWidth: videoViewportSize.width,
           isDesktopWeb,
@@ -437,7 +475,11 @@ export function ReelCard({
             style={styles.videoBackdrop}
           />
         ) : null}
-        <View style={styles.videoContentArea}>
+        {Platform.OS === "web" ? <ReelWebBackdrop active={active} source={reel.videoUrl} videoRef={videoViewRef} /> : null}
+        <View style={[
+          styles.videoContentArea,
+          { bottom: safeBottomInset },
+        ]}>
           <View style={[styles.videoFrame, containedVideoSize]}>
             <VideoView
               contentFit="contain"

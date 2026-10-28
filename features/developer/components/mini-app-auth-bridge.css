@@ -1,0 +1,8 @@
+.auth-bridge-preview{--primary:#0866e6;--primary-hover:#0758c7;min-width:0;display:grid;gap:14px;background:#fff}
+.auth-bridge-preview h2,.auth-bridge-preview p{margin:0}
+.auth-bridge-preview>p{line-height:1.6;color:#43596b}
+.auth-bridge-preview [role=status]{justify-self:start;border:1px solid #cbdcf5;border-radius:6px;padding:7px 12px;background:#edf5ff;color:#174c91}
+.auth-bridge-preview [role=status][data-state=Connected]{border-color:#b8ddc6;background:#f0faf4;color:#21653c}
+.auth-bridge-preview [role=status][data-state=Failed],.auth-bridge-preview [role=status][data-state="Session Expired"]{border-color:#efc5c5;background:#fff4f4;color:#9b3030}
+.auth-bridge-preview>.button{justify-self:start;min-height:44px}
+.auth-bridge-preview iframe{box-sizing:border-box;max-width:100%;background:#f5f9ff}

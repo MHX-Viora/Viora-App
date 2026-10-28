@@ -18,6 +18,8 @@ import {
   savePendingIncomingCall,
 } from "@/services/pending-incoming-call.service";
 import { registerAnktServiceWorker } from "@/services/pwa.service.web";
+import { playNotificationSound } from "./notification-sound.service";
+import { getActiveChatConversation } from "@/features/chat/chat-events";
 
 const DEVICE_ID_KEY = "ankt.web-push-device-id";
 const TOKEN_KEY = "ankt.web-push-token";
@@ -72,7 +74,12 @@ const handleForegroundMessage = (data: Record<string, unknown>) => {
     if (type === "CallAnsweredElsewhere" && isAcceptedOnCurrentRealtimeConnection(data)) return;
     void clearPendingIncomingCall(callId);
     emitCallLifecycle(type, data);
+    return;
   }
+  if (type === "chat" && (data.isMuted === true || data.isMuted === "true" || data.conversationId === getActiveChatConversation())) return;
+  if (data.isRead === true || data.isRead === "true") return;
+  const key = type === "chat" ? data.messageId : data.notificationId;
+  void playNotificationSound(typeof key === "string" ? key : undefined);
 };
 
 export const registerPushNotifications = async (): Promise<string | null> => {

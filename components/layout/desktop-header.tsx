@@ -55,7 +55,7 @@ function HeaderTab({
     >
       <View style={styles.tabIconWrap}>
         <Ionicons
-          color={active ? theme.colors.primary : theme.colors.textMuted}
+          color={theme.isDark ? (active ? theme.colors.primary : theme.colors.textMuted) : "#FFFFFF"}
           name={active ? item.iconActive : item.icon}
           size={23}
         />
@@ -161,10 +161,13 @@ export function DesktopHeader({
   );
 }
 
-const createStyles = (theme: AppTheme) =>
-  StyleSheet.create({
+const createStyles = (theme: AppTheme) => {
+  const background = theme.isDark ? theme.colors.surface : "#991F1B";
+  const foreground = theme.isDark ? theme.colors.text : "#FFFFFF";
+  const active = theme.isDark ? theme.colors.primary : "#FFFFFF";
+  return StyleSheet.create({
     activeIndicator: {
-      backgroundColor: theme.colors.primary,
+      backgroundColor: active,
       borderRadius: 2,
       bottom: 0,
       height: 3,
@@ -206,14 +209,14 @@ const createStyles = (theme: AppTheme) =>
     },
     brandPressed: { opacity: 0.72 },
     brandText: {
-      color: theme.colors.text,
+      color: foreground,
       fontSize: 21,
       fontWeight: "900",
       letterSpacing: 0.8,
     },
     header: {
-      backgroundColor: theme.colors.surface,
-      borderBottomColor: theme.colors.borderSubtle,
+      backgroundColor: background,
+      borderBottomColor: theme.isDark ? theme.colors.borderSubtle : "rgba(255, 255, 255, 0.18)",
       borderBottomWidth: 1,
       height: layout.desktopHeaderHeight,
       left: 0,
@@ -267,10 +270,10 @@ const createStyles = (theme: AppTheme) =>
       paddingHorizontal: spacing.md,
       position: "relative",
     },
-    tabHovered: { backgroundColor: theme.colors.primarySoft },
+    tabHovered: { backgroundColor: theme.isDark ? theme.colors.primarySoft : "rgba(255, 255, 255, 0.12)" },
     tabIconWrap: { position: "relative" },
-    tabLabel: { color: theme.colors.textMuted, fontSize: 11, fontWeight: "700" },
-    tabLabelActive: { color: theme.colors.primary },
+    tabLabel: { color: theme.isDark ? theme.colors.textMuted : foreground, fontSize: 11, fontWeight: "700" },
+    tabLabelActive: { color: active },
     user: {
       alignItems: "center",
       flexDirection: "row",
@@ -279,9 +282,10 @@ const createStyles = (theme: AppTheme) =>
       minWidth: 132,
     },
     userName: {
-      color: theme.colors.text,
+      color: foreground,
       fontSize: 13,
       fontWeight: "700",
       maxWidth: 100,
     },
   });
+};

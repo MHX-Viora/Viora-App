@@ -7,11 +7,12 @@ import { type ThemeColors, useTheme } from "@/theme";
 
 
 type Props = {
+  isMarkingAllRead?: boolean;
   onMarkAllRead: () => void;
   unreadCount: number;
 };
 
-export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
+export function NotificationHeader({ isMarkingAllRead = false, onMarkAllRead, unreadCount }: Props) {
   const { theme } = useTheme();
   const colors = theme.notifications;
   const { isDesktopWeb, isWeb } = useResponsive();
@@ -31,10 +32,12 @@ export function NotificationHeader({ onMarkAllRead, unreadCount }: Props) {
       {unreadCount > 0 && (
         <Pressable
           accessibilityRole="button"
+          accessibilityState={{ busy: isMarkingAllRead, disabled: isMarkingAllRead }}
+          disabled={isMarkingAllRead}
           onPress={onMarkAllRead}
           style={styles.action}
         >
-          <Text style={styles.actionText}>Đánh dấu tất cả đã đọc</Text>
+          <Text style={styles.actionText}>{isMarkingAllRead ? "Đang đánh dấu…" : "Đánh dấu tất cả đã đọc"}</Text>
         </Pressable>
       )}
     </View>

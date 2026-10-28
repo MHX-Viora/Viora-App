@@ -1,4 +1,4 @@
-const SHELL_CACHE = "ankt-shell-v1";
+const SHELL_CACHE = "ankt-shell-v2";
 const STATIC_CACHE = "ankt-static-v1";
 const CURRENT_CACHES = new Set([SHELL_CACHE, STATIC_CACHE]);
 const SHELL_FILES = [
@@ -89,6 +89,8 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || isSensitivePath(url.pathname)) return;
+    // Developer account pages and APIs require the network; never cache private responses.
+  if (url.pathname === "/developers" || url.pathname.startsWith("/developers/")) return;
   if (request.mode === "navigate") {
     event.respondWith(networkFirstNavigation(request));
     return;

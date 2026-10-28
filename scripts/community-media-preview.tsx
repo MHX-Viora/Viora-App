@@ -28,7 +28,7 @@ function Preview() {
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, padding: 8 }}>
       {ratios.map(([x,y], i) => <Pressable accessibilityRole="button" key={i} onPress={() => { setIndex(i); setFailed(false); }}><Text style={{ color: theme.colors.text }}>{x}x{y}</Text></Pressable>)}
       <Pressable accessibilityRole="button" onPress={() => setFailed(true)}><Text style={{ color: theme.colors.text }}>404</Text></Pressable>
-      <Pressable accessibilityRole="button" onPress={() => void setMode(theme.isDark ? "classic" : "modern")}><Text style={{ color: theme.colors.text }}>Theme</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => void setMode(theme.isDark ? "classic" : "premium-ocean")}><Text style={{ color: theme.colors.text }}>Theme</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => setProfileMode(value => !value)}><Text style={{ color: theme.colors.text }}>Profile</Text></Pressable>
       <Pressable accessibilityRole="button" onPress={() => setAccountStyle(value => value === 0 ? 2 : 0)}><Text style={{ color: theme.colors.text }}>Author/Personal</Text></Pressable>
     </View>

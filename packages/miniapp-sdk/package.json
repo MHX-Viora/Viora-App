@@ -1,0 +1,33 @@
+{
+  "name": "@ankt/miniapp-sdk",
+  "version": "0.4.1",
+  "sdkReleasedAt": "2026-10-27",
+  "private": true,
+  "type": "module",
+  "description": "ANKT Mini App Auth Bridge SDK",
+  "exports": {
+    "./bridge-auth": {
+      "types": "./dist/host-auth.d.ts",
+      "import": "./dist/host-auth.js"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/clean-legacy-output.mjs && tsc -p tsconfig.json && node scripts/build-browser.mjs",
+    "test": "npm run build && node --test --experimental-test-isolation=none tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

@@ -1,0 +1,83 @@
+.developer-site .mini-page-heading,.developer-site .mini-detail-heading,.developer-site .mini-dialog-heading,.developer-site .mini-actions { display:flex; align-items:center; gap:16px; }
+.developer-site .mini-page-heading { justify-content:space-between; margin-bottom:32px; align-items:flex-start; }
+.developer-site .mini-page-heading h1,.developer-site .mini-detail-heading h1 { margin:0 0 8px; }
+.developer-site .mini-page-heading .button { flex-shrink:0; }
+.developer-site .mini-app-list { display:grid; gap:12px; }
+.developer-site .mini-app-card { display:flex; align-items:center; gap:20px; padding:24px; border:1px solid #dfe4e9; border-radius:12px; background:#fff; color:#172333; text-decoration:none; transition:border-color .15s; }
+.developer-site .mini-app-card:hover { border-color:#2f59d9; }
+.developer-site .mini-app-card-content { flex:1; min-width:0; display:grid; gap:8px; }
+.developer-site .mini-app-card-content strong { font-size:1.1rem; }
+.developer-site .mini-logo { width:64px; height:64px; border-radius:14px; object-fit:cover; flex-shrink:0; }
+.developer-site .mini-logo-placeholder { display:grid; place-items:center; background:#eef2f9; color:#3457ad; font-size:2rem; }
+.developer-site .mini-status { display:inline-block; justify-self:start; width:fit-content; padding:4px 10px; border-radius:6px; background:#f1f3f6; color:#526073; font-size:.78rem; font-weight:600; }
+.developer-site .mini-dialog { width:min(520px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow-y:auto; padding:28px; border:1px solid #dfe4e9; border-radius:16px; background:#fff; color:#172333; box-shadow:0 24px 80px #17233326; font-family:inherit; box-sizing:border-box; }
+.developer-site .mini-dialog::backdrop { background:#101d32a6; }
+.developer-site .mini-dialog-heading { justify-content:space-between; margin-bottom:12px; }
+.developer-site .mini-dialog h2 { font-size:1.5rem; margin:0; }
+.developer-site .mini-icon-button { display:grid; place-items:center; min-width:44px; min-height:44px; border:1px solid #dfe4e9; border-radius:8px; background:#fff; color:#172333; cursor:pointer; font-size:1.5rem; }
+.developer-site .mini-dialog fieldset,.developer-site .mini-section fieldset { border:0; padding:0; margin:0; min-width:0; }
+.developer-site .mini-logo-field { display:flex; gap:16px; align-items:center; min-width:0; }
+.developer-site .mini-logo-field input { min-width:0; width:100%; padding:8px; }
+.developer-site .form-field select,.developer-site .form-field textarea { font:inherit; padding:12px; border:1px solid #cbd4df; border-radius:8px; width:100%; min-width:0; box-sizing:border-box; background:#fff; color:#172333; }
+.developer-site .form-field textarea { resize:vertical; }
+.developer-site .mini-actions { flex-wrap:wrap; margin-top:20px; }
+.developer-site .mini-skeletons { display:grid; gap:12px; }
+.developer-site .mini-skeleton { height:120px; border-radius:12px; background:#eef2f6; animation:mini-pulse 1.5s ease-in-out infinite alternate; }
+@keyframes mini-pulse { to { opacity:.45; } }
+.developer-site .mini-detail-heading { margin:24px 0 32px; align-items:flex-start; }
+.developer-site .mini-detail-heading>div { min-width:0; }
+.developer-site .mini-tabs { display:flex; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin; gap:4px; border-bottom:1px solid #dfe4e9; padding-bottom:8px; }
+.developer-site .mini-tabs button { flex-shrink:0; white-space:nowrap; font:inherit; font-size:.875rem; min-height:44px; padding:8px 12px; border:0; border-radius:7px; background:transparent; color:#526073; cursor:pointer; }
+.developer-site .mini-tabs button[aria-selected=true] { background:#edf2ff; color:#2048b5; font-weight:600; }
+.developer-site .mini-section { padding:28px 0; }
+.developer-site .mini-section h2 { margin:0 0 24px; }
+.developer-site .mini-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 20px; }
+.developer-site .mini-facts { display:grid; grid-template-columns:140px minmax(0,1fr); gap:16px; }
+.developer-site .mini-facts dt { color:#637084; }.developer-site .mini-facts dd { margin:0; }
+.developer-site .mini-callback { display:flex; gap:12px; align-items:center; }
+.developer-site .mini-callback .form-field { flex:1; min-width:0; }
+.developer-site .mini-credential { font-family:monospace; font-size:.85rem; background:#f5f7fa; }
+.developer-site .mini-section .form-field>.button { align-self:flex-start; width:fit-content; }
+.developer-site .mini-dirty { color:#8a5718; background:#fff7e8; padding:12px 16px; border-radius:8px; }
+.developer-site .mini-checklist { list-style:none; padding:0; display:grid; gap:16px; }
+.developer-site .mini-checklist span { color:#2f59d9; }
+.developer-site .mini-activity { list-style:none; padding:0; }
+.developer-site .mini-activity li { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; padding:16px 0; border-bottom:1px solid #e6e9ee; }
+.developer-site .mini-activity time { color:#637084; font-size:.85rem; }
+.developer-site .mini-danger { color:#a02b2b; }
+.developer-site code { overflow-wrap:anywhere; word-break:break-word; }
+.developer-site .console-content { min-width:0; }
+.developer-site .console-sidebar nav button { font:inherit; text-align:left; border:0; background:transparent; color:inherit; padding:12px 14px; border-radius:8px; cursor:pointer; }
+.developer-site .console-sidebar nav button:hover { background:#edf2ff; }
+.developer-site .mini-menu-toggle,.developer-site .mini-drawer-backdrop { display:none; }
+.developer-site .mini-app-card:focus-visible,.developer-site button:focus-visible,.developer-site select:focus-visible { outline:3px solid #3664df; outline-offset:3px; }
+@media(max-width:760px) {
+  .developer-site .console-layout { display:block; }
+  .developer-site .mini-menu-toggle { display:inline-flex; margin-bottom:24px; }
+  .developer-site .console-sidebar { display:none; }
+  .developer-site .console-sidebar.mini-sidebar-open { display:block; position:fixed; top:0; left:0; bottom:0; width:min(280px,85vw); box-sizing:border-box; z-index:101; background:#fff; padding:32px 20px; overflow-y:auto; }
+  .developer-site .mini-drawer-backdrop { display:block; position:fixed; inset:0; border:0; z-index:100; background:#101d3299; }
+  .developer-site .mini-page-heading { flex-direction:column; gap:16px; }
+  .developer-site .mini-form-grid { grid-template-columns:1fr; }
+  .developer-site .mini-app-card { padding:16px; gap:12px; }
+  .developer-site .mini-logo { width:52px; height:52px; }
+  .developer-site .mini-facts { grid-template-columns:1fr; gap:6px; }
+  .developer-site .mini-facts dd { margin-bottom:14px; }
+  .developer-site .mini-dialog { padding:20px; }
+}
+@media(prefers-reduced-motion:reduce) { .developer-site .mini-skeleton { animation:none; } }
+.developer-site .mini-domain-section,.developer-site .mini-readiness-section { border-top:1px solid #dfe4e9; padding:32px 0; }
+.developer-site .mini-configuration h3 { margin:28px 0 16px; font-size:1.2rem; }
+.developer-site .mini-domain-section .mini-page-heading,.developer-site .mini-readiness-section .mini-page-heading { margin-bottom:16px; }
+.developer-site .mini-domain-section .mini-page-heading h3,.developer-site .mini-readiness-section .mini-page-heading h3 { margin:0 0 8px; }
+.developer-site .mini-domain-steps { padding-left:24px; line-height:1.7; }.developer-site .mini-domain-steps li { margin:10px 0; overflow-wrap:anywhere; }
+.developer-site .mini-verification-url { padding:16px; background:#f4f7fb; border-radius:8px; margin:20px 0; overflow-wrap:anywhere; }
+.developer-site .mini-verification-url span { display:block; font-size:.8rem; color:#526073; margin-bottom:8px; }
+.developer-site .mini-verification-url a { color:#234ba9; }
+.developer-site .mini-verified,.developer-site .mini-save-notice { background:#eaf7ef; color:#216540; }
+.developer-site .mini-save-notice { padding:12px 16px; border-radius:8px; }
+.developer-site .mini-readiness-list { padding:0; list-style:none; }
+.developer-site .mini-readiness-list li { display:flex; gap:12px; align-items:flex-start; padding:16px 0; border-bottom:1px solid #e6e9ee; }
+.developer-site .mini-readiness-list li>div { flex:1; min-width:0; }.developer-site .mini-readiness-list p { margin:6px 0 0; color:#637084; font-size:.875rem; }
+.developer-site .mini-pass { color:#216540; }.developer-site .mini-check-warning { color:#8a5718; }
+.developer-site [hidden] { display:none!important; }

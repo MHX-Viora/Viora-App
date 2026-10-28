@@ -47,12 +47,12 @@ export function ReelsSearchModal({
   visible: boolean;
 }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isDesktopWeb } = useResponsive();
   const dialogLayout = getResponsiveDialogLayout({
     isDesktopWeb,
-    maxWidth: 900,
+    maxWidth: 960,
   });
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Reel[]>([]);
@@ -108,12 +108,12 @@ export function ReelsSearchModal({
 
   const searchHeader = (
     <View style={[styles.searchBox, styles.floatingSearchBox]}>
-      <Ionicons color={colors.white} name="search" size={20} />
+      <Ionicons color={colors.textMuted} name="search" size={20} />
       <TextInput
         accessibilityLabel="Tìm kiếm video ngắn"
         onChangeText={setQuery}
         placeholder="Tìm video, người đăng, hashtag..."
-        placeholderTextColor={colors.visuals.rgb_255_255_255_0_78}
+        placeholderTextColor={colors.textMuted}
         returnKeyType="search"
         style={[styles.input, styles.floatingInput]}
         value={query}
@@ -125,7 +125,7 @@ export function ReelsSearchModal({
           hitSlop={8}
           onPress={() => setQuery("")}
         >
-          <Ionicons color={colors.white} name="close-circle" size={20} />
+          <Ionicons color={colors.textMuted} name="close-circle" size={20} />
         </Pressable>
       )}
     </View>
@@ -229,7 +229,7 @@ export function ReelsSearchModal({
 
 function ReelSearchSkeleton() {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const opacity = useRef(new Animated.Value(0.45)).current;
 
@@ -277,7 +277,7 @@ function EmptySearch({
   title: string;
 }) {
   const { theme } = useTheme();
-  const colors = theme.reels;
+  const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.emptyState}>
@@ -324,7 +324,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontWeight: "700",
     marginTop: spacing.sm,
   },
-  floatingInput: { color: colors.white },
+  floatingInput: { color: colors.text },
   floatingSearchBox: {
     backgroundColor: colors.surfaceElevated,
     borderColor: colors.border,

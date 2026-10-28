@@ -165,8 +165,10 @@
         {
           "icon": "./assets/images/viora_logo.png",
           "color": "#2868D7",
+          "defaultChannel": "ankt_notifications_v2",
           "sounds": [
-            "./assets/audio/nhac_chuong.mp3"
+            "./assets/audio/nhac_chuong.mp3",
+            "./assets/audio/ankt_notification.wav"
           ]
         }
       ],

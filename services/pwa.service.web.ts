@@ -8,6 +8,7 @@ import {
   type PwaUpdateResult,
 } from "@/features/pwa/install-policy";
 import { getActiveVoiceCall } from "@/features/calls/call-events";
+import { activateLegacyWorkerReplacement } from '@/features/pwa/worker-migration';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -88,6 +89,9 @@ export const registerAnktServiceWorker = (
   registrationPromise = navigator.serviceWorker
     .register(workerUrl(options), { scope: "/" })
     .then((registration) => {
+      if (activateLegacyWorkerReplacement(registration, navigator.serviceWorker.controller?.scriptURL, window.location.origin)) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => emit({ updateAvailable: false }), { once: true });
+      }
       watchWorkerUpdates(registration);
       return registration;
     })

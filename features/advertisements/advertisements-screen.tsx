@@ -15,7 +15,7 @@ import { formatVnd } from "@/utils/wallet-format";
 const FILTERS = [
   { label: "Tất cả", status: null },
   { label: "Đang chạy", status: AdvertisementStatus.Active },
-  { label: "Chờ duyệt", status: AdvertisementStatus.Pending },
+  { label: "Đã lên lịch", status: AdvertisementStatus.Approved },
   { label: "Tạm dừng", status: AdvertisementStatus.Paused },
   { label: "Hoàn thành", status: AdvertisementStatus.Completed },
   { label: "Bị từ chối", status: AdvertisementStatus.Rejected },

@@ -24,6 +24,7 @@ export function ReelAction({
   const { theme } = useTheme();
   const colors = theme.reels;
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const iconSize = icon === "heart" ? 36 : icon === "chatbubble" ? 30 : 24;
   const selectedColor =
     icon === "heart"
       ? colors.danger
@@ -43,7 +44,7 @@ export function ReelAction({
         <Ionicons
           color={selected ? selectedColor : colors.white}
           name={icon}
-          size={24}
+          size={iconSize}
         />
       </Pressable>
       {value && <Text style={styles.actionValue}>{value}</Text>}
@@ -62,17 +63,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   circleAction: {
     alignItems: "center",
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.borderSubtle,
-    borderRadius: 23,
-    borderWidth: 1,
-    elevation: 5,
     height: 46,
     justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOffset: { height: 2, width: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 5,
     width: 46,
   },
 });

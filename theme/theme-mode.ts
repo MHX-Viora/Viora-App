@@ -1,7 +1,7 @@
 export const THEME_STORAGE_KEY = "theme_mode";
 export const DEFAULT_THEME_MODE = "classic" as const;
 
-export const THEME_MODES = ["modern", "premium-ocean", "classic"] as const;
+export const THEME_MODES = ["premium-ocean", "classic"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
 export function normalizeThemeMode(value: string | null): ThemeMode {

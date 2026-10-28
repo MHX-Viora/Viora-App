@@ -1,4 +1,5 @@
-import { Stack, router, useSegments } from "expo-router";
+import { Stack, router, useSegments, type Href } from "expo-router";
+import { isPublicMiniAppRoute, miniAppsEnabled } from "@/features/mini-apps/lib/host-controller";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import {
@@ -134,8 +135,13 @@ function RootLayoutContent() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const checkLoginStatus = async () => {
+      // This route only opens the independent portal; it needs no ANKT session.
+      if (segments[0] === "developers") return;
+      if (Platform.OS === "web" && isPublicMiniAppRoute(segments, miniAppsEnabled)) return;
       const session = await ensureFreshSession();
+      if (cancelled) return;
       const currentRoute = segments[0];
 
       const isAuthRoute =
@@ -200,17 +206,20 @@ function RootLayoutContent() {
 
     void checkLoginStatus()
       .catch(async (error: unknown) => {
+        if (cancelled) return;
         console.info(
           "[Session] initial hydration failed",
           error instanceof Error ? error.message : String(error),
         );
         // A failed notification restore or temporary storage error is not a logout.
         const remainingSession = await getSession().catch(() => undefined);
+        if (cancelled) return;
         if (remainingSession === null || (remainingSession && hasSessionIdentityMismatch(remainingSession))) {
           router.replace("/login");
         }
       })
-      .finally(() => setIsAppReady(true));
+      .finally(() => { if (!cancelled) setIsAppReady(true); });
+    return () => { cancelled = true; };
   }, [segments, sessionRevision]);
 
   return (

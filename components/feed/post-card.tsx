@@ -24,7 +24,7 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { deletePost, reportPost } from "@/services/post.service";
 import { spacing, typography } from "@/theme";
 import type { FeedPost } from "@/types/feed";
-import { AdvertisementFeedbackType } from "@/types/advertisement";
+import { AdvertisementCtaType, AdvertisementFeedbackType } from "@/types/advertisement";
 import { advertisementCtaLabel, advertisementDestinationLabel } from "@/utils/advertisement-format";
 import { normalizePostLink } from "@/utils/post-link";
 import { withoutHashtags } from "@/utils/display-text";
@@ -154,6 +154,7 @@ function ReactionIcon({
 }
 
 type Props = {
+  advertisementPreviewLayout?: boolean;
   onAdvertise?: (post: FeedPost) => void;
   onAdvertisementFeedback?: (advertisementId: string, type: AdvertisementFeedbackType) => void;
   onAdvertisementPress?: (post: FeedPost) => void;
@@ -171,6 +172,7 @@ type Props = {
 };
 
 export function PostCard({
+  advertisementPreviewLayout = false,
   onAdvertise,
   onAdvertisementFeedback,
   onAdvertisementPress,
@@ -260,6 +262,9 @@ export function PostCard({
   const isNewsLayout =
     variant === "news" && post.postType === 2 && !!post.article;
   const isAdvertisement = !!post.advertisement;
+  const destinationHeadline = post.advertisement?.headline?.trim();
+  const destinationDescription = post.advertisement?.description?.trim();
+  const destinationDomain = post.advertisement?.destinationUrl?.trim() ? advertisementDestinationLabel(post.advertisement.destinationUrl) : '';
 
   useEffect(() => {
     setIsBodyExpanded(false);
@@ -330,6 +335,7 @@ export function PostCard({
 
   return (
     <Pressable
+      testID={advertisementPreviewLayout ? 'post-advertisement-preview' : undefined}
       accessibilityRole={onOpenPost ? "button" : undefined}
       onPress={onOpenPost ? () => onOpenPost(post.id) : undefined}
       style={[styles.card, isNewsLayout && styles.newsCard]}
@@ -372,7 +378,8 @@ export function PostCard({
               <View style={styles.sponsoredLabel}>
                 <Ionicons color={colors.textMuted} name="megaphone-outline" size={12} />
                 <Text style={styles.sponsoredText}>Được tài trợ</Text>
-                {post.advertisement?.isPreview ? <Text style={styles.sponsoredPreviewText}>Xem trước</Text> : null}
+                <Text style={styles.meta}>·</Text><Ionicons color={colors.textMuted} name={visibility.icon} size={12} /><Text style={styles.visibilityText}>{visibility.label}</Text>
+                {post.advertisement?.isPreview && !advertisementPreviewLayout ? <Text style={styles.sponsoredPreviewText}>Xem trước</Text> : null}
               </View>
             ) : (
             <View style={styles.visibility}>
@@ -384,11 +391,11 @@ export function PostCard({
               <Text style={styles.visibilityText}>{visibility.label}</Text>
             </View>
             )}
-            <Text style={styles.meta}>
+            {!isAdvertisement && !advertisementPreviewLayout && <Text style={styles.meta}>
               {post.location
                 ? `${post.publishedAt} · ${post.location}`
                 : post.publishedAt}
-            </Text>
+            </Text>}
           </View>
         </View>
         {!post.advertisement?.isPreview ? <Pressable
@@ -402,7 +409,7 @@ export function PostCard({
             name="ellipsis-horizontal"
             size={20}
           />
-        </Pressable> : null}
+        </Pressable> : advertisementPreviewLayout ? <View><Ionicons color={colors.textMuted} name="ellipsis-horizontal" size={20} /></View> : null}
       </View>
 
       {post.postType === 2 && post.article ? (
@@ -626,7 +633,7 @@ export function PostCard({
         </View>
       )}
 
-      {post.advertisement && (!isNewsLayout || !post.article?.thumbnailUrl) ? (
+      {post.advertisement && (!isNewsLayout || !post.article?.thumbnailUrl || post.advertisement.headline || post.advertisement.description) ? (
         <Pressable
           accessibilityRole="button"
           onPress={(event) => {
@@ -636,14 +643,13 @@ export function PostCard({
           }}
           style={[styles.advertisementCta, isNewsLayout && styles.newsAdvertisementCta]}
         >
-          <View style={styles.advertisementPreview}>
-            <Text numberOfLines={1} style={styles.advertisementDomain}>{advertisementDestinationLabel(post.advertisement.destinationUrl)}</Text>
-            <Text numberOfLines={2} style={styles.advertisementHeadline}>{isNewsLayout ? post.author : withoutHashtags(post.article?.title) || post.author}</Text>
-            {!isNewsLayout && withoutHashtags(post.article?.preview) ? <Text numberOfLines={2} style={styles.advertisementDescription}>{withoutHashtags(post.article?.preview)}</Text> : null}
-          </View>
+          {destinationDomain || destinationHeadline || destinationDescription ? <View testID="advertisement-destination-copy" style={styles.advertisementPreview}>
+            {destinationDomain ? <Text numberOfLines={1} style={styles.advertisementDomain}>{destinationDomain.toUpperCase()}</Text> : null}
+            {destinationHeadline ? <Text numberOfLines={2} style={styles.advertisementHeadline}>{destinationHeadline}</Text> : null}
+            {destinationDescription ? <Text numberOfLines={2} style={styles.advertisementDescription}>{destinationDescription}</Text> : null}
+          </View> : null}
           <View style={styles.advertisementCtaButton}>
-            <Text numberOfLines={1} style={styles.advertisementCtaText}>{advertisementCtaLabel(post.advertisement.ctaType)}</Text>
-            <Ionicons color={colors.primaryContrast} name="arrow-forward" size={15} />
+            <Text numberOfLines={1} style={styles.advertisementCtaText}>{post.advertisement.ctaType === AdvertisementCtaType.LearnMore ? 'Tìm hiểu thêm' : advertisementCtaLabel(post.advertisement.ctaType)}</Text>
           </View>
         </Pressable>
       ) : null}
@@ -850,11 +856,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   adInfo: { alignItems: "flex-start", borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, paddingVertical: spacing.md },
   adInfoCopy: { flex: 1, gap: 3 },
   adInfoText: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
-  advertisementCta: { alignItems: "center", backgroundColor: colors.surfaceElevated, borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.md, minHeight: 88, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  advertisementCtaButton: { alignItems: "center", backgroundColor: colors.primary, borderRadius: 9, flexDirection: "row", gap: 5, justifyContent: "center", maxWidth: "44%", minHeight: 42, paddingHorizontal: spacing.md },
-  advertisementCtaText: { color: colors.primaryContrast, fontSize: 13, fontWeight: "800", flexShrink: 1 },
+  advertisementCta: { alignItems: "center", backgroundColor: colors.background, borderTopColor: colors.border, borderTopWidth: 1, flexDirection: "row", gap: spacing.sm, minHeight: 72, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  advertisementCtaButton: { alignItems: "center", backgroundColor: colors.secondaryBackground, borderRadius: 6, flexDirection: "row", gap: 5, justifyContent: "center", marginLeft: 'auto', maxWidth: "44%", minHeight: 32, paddingHorizontal: spacing.md },
+  advertisementCtaText: { color: colors.text, fontSize: 12, fontWeight: "800", flexShrink: 1 },
   advertisementDescription: { color: colors.textMuted, fontSize: 12, lineHeight: 17 },
-  advertisementDomain: { color: colors.primary, fontSize: 12, fontWeight: "700" },
+  advertisementDomain: { color: colors.textMuted, fontSize: 10, fontWeight: "500" },
   advertisementHeadline: { color: colors.text, fontSize: 15, fontWeight: "800", lineHeight: 20 },
   advertisementMediaGrid: { backgroundColor: colors.secondaryBackground },
   advertisementPreview: { flex: 1, gap: 4, minWidth: 0 },

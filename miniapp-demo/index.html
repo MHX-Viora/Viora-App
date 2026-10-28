@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ANKT Mini App Demo</title><link rel="icon" href="data:,"><link rel="stylesheet" href="style.css">
+<main><h1>ANKT Mini App · Demo hồ sơ</h1><p>Chạy trên website HTTPS đã xác minh, mở từ ANKT hoặc Portal production. Nhập Client ID đã cấp cho domain này.</p><p>Demo chỉ kiểm tra Bridge và đọc hồ sơ. Đăng nhập backend ứng dụng cần thêm getLoginCode, partner exchange và phiên riêng.</p>
+<form id="connect"><label for="client">Client ID</label><input id="client" required pattern="app_[A-Za-z0-9_\-]{43}" autocomplete="off"><button>Kết nối ANKT</button></form>
+<p id="status" role="status">Chưa kết nối</p><p id="error" role="alert"></p>
+<dl><dt>Môi trường</dt><dd id="environment">—</dd><dt>User ID</dt><dd id="id">—</dd><dt>Tên</dt><dd id="name">—</dd><dt>Phiên</dt><dd id="session">—</dd></dl>
+<img id="avatar" hidden alt="Ảnh đại diện" width="64" height="64"><button id="logout" disabled>Kết thúc phiên Mini App</button></main>
+<script src="ankt-miniapp.js?v=0.4.1"></script><script src="app.js"></script></html>
