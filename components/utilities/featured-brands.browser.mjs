@@ -38,11 +38,12 @@ try {
   const url = `http://127.0.0.1:${server.address().port}/`;
   await browser.rpc('Page.navigate', { url });
   await browser.wait('document.querySelectorAll("[data-testid=featured-brand-logo]").length===4');
+  assert.equal(await browser.read(`(()=>{const s=getComputedStyle(document.querySelector('[data-testid=featured-brand-logo]'));return s.borderTopWidth==='0px' && s.backgroundColor==='rgba(0, 0, 0, 0)'})()`), true);
   assert.equal(await browser.read('document.querySelector("[data-testid=featured-brands-section]").textContent.includes("Fixture brand")'), false, 'no visible captions');
-  for (const width of [320, 375, 768, 1440]) {
+  for (const width of [320, 375, 768, 1024, 1440]) {
     await browser.rpc('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
     const fourColumns = width >= 768;
-    await browser.wait(`(()=>{const tiles=[...document.querySelectorAll('[data-testid=featured-brand-logo]')].map(e=>e.getBoundingClientRect());return ${fourColumns ? 'Math.abs(tiles[2].y-tiles[0].y)<1' : 'tiles[2].y>tiles[0].y'}})()`);
+    await browser.wait(`(()=>{const tiles=[...document.querySelectorAll('[data-testid=featured-brand-logo]')].map(e=>e.getBoundingClientRect());return Math.abs(tiles[2].y-tiles[0].y)<1 && ${fourColumns ? 'Math.abs(tiles[3].y-tiles[0].y)<1' : 'tiles[3].y>tiles[0].y'}})()`);
     assert.equal(await browser.read('document.documentElement.scrollWidth>innerWidth'), false);
     assert.equal(await browser.read('Array.from(document.querySelector(\'[aria-label="Fixture brand 1"]\').querySelectorAll("div")).some(e=>getComputedStyle(e).backgroundSize==="contain")'), true);
     if ([375, 1440].includes(width)) { const shot = await browser.rpc('Page.captureScreenshot', { format: 'png' }); await writeFile(`.codex-tmp/featured-brands-${width}.png`, Buffer.from(shot.data, 'base64')); }
@@ -56,5 +57,5 @@ try {
   items = [{ id: 'broken', name: 'Broken logo', logoUrl: '/missing.png', sortOrder: 0 }]; await browser.rpc('Page.navigate', { url });
   await browser.wait('document.querySelector("[data-testid=featured-brands-grid]") && !document.querySelector("[data-testid=brand-skeleton]") && !document.querySelector("[data-testid=featured-brand-logo]")');
   assert.deepEqual(browser.issues, []);
-  console.log('PASS featured brands: logo-only cards, contain sizing, 2/4 columns, no overflow, empty, error/retry and broken-logo removal.');
+  console.log('PASS featured brands: logo-only cards, contain sizing, 3/4 columns, no overflow, empty, error/retry and broken-logo removal.');
 } finally { if (browser) await browser.close(); await new Promise(resolve => server.close(resolve)); }

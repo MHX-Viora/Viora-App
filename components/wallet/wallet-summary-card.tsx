@@ -78,7 +78,7 @@ export function WalletSummaryCard({ error, loading = false, onDeposit, onHistory
 
         {ready || loading ? <View style={styles.coinBalance}>
           {!compact && <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.coinIcon}>
-            <Ionicons color="#E9C574" name="layers-outline" size={12} />
+            <Text style={styles.coinSymbol}>🪙</Text>
           </View>}
           <View style={styles.coinCopy}>
             {loading ? <View accessibilityLabel="Đang tải số dư ANKT" style={styles.skeletonCoin} /> : (
@@ -123,18 +123,20 @@ function WalletControl({ disabled = false, icon, label, onPress, styles, variant
   return (
     <View style={[styles.controlWrap, iconOnly && styles.toggleWrap, variant === "icon" && styles.privacyWrap, variant === "retry" && styles.retryWrap]}>
       <Pressable accessibilityLabel={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled}
+        hitSlop={variant === "secondary" ? 2 : undefined}
         onBlur={() => setFocused(false)} onFocus={() => setFocused(true)}
         onHoverIn={() => setHovered(true)} onHoverOut={() => setHovered(false)} onPress={onPress}
         style={({ pressed }) => [
           styles.action,
           variant === "secondary" ? styles.actionSecondary : styles.actionTertiary,
-          iconOnly && styles.toggle, variant === "retry" && styles.retry,
+          iconOnly && styles.toggle, variant === "secondary" && styles.compactAction, variant === "retry" && styles.retry,
           !reducedMotion && styles.transition,
-          hovered && !disabled && styles.actionHover,
-          pressed && styles.actionPressed, focused && styles.actionFocused, disabled && styles.actionDisabled,
+          hovered && !disabled && (variant === "icon" ? styles.privacyHover : styles.actionHover),
+          pressed && styles.actionPressed, focused && (variant === "icon" ? styles.privacyHover : styles.actionFocused), disabled && styles.actionDisabled,
+          variant === "icon" && styles.privacyButton,
         ]}>
         <View accessible={false} importantForAccessibility="no-hide-descendants">
-          <Ionicons color={textStyle.color} name={icon} size={variant === "icon" ? 16 : 20} />
+          <Ionicons color={textStyle.color} name={icon} size={variant === "icon" ? 16 : 18} />
         </View>
         {!iconOnly && <Text style={textStyle}>{label}</Text>}
       </Pressable>
@@ -162,10 +164,11 @@ const createStyles = (colors: ThemeColors, width: number) => StyleSheet.create({
   balance: { color: colors.text, fontSize: width < 360 ? 22 : 28, fontWeight: "700", fontVariant: ["tabular-nums"], letterSpacing: -0.5, lineHeight: width < 360 ? 26 : 32, flexShrink: 1 },
   coinBalance: { alignItems: "center", alignSelf: "flex-start", flexDirection: "row", gap: 4, maxWidth: width < 360 ? Math.max(60, width - 204) : "100%" },
   coinIcon: { alignItems: "center", justifyContent: "center" },
+  coinSymbol: { fontSize: 14, lineHeight: 18 },
   coinCopy: { minWidth: 0, gap: spacing.xs, flexShrink: 1 },
   coinLabel: { color: colors.textMuted, fontSize: 12, fontWeight: "500" },
   coinBalanceText: { color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: "600", fontVariant: ["tabular-nums"] },
-  actionRow: { position: "absolute", bottom: 8, right: 10, flexDirection: "row", gap: width < 360 ? 0 : 4 },
+  actionRow: { position: "absolute", bottom: 8, right: 10, flexDirection: "row", gap: 4 },
   controlWrap: { minWidth: 0 },
   action: { alignItems: "center", borderColor: "transparent", borderRadius: 10, borderWidth: 1, flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 44, width: 44 },
   actionSecondary: { backgroundColor: colors.secondaryBackground, borderColor: colors.borderSubtle },
@@ -177,9 +180,12 @@ const createStyles = (colors: ThemeColors, width: number) => StyleSheet.create({
   actionFocused: { borderColor: colors.primary, ...Platform.select({ web: { outlineColor: colors.primary, outlineOffset: 3, outlineStyle: "solid", outlineWidth: 2 } }) },
   transition: Platform.select({ web: { transitionDuration: "180ms", transitionProperty: "background-color, border-color, opacity" } as ViewStyle, default: {} }),
   toggleWrap: { zIndex: 1 },
-  privacyWrap: { position: "absolute", right: 10, top: 8 },
+  privacyWrap: { position: "absolute", right: 2, top: 0 },
+  privacyButton: { backgroundColor: "transparent", borderWidth: 0, ...Platform.select({ web: { outlineStyle: "none" } }) },
+  privacyHover: { opacity: 0.75 },
   retryWrap: { alignSelf: "flex-start" },
   toggle: { minHeight: 44, padding: 0, width: 44 },
+  compactAction: { minHeight: 40, width: 40 },
   tooltip: { backgroundColor: "#21354A", borderColor: colors.borderSubtle, borderWidth: 1, borderRadius: 6, bottom: "100%", marginBottom: 4, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, position: "absolute", right: 0, minWidth: 104, pointerEvents: "none" },
   tooltipText: { color: colors.text, fontSize: 12, lineHeight: 18, fontWeight: "500" },
   privacyTooltip: { top: "100%", bottom: "auto", marginTop: 4, marginBottom: 0 },

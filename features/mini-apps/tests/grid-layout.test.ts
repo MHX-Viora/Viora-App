@@ -2,6 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { miniAppGridLayout } from "../lib/grid-layout";
 
+test("mobile fits four mini apps after screen and section padding", () => {
+  for (const width of [248, 262, 288, 317, 345, 375]) {
+    const { columns, cellWidth, gap } = miniAppGridLayout(width);
+    assert.equal(columns, 4, `four columns at container width ${width}`);
+    assert.ok(cellWidth >= 56, "logo fits inside each cell");
+    assert.ok(columns * cellWidth + (columns - 1) * gap <= width + 0.1);
+  }
+});
+
 test("grid fits narrow, large-font and desktop containers without stretching logos", () => {
   for (const width of [240, 288, 320, 375, 720, 1008]) {
     for (const fontScale of [1, 1.5, 2]) {

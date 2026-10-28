@@ -52,13 +52,13 @@ export function MiniAppSection({ onOpen }: { onOpen: (appId: string) => void }) 
   );
 }
 const styles = StyleSheet.create({
-  section: { borderRadius: 18, borderWidth: 1, gap: spacing.sm, padding: spacing.lg },
-  heading: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md, marginBottom: spacing.sm },
-  headingIcon: { width: 28, height: 28, flexDirection: "row", flexWrap: "wrap", gap: 4 },
-  headingIconCell: { width: 12, height: 12, borderRadius: 3, backgroundColor: "#008CFF" },
+  section: { borderRadius: 18, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  heading: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm, marginBottom: spacing.sm },
+  headingIcon: { width: 24, height: 24, flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  headingIconCell: { width: 10, height: 10, borderRadius: 3, backgroundColor: "#008CFF" },
   headingCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
-  title: { fontSize: 20, fontWeight: "700", lineHeight: 28 },
-  description: { fontSize: 14, lineHeight: 21 },
+  title: { fontSize: 18, fontWeight: "700", lineHeight: 24 },
+  description: { fontSize: 13, lineHeight: 18 },
   status: { alignItems: "center", gap: spacing.md, paddingVertical: spacing.lg },
   message: { fontSize: 14, lineHeight: 21, textAlign: "center" },
   empty: { fontSize: 14, lineHeight: 21, paddingVertical: spacing.xl, textAlign: "center" },

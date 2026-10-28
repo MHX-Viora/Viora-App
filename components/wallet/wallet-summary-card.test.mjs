@@ -162,7 +162,7 @@ test("controls have large targets and visible keyboard, hover and press feedback
     assert.equal(typeof control.onHoverIn, "function");
     const idle = native.StyleSheet.flatten(control.style({ pressed: false }));
     const pressed = native.StyleSheet.flatten(control.style({ pressed: true }));
-    assert.ok(idle.minHeight >= 44);
+    assert.ok(idle.minHeight + 2 * (control.hitSlop ?? 0) >= 44);
     assert.ok(pressed.opacity < 1);
   }
 });
