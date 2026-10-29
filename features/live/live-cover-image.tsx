@@ -12,26 +12,28 @@ type Props = {
   overlay?: ReactNode;
   style?: StyleProp<ViewStyle>;
   fill?: boolean;
+  blurredOnly?: boolean;
 };
 
-export function LiveCoverImage({ source, fallbackSource, aspectRatio = LIVE_COVER_ASPECT_RATIO, borderRadius = 0, overlay, style, fill = false }: Props) {
+export function LiveCoverImage({ source, fallbackSource, aspectRatio = LIVE_COVER_ASPECT_RATIO, borderRadius = 0, overlay, style, fill = false, blurredOnly = false }: Props) {
   const sources = [source, fallbackSource, DEFAULT_LIVE_COVER].map(normalizeLiveCoverSource).filter(value => value !== undefined);
   // A new selection remounts only the image layers, so old request errors cannot replace its preview.
   const sourceKey = JSON.stringify(sources.map(liveCoverSourceKey));
   return <View pointerEvents="none" style={[styles.frame, fill ? StyleSheet.absoluteFillObject : { aspectRatio }, { borderRadius }, style]}>
-    <CoverLayers key={sourceKey} sources={sources} />
+    <CoverLayers key={sourceKey} sources={sources} blurredOnly={blurredOnly} />
     {overlay}
   </View>;
 }
 
-function CoverLayers({ sources }: { sources: ImageProps["source"][] }) {
+function CoverLayers({ sources, blurredOnly }: { sources: ImageProps["source"][]; blurredOnly: boolean }) {
   const [index, setIndex] = useState(0);
   const source = sources[index];
+  const nextSource = () => setIndex(current => current === index ? Math.min(current + 1, sources.length - 1) : current);
   return <>
-    <Image accessible={false} blurRadius={28} cachePolicy="memory-disk" contentFit="cover" source={source} style={styles.blurredBackdrop} transition={0} />
+    <Image accessible={false} blurRadius={28} cachePolicy="memory-disk" contentFit="cover" source={source} style={styles.blurredBackdrop} transition={0} onError={blurredOnly ? nextSource : undefined} />
     <View style={styles.backdropTint} />
-    <Image accessibilityLabel="Ảnh bìa Live" cachePolicy="memory-disk" contentFit="contain" source={source} style={StyleSheet.absoluteFillObject} transition={0}
-      onError={() => setIndex(current => current === index ? Math.min(current + 1, sources.length - 1) : current)} />
+    {!blurredOnly ? <Image accessibilityLabel="Ảnh bìa Live" cachePolicy="memory-disk" contentFit="contain" source={source} style={StyleSheet.absoluteFillObject} transition={0}
+      onError={nextSource} /> : null}
   </>;
 }
 

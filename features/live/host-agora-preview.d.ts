@@ -6,6 +6,8 @@ export type HostAgoraPreviewHandle = {
   join(access: AgoraAccess): Promise<void>;
   renew(token: string): Promise<void>;
   leave(): Promise<void>;
+  shareScreen?(): Promise<void>;
+  stopScreenShare?(): Promise<void>;
 };
 
 export type HostAgoraPreviewProps = {
@@ -17,6 +19,8 @@ export type HostAgoraPreviewProps = {
   onReady(): void;
   onError(): void;
   onTokenWillExpire(): void;
+  onScreenShareChanged?(sharing: boolean): void;
+  onScreenShareError?(): void;
   style?: StyleProp<ViewStyle>;
 };
 

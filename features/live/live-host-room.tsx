@@ -62,6 +62,11 @@ type Props = {
   onFlipCamera: () => void;
   onCameraReady: () => void;
   onCameraError: () => void;
+  screenSharing?: boolean;
+  screenSharePending?: boolean;
+  onScreenShare?: () => void;
+  onScreenShareChanged?: (sharing: boolean) => void;
+  onScreenShareError?: () => void;
   onBack: () => void;
   onStart: () => void;
   onCancelCountdown: () => void;
@@ -92,7 +97,7 @@ export function LiveHostRoom(props: Props) {
   const visibleComments = props.comments.filter((comment) => !comment.hidden);
   const chatComments = visibleComments.filter((comment) => !comment.gift);
   const overlayComments = selectLiveOverlayComments(chatComments, props.pinnedComment, getLiveOverlayCommentLimit(width, height));
-  const ready = props.cameraGranted && props.cameraReady && !props.cameraError && props.microphoneGranted && props.cameraOn && props.microphoneOn && props.connected;
+  const ready = props.cameraGranted && props.cameraReady && !props.cameraError && props.microphoneGranted && (props.cameraOn || !!props.screenSharing) && props.microphoneOn && props.connected;
   const sendComment = () => {
     const text = draft.trim();
     if (!text || !props.settings.allowComments) return;
@@ -126,14 +131,16 @@ export function LiveHostRoom(props: Props) {
     <HostIconButton compact={compactControls} small={smallControls} icon={props.microphoneGranted && props.microphoneOn ? "mic-outline" : "mic-off-outline"} label={props.microphoneGranted && props.microphoneOn ? "Tắt mic" : "Bật mic"} onPress={props.onMicrophoneToggle} />
     <HostIconButton compact={compactControls} small={smallControls} icon={props.cameraGranted && props.cameraOn ? "videocam-outline" : "videocam-off-outline"} label={props.cameraGranted && props.cameraOn ? "Tắt camera" : "Bật camera"} onPress={props.onCameraToggle} />
     <HostIconButton compact={compactControls} small={smallControls} icon="camera-reverse-outline" label="Đổi camera" onPress={props.onFlipCamera} />
+    {live && props.onScreenShare ? <HostIconButton compact={compactControls} small={smallControls} icon="desktop-outline" label={props.screenSharePending ? 'Đang chọn…' : props.screenSharing ? 'Dừng chia sẻ' : 'Chia sẻ màn hình'} onPress={props.onScreenShare} /> : null}
     {live ? <HostIconButton compact={compactControls} small={smallControls} danger icon="power-outline" label="Kết thúc" onPress={props.onEndRequest} /> : null}
   </View>;
 
   const media = <View style={[styles.stage, mobileFullscreen ? styles.mobileStage : width >= 768 ? styles.wideStage : styles.portraitStage]}>
-    {props.cameraGranted && props.agoraAppId ? <><HostAgoraPreview appId={props.agoraAppId} cameraOn={props.cameraOn} facing={props.facing} key={props.cameraSession} microphoneOn={props.microphoneOn} onError={props.onCameraError} onReady={props.onCameraReady} onTokenWillExpire={props.onTokenWillExpire} ref={props.agoraRef} style={StyleSheet.absoluteFillObject} />{!props.cameraOn || !props.cameraReady ? <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}</> : <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} />}
+    {props.cameraGranted && props.agoraAppId && (props.cameraOn || props.screenSharing) && props.cameraReady ? <LiveCoverBackdrop blurredOnly source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}
+    {props.cameraGranted && props.agoraAppId ? <><HostAgoraPreview appId={props.agoraAppId} cameraOn={props.cameraOn} facing={props.facing} onScreenShareChanged={props.onScreenShareChanged} onScreenShareError={props.onScreenShareError} key={props.cameraSession} microphoneOn={props.microphoneOn} onError={props.onCameraError} onReady={props.onCameraReady} onTokenWillExpire={props.onTokenWillExpire} ref={props.agoraRef} style={StyleSheet.absoluteFillObject} />{(!props.cameraOn && !props.screenSharing) || !props.cameraReady ? <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}</> : <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} />}
     <View style={styles.stageShade} />
     {live ? <View style={[styles.reactionHearts, mobile && styles.mobileReactionHearts, { pointerEvents: "none" }]}><LiveHeartBurst ref={props.heartBurstRef} /></View> : null}
-    {!props.cameraOn || !props.cameraGranted || props.cameraError ? <View style={styles.cameraMessage}><Ionicons color={hostColors.text} name="videocam-off-outline" size={36} /><Text style={styles.cameraMessageText}>{!props.cameraOn ? "Camera đang tắt" : props.cameraError ? "Không thể mở camera" : "Cần cấp quyền camera để xem trước"}</Text></View> : null}
+    {(!props.cameraOn && !props.screenSharing) || !props.cameraGranted || props.cameraError ? <View style={styles.cameraMessage}><Ionicons color={hostColors.text} name="videocam-off-outline" size={36} /><Text style={styles.cameraMessageText}>{!props.cameraOn ? "Camera đang tắt" : props.cameraError ? "Không thể mở camera" : "Cần cấp quyền camera để xem trước"}</Text></View> : null}
 
     {live ? <View style={[styles.liveTop, mobile && { top: insets.top + 10 }]}><View style={[styles.liveTopLeft, mobile && styles.mobileLiveTopLeft]}><View style={[styles.livePill, mobile && styles.mobileLivePill]}><Ionicons color="#FFFFFF" name="radio" size={mobile ? 10 : 12} /><Text style={[styles.livePillText, mobile && styles.mobileLivePillText]}>LIVE</Text></View><StatPill compact={mobile} icon="time-outline" value={formatHostDuration(props.elapsed)} /><StatPill compact={mobile} icon="eye-outline" value={formatLiveCount(props.viewerCount)} /><StatPill compact={mobile} icon="heart" value={formatLiveCount(props.reactionCount)} /></View><View style={[styles.connectionBadge, mobile && styles.mobileConnectionBadge]}><Ionicons color={props.connected ? hostColors.green : hostColors.yellow} name={props.connected ? "checkmark-circle" : "warning-outline"} size={14} /><Text style={styles.connectionText}>{props.connected ? "Thiết bị sẵn sàng" : "Mất kết nối mạng"}</Text></View></View> : props.mode === "countdown" && mobile ? null : <View style={styles.previewBadge}><Text style={styles.previewBadgeText}>{props.mode === "check" ? "PREVIEW · CHƯA PHÁT LIVE" : "CHUẨN BỊ"}</Text></View>}
     {live && mobile ? <View style={[styles.mobileGifters, { top: insets.top + 40 }]}><LiveTopGifters gifters={props.topGifters} mode="mobile" /></View> : null}
@@ -165,7 +172,8 @@ export function LiveHostRoom(props: Props) {
           <StatusRow icon="wifi-outline" label="Kết nối Internet" ok={props.connected} detail={props.connected ? "Có kết nối · chưa đo tốc độ" : "Mất kết nối"} />
           <StatusRow icon="shield-checkmark-outline" label="Thiết bị" ok={ready} detail={ready ? "Sẵn sàng xem trước" : "Cần kiểm tra"} />
           {(!props.cameraGranted || !props.microphoneGranted || props.cameraError) ? <HostButton label={!props.cameraGranted || !props.microphoneGranted ? "Cho phép camera và micro" : "Thử lại camera"} icon={props.cameraError ? "refresh-outline" : "lock-open-outline"} onPress={props.onRequestPermissions} variant="secondary" style={styles.statusButton} /> : null}
-          <HostButton disabled={!ready} label="Bắt đầu live" icon="radio-outline" onPress={props.onStart} style={styles.statusButton} />
+          {props.onScreenShare ? <><HostButton disabled={!ready || props.screenSharePending} label={props.screenSharePending ? 'Đang chọn màn hình…' : props.screenSharing ? 'Dừng chia sẻ màn hình' : 'Live màn hình / game'} icon="desktop-outline" onPress={props.onScreenShare} variant="secondary" style={styles.statusButton} /><Text style={styles.muted}>Màn hình là hình chính, camera ở góc. Micro tiếp tục thu giọng nói.</Text></> : null}
+          <HostButton disabled={!ready || props.screenSharePending} label="Bắt đầu live" icon="radio-outline" onPress={props.onStart} style={styles.statusButton} />
         </HostPanel> : null}
         {live && !mobile ? <HostPanel style={[styles.chatPanel, sideBySide && { width: Math.min(390, width * 0.28) }]}>
           <View style={styles.roomTabs}>

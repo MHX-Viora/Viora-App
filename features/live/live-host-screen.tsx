@@ -47,6 +47,9 @@ export function LiveHostScreen() {
   const [cameraOn, setCameraOn] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [screenSharePending, setScreenSharePending] = useState(false);
+  const screenShareBusy = useRef(false);
   const [cameraSession, setCameraSession] = useState(0);
   const [microphoneOn, setMicrophoneOn] = useState(true);
   const [facing, setFacing] = useState<"front" | "back">("front");
@@ -66,6 +69,16 @@ export function LiveHostScreen() {
   const [realtimeRetry, setRealtimeRetry] = useState(0);
   const realtimeRef = useRef<Awaited<ReturnType<typeof connectLiveRoom>> | null>(null);
   const [connected, setConnected] = useState(Platform.OS === "web" ? typeof navigator !== "undefined" ? navigator.onLine : true : true);
+
+  const toggleScreenShare = async () => {
+    if (screenShareBusy.current || starting || phase === 'countdown') return;
+    const preview = agoraRef.current;
+    if (!preview?.shareScreen || !preview.stopScreenShare) { showAppToast({ title: 'Chưa hỗ trợ chia sẻ màn hình', message: 'Vui lòng cập nhật ứng dụng hoặc sử dụng trình duyệt máy tính.', type: 'error' }); return; }
+    screenShareBusy.current = true; setScreenSharePending(true);
+    try { if (screenSharing) await preview.stopScreenShare(); else await preview.shareScreen(); }
+    catch (error) { showAppToast({ title: 'Chưa chia sẻ được màn hình', message: error instanceof Error ? error.message : 'Bạn có thể chọn lại màn hình và cấp quyền quay màn hình.', type: 'error' }); }
+    finally { screenShareBusy.current = false; setScreenSharePending(false); }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -189,7 +202,7 @@ export function LiveHostScreen() {
     setCameraSession((session) => session + 1);
   };
   const startCountdown = async () => {
-    if (starting || !cameraPermission?.granted || !cameraReady || cameraError || !microphonePermission?.granted || !cameraOn || !microphoneOn || !connected || !settings.categoryId) return;
+    if (starting || screenShareBusy.current || !cameraPermission?.granted || !cameraReady || cameraError || !microphonePermission?.granted || (!cameraOn && !screenSharing) || !microphoneOn || !connected || !settings.categoryId) return;
     setStarting(true);
     let createdId: string | null = null;
     try {
@@ -275,6 +288,11 @@ export function LiveHostScreen() {
       cameraReady={cameraReady}
       cameraError={cameraError}
       cameraSession={cameraSession}
+      screenSharing={screenSharing}
+      screenSharePending={screenSharePending}
+      onScreenShare={() => void toggleScreenShare()}
+      onScreenShareChanged={setScreenSharing}
+      onScreenShareError={() => showAppToast({ title: 'Chia sẻ màn hình đã dừng', message: 'Vui lòng chọn lại màn hình nếu muốn tiếp tục.', type: 'error' })}
       agoraAppId={agoraAppId}
       agoraRef={agoraRef}
       onTokenWillExpire={() => void renewAgoraToken()}
@@ -284,7 +302,7 @@ export function LiveHostScreen() {
       facing={facing}
       connected={connected}
       onRequestPermissions={requestOrRetryCamera}
-      onCameraToggle={() => { if (cameraPermission?.granted) { setCameraReady(false); setCameraError(false); setCameraOn((value) => !value); } else void askPermissions(); }}
+      onCameraToggle={() => { if (cameraPermission?.granted) { if (!screenSharing) setCameraReady(false); setCameraError(false); setCameraOn((value) => !value); } else void askPermissions(); }}
       onMicrophoneToggle={() => microphonePermission?.granted ? setMicrophoneOn((value) => !value) : void askPermissions()}
       onFlipCamera={() => { setFacing((value) => value === "front" ? "back" : "front"); }}
       onCameraReady={() => { setCameraReady(true); setCameraError(false); }}
