@@ -16,6 +16,8 @@ export type LiveGiftOverlayEvent = {
   giftId: string;
   giftName: string;
   imageUrl: string;
+  animationUrl?: string | null;
+  animationDurationMs?: number;
   quantity: number;
   tier: LiveGiftTier;
   lastGiftAt: number;
@@ -96,6 +98,8 @@ export const addLiveGiftOverlayEvent = (
     giftId: gift.giftId,
     giftName: gift.giftName,
     imageUrl: gift.imageUrl,
+    animationUrl: gift.animationUrl,
+    animationDurationMs: gift.animationDurationMs,
     quantity: gift.quantity,
     tier,
     lastGiftAt: receivedAt,
