@@ -47,8 +47,6 @@ import { ReelsSearchModal } from "@/components/reels/reels-search-modal";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { getReelIndexFromOffset } from "@/features/reels/reel-pagination";
-import { getSession } from "@/stores/session-store";
-import { canCreateArticle } from "@/types/account-style";
 import { useResponsive } from "@/hooks/use-responsive";
 import { reels } from "@/features/reels/data";
 import { reactPost, savePost } from "@/services/post.service";
@@ -145,10 +143,6 @@ export function ReelsScreen() {
   const pendingAdvertisementIdsRef = useRef(new Set<string>());
   const advertisementEventIdsRef = useRef(new Map<string, string>());
   const [reelItems, setReelItems] = useState(reels);
-  const [canAdvertise, setCanAdvertise] = useState(false);
-  useEffect(() => {
-    void getSession().then((session) => setCanAdvertise(canCreateArticle(session?.user?.accountStyle))).catch(() => undefined);
-  }, []);
   const [sort, setSort] = useState<ReelSort>("popular");
   const [reelHeight, setReelHeight] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -204,7 +198,7 @@ export function ReelsScreen() {
       setReelItems(mergeReelAdvertisements(
         response.reels,
         delivery.items.map((advertisement) => ({ postId: advertisement.postId, item: advertisementToReel(advertisement) })),
-        previews.map((advertisement) => ({ postId: advertisement.postId, item: advertisementToReel(advertisement, true) })),
+        previews.map((advertisement) => ({ postId: advertisement.postId, item: advertisementToReel(advertisement, false, true) })),
         AD_PLACEMENT_GAPS.reels,
       ));
       setActiveIndex(0);
@@ -236,7 +230,7 @@ export function ReelsScreen() {
     const advertisement = reelItems.find(
       (item) => item.advertisement?.id === visibleAdvertisementId,
     )?.advertisement;
-    if (!advertisement || advertisement.isPreview || viewedAdvertisementIdsRef.current.has(advertisement.id) ||
+    if (!advertisement || advertisement.isPreview || advertisement.isOwnerView || viewedAdvertisementIdsRef.current.has(advertisement.id) ||
         !isFocused || !isAppActive || searchVisible || commentsPostId !== null || createVisible) return;
     const adId = advertisement.id;
     if (pendingAdvertisementIdsRef.current.has(adId)) return;
@@ -572,7 +566,7 @@ export function ReelsScreen() {
             maxToRenderPerBatch={2}
             renderItem={({ index, item }) => (
               <ReelCard
-                onAdvertise={canAdvertise ? (reel) => router.push({ pathname: "/advertise/[postId]", params: { postId: reel.id, postType: "1" } }) : undefined}
+                onAdvertise={(reel) => router.push({ pathname: "/advertise/[postId]", params: { postId: reel.id, postType: "1" } })}
                 onAdvertisementFeedback={handleAdvertisementFeedback}
                 onAdvertisementPress={(reel) => void handleAdvertisementPress(reel)}
                 active={

@@ -207,6 +207,7 @@ export const sendFriendRequest = async (
 export const getUserProfile = async (userId: string): Promise<UserProfile> => {
   const response = await authenticatedFetch(
     `${BASE_URL}/api/users/${userId}/profile`,
+    { cache: "no-store" },
   );
   const data = parseResponseText(await response.text());
 

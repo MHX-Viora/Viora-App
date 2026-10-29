@@ -57,6 +57,7 @@ export const mapFeedPost = (
   post: ApiPost,
   currentUser?: { displayName?: string; avatarUrl?: string; id?: string } | null,
 ): FeedPost => ({
+  advertisement: post.advertisement ?? undefined,
   id: post.id,
   author:
     post.user?.displayName?.trim() ||

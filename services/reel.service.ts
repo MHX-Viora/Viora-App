@@ -147,6 +147,7 @@ export const mapReel = (
     videoMedia ?? reel.media?.find((media) => media.thumbnailUrl);
 
   return {
+    advertisement: reel.advertisement ?? undefined,
     id: reel.id,
     authorId: reel.user?.id ?? null,
     author: reel.user?.displayName?.trim() || "Người dùng ANKT",

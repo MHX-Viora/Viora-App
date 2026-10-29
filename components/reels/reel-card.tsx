@@ -538,7 +538,7 @@ export function ReelCard({
         ]}
         pointerEvents="box-none"
       >
-        <View pointerEvents="box-none" style={[styles.bottomContent, reel.advertisement && styles.advertisementBottomContent]}>
+        <View pointerEvents="box-none" style={styles.bottomContent}>
           <View
             style={[
               styles.copy,
@@ -553,34 +553,6 @@ export function ReelCard({
             ]}
           >
             <View style={styles.authorLine}>
-              {reel.advertisement ? (
-                <View style={styles.advertisementAvatarWrap}>
-                  <Pressable
-                    accessibilityLabel={`Trang của ${reel.author}`}
-                    accessibilityRole="button"
-                    disabled={!reel.authorId || !onOpenAuthor}
-                    onPress={() => reel.authorId && onOpenAuthor?.(reel.authorId)}
-                  >
-                    <UserAvatar displayName={reel.author} imageUrl={reel.avatar} size={48} style={styles.avatar} />
-                  </Pressable>
-                  {!isFollowingAuthor && !reel.isMine ? (
-                    <Pressable
-                      accessibilityLabel="Theo dõi người đăng"
-                      accessibilityRole="button"
-                      disabled={isFollowingAuthorBusy}
-                      onPress={handleFollowAuthor}
-                      style={styles.follow}
-                    >
-                      {isFollowingAuthorBusy ? <ActivityIndicator color={colors.white} size="small" /> : <Ionicons color={colors.white} name="add" size={14} />}
-                    </Pressable>
-                  ) : null}
-                  {showFollowSuccess ? (
-                    <View style={styles.followSuccess}>
-                      <Ionicons color={colors.white} name="checkmark" size={16} />
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
               <View style={styles.authorCopy}>
                 <Pressable
                   accessibilityRole="button"
@@ -621,6 +593,19 @@ export function ReelCard({
                 <Text style={styles.moreText}>Xem thêm</Text>
               </Pressable>
             )}
+            {reel.advertisement ? (
+              <Pressable
+                accessibilityLabel={`${advertisementCtaLabel(reel.advertisement.ctaType)} quảng cáo`}
+                accessibilityRole="button"
+                onPress={() => onAdvertisementPress?.(reel)}
+                style={({ pressed }) => [styles.advertisementCta, pressed && styles.advertisementCtaPressed]}
+              >
+                <Text numberOfLines={1} style={styles.advertisementCtaText}>
+                  {advertisementCtaLabel(reel.advertisement.ctaType)}
+                </Text>
+                <Ionicons color={colors.white} name="chevron-forward" size={18} />
+              </Pressable>
+            ) : null}
           </View>
           <View
             style={[
@@ -628,8 +613,7 @@ export function ReelCard({
               desktopCopyWidth !== null && styles.desktopRail,
             ]}
           >
-            {!reel.advertisement ? (
-              <View style={styles.avatarWrap}>
+            <View style={styles.avatarWrap}>
               <Pressable
                 accessibilityRole="button"
                 disabled={!reel.authorId || !onOpenAuthor}
@@ -663,7 +647,6 @@ export function ReelCard({
                 </View>
               )}
               </View>
-            ) : null}
             <ReelAction
               icon="heart"
               label="Thích reels"
@@ -690,19 +673,7 @@ export function ReelCard({
             />
           </View>
         </View>
-        {reel.advertisement ? (
-          <Pressable
-            accessibilityLabel={`${advertisementCtaLabel(reel.advertisement.ctaType)} quảng cáo`}
-            accessibilityRole="button"
-            onPress={() => onAdvertisementPress?.(reel)}
-            style={({ pressed }) => [styles.advertisementCta, pressed && styles.advertisementCtaPressed]}
-          >
-            <Text numberOfLines={1} style={styles.advertisementCtaText}>
-              {advertisementCtaLabel(reel.advertisement.ctaType)}
-            </Text>
-            <Ionicons color={colors.white} name="chevron-forward" size={18} />
-          </Pressable>
-        ) : null}
+
       </View>
 
       {showControls && (
@@ -733,7 +704,7 @@ export function ReelCard({
               {reel.advertisement ? <>
                 <View style={styles.advertisementInfo}><Ionicons color={colors.white} name="information-circle-outline" size={21} /><View style={styles.advertisementInfoCopy}><Text style={styles.moderationText}>{reel.advertisement.isPreview ? "Bản xem trước quảng cáo" : "Tại sao tôi thấy quảng cáo này?"}</Text><Text style={styles.advertisementInfoText}>{reel.advertisement.isPreview ? "Lượt xem thử này không tính phí." : "Quảng cáo được phân phối theo đối tượng và ngân sách đã thiết lập."}</Text></View></View>
                 <Pressable onPress={() => { setShowControls(false); if (reel.authorId) onOpenAuthor?.(reel.authorId); }} style={styles.moderationAction}><Ionicons color={colors.white} name="business-outline" size={21} /><Text style={styles.moderationText}>Thông tin nhà quảng cáo</Text></Pressable>
-                {!reel.advertisement.isPreview ? <>
+                {!reel.advertisement.isPreview && !reel.advertisement.isOwnerView ? <>
                   <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.Hide); }} style={styles.moderationAction}><Ionicons color={colors.white} name="eye-off-outline" size={21} /><Text style={styles.moderationText}>Ẩn quảng cáo</Text></Pressable>
                   <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.NotInterested); }} style={styles.moderationAction}><Ionicons color={colors.white} name="thumbs-down-outline" size={21} /><Text style={styles.moderationText}>Không quan tâm</Text></Pressable>
                   <Pressable onPress={() => { setShowControls(false); onAdvertisementFeedback?.(reel.advertisement!.id, AdvertisementFeedbackType.Report); }} style={styles.moderationAction}><Ionicons color={colors.danger} name="flag-outline" size={21} /><Text style={[styles.moderationText, styles.deleteText]}>Báo cáo quảng cáo</Text></Pressable>
@@ -784,14 +755,6 @@ export function ReelCard({
             </View>
             <View style={styles.controlsHeader}>
               <Text style={styles.controlsTitle}>Cài đặt video</Text>
-              <Pressable
-                accessibilityLabel="Đóng cài đặt video"
-                accessibilityRole="button"
-                hitSlop={10}
-                onPress={() => setShowControls(false)}
-              >
-                <Ionicons color={colors.white} name="close" size={26} />
-              </Pressable>
             </View>
 
             <View style={styles.seekRow}>
@@ -957,9 +920,7 @@ export function ReelCard({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  advertisementAvatarWrap: { marginRight: spacing.xs, transform: [{ translateY: -3 }] },
-  advertisementBottomContent: { marginBottom: spacing.sm },
-  advertisementCta: { alignItems: "center", alignSelf: "stretch", backgroundColor: colors.visuals.rgb_0_0_0_0_54, borderColor: colors.visuals.rgb_255_255_255_0_24, borderRadius: 10, borderWidth: 1, flexDirection: "row", gap: spacing.sm, justifyContent: "center", marginHorizontal: spacing.md, minHeight: 44, paddingHorizontal: spacing.md },
+  advertisementCta: { alignItems: "center", alignSelf: "stretch", backgroundColor: colors.visuals.rgb_0_0_0_0_54, borderColor: colors.visuals.rgb_255_255_255_0_24, borderRadius: 10, borderWidth: 1, flexDirection: "row", gap: spacing.sm, justifyContent: "center", marginTop: spacing.sm, minHeight: 44, paddingHorizontal: spacing.md },
   advertisementCtaPressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
   advertisementCtaText: { color: colors.white, fontSize: 14, fontWeight: "800" },
   advertisementInfo: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md, paddingVertical: spacing.sm },

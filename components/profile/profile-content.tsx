@@ -10,6 +10,7 @@ import {
 } from "react-native";
 
 import { PostCard } from "@/components/feed/post-card";
+import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { getResponsiveContentLayout } from "@/components/layout/responsive-layout";
 import { ReelsGridViewer } from "@/components/reels/reels-grid-viewer";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -130,6 +131,9 @@ export function ProfileContent({
           {visiblePosts.map((post) => (
             <PostCard
               key={post.id}
+              onAdvertisementPress={(item) => {
+                if (item.advertisement) void openAdvertisement(item.advertisement, { id: item.id, authorId: item.authorId, postType: item.postType });
+              }}
               onComment={onCommentPost}
               onDeleted={onDeletePost}
               onOpenAuthor={onOpenAuthor}
