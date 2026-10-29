@@ -76,7 +76,7 @@ export const trackAdvertisementClick = (id: string, clientEventId: string) =>
 export const sendAdvertisementFeedback = (id: string, type: AdvertisementFeedbackType, reason?: string) =>
   request(`/api/advertisements/${encodeURIComponent(id)}/feedback`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ type, reason }) });
 
-export const advertisementToFeedPost = (advertisement: Advertisement, isPreview = false): FeedPost => {
+export const advertisementToFeedPost = (advertisement: Advertisement, isPreview = false, currentUserId?: string, isOwnerView = false): FeedPost => {
   const content = advertisement.content;
   const post = mapFeedPost({
     ...content,
@@ -85,11 +85,11 @@ export const advertisementToFeedPost = (advertisement: Advertisement, isPreview 
     isReacted: false,
     isSaved: false,
     reactionType: 0,
-  } as ApiPost);
-  return { ...post, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, headline: advertisement.headline, description: advertisement.description, isPreview } };
+  } as ApiPost, currentUserId ? { id: currentUserId } : undefined);
+  return { ...post, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, headline: advertisement.headline, description: advertisement.description, isPreview, isOwnerView } };
 };
 
-export const advertisementToReel = (advertisement: Advertisement, isPreview = false): Reel => {
+export const advertisementToReel = (advertisement: Advertisement, isPreview = false, isOwnerView = false): Reel => {
   const content = advertisement.content;
   const reel = mapReel({
     ...content,
@@ -100,7 +100,7 @@ export const advertisementToReel = (advertisement: Advertisement, isPreview = fa
     hashtags: content.hashtags ?? [],
     user: { ...content.user, avatarUrl: content.user.avatarUrl ?? "", isFollowing: false },
   } as ApiReel);
-  return { ...reel, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, headline: advertisement.headline, description: advertisement.description, isPreview } };
+  return { ...reel, isMine: isOwnerView || reel.isMine, advertisement: { id: advertisement.id, ctaType: advertisement.ctaType, destinationUrl: advertisement.destinationUrl, headline: advertisement.headline, description: advertisement.description, isPreview, isOwnerView } };
 };
 
 export const createAdvertisementEventId = (prefix: string, advertisementId: string) =>

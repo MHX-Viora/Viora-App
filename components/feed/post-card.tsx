@@ -262,6 +262,7 @@ export function PostCard({
   const isNewsLayout =
     variant === "news" && post.postType === 2 && !!post.article;
   const isAdvertisement = !!post.advertisement;
+  const isAdvertisementDemo = advertisementPreviewLayout && !!post.advertisement?.isPreview;
   const destinationHeadline = post.advertisement?.headline?.trim();
   const destinationDescription = post.advertisement?.description?.trim();
   const destinationDomain = post.advertisement?.destinationUrl?.trim() ? advertisementDestinationLabel(post.advertisement.destinationUrl) : '';
@@ -398,18 +399,19 @@ export function PostCard({
             </Text>}
           </View>
         </View>
-        {!post.advertisement?.isPreview ? <Pressable
+        <Pressable
           accessibilityLabel="Tùy chọn bài viết"
           accessibilityRole="button"
+          disabled={isAdvertisementDemo}
           hitSlop={10}
-          onPress={() => setOptionsVisible(true)}
+          onPress={isAdvertisementDemo ? undefined : () => setOptionsVisible(true)}
         >
           <Ionicons
             color={colors.textMuted}
             name="ellipsis-horizontal"
             size={20}
           />
-        </Pressable> : advertisementPreviewLayout ? <View><Ionicons color={colors.textMuted} name="ellipsis-horizontal" size={20} /></View> : null}
+        </Pressable>
       </View>
 
       {post.postType === 2 && post.article ? (
@@ -794,7 +796,7 @@ export function PostCard({
             </> : <>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Tùy chọn bài viết</Text>
-            {isAdvertisement ? <>
+            {isAdvertisement && !post.isMine ? <>
               <View style={styles.adInfo}><Ionicons color={colors.primary} name="information-circle-outline" size={22} /><View style={styles.adInfoCopy}><Text style={styles.sheetActionText}>Tại sao tôi thấy quảng cáo này?</Text><Text style={styles.adInfoText}>Quảng cáo được phân phối dựa trên đối tượng và ngân sách do nhà quảng cáo thiết lập.</Text></View></View>
               <Pressable onPress={() => { setOptionsVisible(false); if (post.authorId) onOpenAuthor?.(post.authorId); }} style={styles.sheetAction}><Ionicons color={colors.text} name="business-outline" size={22} /><Text style={styles.sheetActionText}>Thông tin nhà quảng cáo</Text></Pressable>
               <Pressable onPress={() => { setOptionsVisible(false); onAdvertisementFeedback?.(post.advertisement!.id, AdvertisementFeedbackType.Hide); }} style={styles.sheetAction}><Ionicons color={colors.text} name="eye-off-outline" size={22} /><Text style={styles.sheetActionText}>Ẩn quảng cáo</Text></Pressable>
@@ -816,7 +818,7 @@ export function PostCard({
                 <Text style={styles.sheetActionText}>Không quan tâm</Text>
               </Pressable>
             ) : null}
-            {post.isMine && post.visibility === 0 && onAdvertise && (
+            {post.isMine && post.postType !== 2 && post.visibility === 0 && onAdvertise && (
               <Pressable
                 onPress={() => { setOptionsVisible(false); onAdvertise?.(post); }}
                 style={styles.sheetAction}

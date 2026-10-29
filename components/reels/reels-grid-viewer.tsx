@@ -18,6 +18,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ReelCard } from "@/components/reels/reel-card";
+import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { getReelViewerIndex } from "@/components/reels/reels-grid-viewer-state";
 import { formatReelCount } from "@/services/reel.service";
 import { spacing } from "@/theme";
@@ -226,6 +227,7 @@ export function ReelsGridViewer({
               </View>
             )}
             <View style={styles.videoShade} />
+            {reel.advertisement ? <View style={styles.sponsoredBadge}><Ionicons color={colors.white} name="megaphone-outline" size={12} /><Text style={styles.sponsoredText}>Được tài trợ</Text></View> : null}
             <View style={styles.videoMetric}>
               <Ionicons color={colors.white} name="heart" size={12} />
               <Text style={styles.videoMetricText}>{reel.likes}</Text>
@@ -275,6 +277,9 @@ export function ReelsGridViewer({
                 index === viewerIndex ? (
                   <ReelCard
                     active={!paused}
+                    onAdvertisementPress={(reel) => {
+                      if (reel.advertisement) void openAdvertisement(reel.advertisement, { id: reel.id, authorId: reel.authorId, postType: 1 });
+                    }}
                     height={viewerHeight}
                     onComment={onComment}
                     onDelete={handleDelete}
@@ -338,6 +343,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingTop: 2,
   },
   videoImage: { height: "100%", width: "100%" },
+  sponsoredBadge: { alignItems: "center", backgroundColor: colors.visuals.rgb_0_0_0_0_54, borderRadius: 6, flexDirection: "row", gap: 3, left: 7, paddingHorizontal: 5, paddingVertical: 4, position: "absolute", right: 7, top: 7 },
+  sponsoredText: { color: colors.white, flexShrink: 1, fontSize: 10, fontWeight: "700" },
   videoMetric: {
     alignItems: "center",
     bottom: 7,

@@ -22,6 +22,7 @@ export type ArticleBlock = {
 };
 
 export type Article = {
+  hashtags?: { id: string; name: string }[];
   id: string;
   title: string;
   visibility: number;
@@ -48,6 +49,7 @@ export type Article = {
 };
 
 export type SaveArticleInput = {
+  hashtags?: string[];
   title: string;
   visibility: number;
   blocks: ArticleBlock[];

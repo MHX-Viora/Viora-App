@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import type { LiveRealtimeGift } from "@/services/live-realtime.service";
 import { GiftBanner } from "./live-gift-banner";
 import { createLiveGiftQueueManager, type LiveGiftQueueManager } from "./live-gift-queue-manager";
+import { SvgaGiftEffects } from './svga-gift-effects';
 
 export function useLiveGiftOverlay() {
   const manager = useRef<LiveGiftQueueManager | null>(null);
@@ -25,11 +26,9 @@ export const LiveGiftOverlay = memo(function LiveGiftOverlay({ manager, compact 
 }) {
   const state = useSyncExternalStore(manager.subscribe, manager.getSnapshot, manager.getSnapshot);
   const events = state.visible;
-  if (!events.length) return null;
-
-  return <View accessibilityLiveRegion="polite" pointerEvents="none" style={[styles.overlay, compact && styles.compactOverlay]}>
+  return <><SvgaGiftEffects manager={manager} /><View accessibilityLiveRegion="polite" pointerEvents="none" style={[styles.overlay, compact && styles.compactOverlay]}>
     {events.map((event) => <GiftBanner compact={compact} event={event} key={event.id} />)}
-  </View>;
+  </View></>;
 });
 
 const styles = StyleSheet.create({

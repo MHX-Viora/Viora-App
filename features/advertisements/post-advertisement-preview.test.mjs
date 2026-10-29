@@ -35,8 +35,17 @@ test('draft presentation preserves content and counts without mutating the sourc
 
 export function renderPreview(themeName = 'classic', cta = 0, withMedia = false, copy = {}) {
   const theme = compile(path.join(root, `theme/${themeName}.ts`))[themeName === 'classic' ? 'classicTheme' : 'premiumOceanTheme'];
+  let stateIndex = 0;
   const overrides = {
-    react: React, 'react-native': native,
+    react: { ...React, useState: initial => {
+      const index = stateIndex++;
+      const [value, setValue] = React.useState(index === 1 ? Boolean(copy.optionsOpen) : initial);
+      return [value, index === 1 && copy.onOptionsChange ? copy.onOptionsChange : setValue];
+    } },
+    'react-native': { ...native,
+      Modal: props => props.visible ? React.createElement(native.View, null, props.children) : null,
+      Pressable: props => { copy.controls?.push(props); return React.createElement(native.Pressable, props); },
+    },
     '@/theme': { spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 }, typography: { body: { fontSize: 14, lineHeight: 20 } }, useTheme: () => ({ theme }) },
     '@expo/vector-icons/Ionicons': props => React.createElement('svg', { width: props.size, height: props.size, fill: props.color }),
     '@/hooks/use-responsive': { useResponsive: () => ({ isDesktopWeb: true }) },
@@ -52,8 +61,30 @@ export function renderPreview(themeName = 'classic', cta = 0, withMedia = false,
   const content = { ...post, ...copy.post, ...(withMedia ? { images: ['/preview-art.png'] } : {}) };
   const presented = createPostAdvertisementPreview(content, cta, copy.destinationUrl ?? 'https://ankt.vn', copy.headline, copy.description);
   if (copy.published) presented.advertisement = { ...presented.advertisement, id: 'delivered-ad', isPreview: false };
-  return renderToStaticMarkup(React.createElement(PostCard, { advertisementPreviewLayout: copy.published !== true, variant: copy.post?.postType === 2 ? 'news' : 'default', post: copy.organic ? content : presented }));
+  return renderToStaticMarkup(React.createElement(PostCard, { advertisementPreviewLayout: !copy.ownerPreview && copy.published !== true, onAdvertise: copy.onAdvertise, variant: copy.post?.postType === 2 ? 'news' : 'default', post: copy.organic ? content : presented }));
 }
+
+test('owner preview opens normal post options while creation demo stays disabled', () => {
+  const controls = [], changes = [];
+  const html = renderPreview('classic', 0, false, { ownerPreview: true, optionsOpen: true, controls, onOptionsChange: value => changes.push(value), onAdvertise() {} });
+  const options = controls.find(control => control.accessibilityLabel === 'Tùy chọn bài viết');
+  assert.ok(!options.disabled);
+  assert.equal(typeof options.onPress, 'function');
+  options.onPress();
+  assert.deepEqual(changes, [true]);
+  assert.match(html, /Xóa bài viết/);
+  assert.match(html, /Quảng cáo bài viết/);
+  assert.doesNotMatch(html, /Ẩn quảng cáo|Báo cáo quảng cáo|Thông tin nhà quảng cáo|Không quan tâm/);
+  const demo = [];
+  renderPreview('classic', 0, false, { controls: demo });
+  assert.equal(demo.find(control => control.accessibilityLabel === 'Tùy chọn bài viết').disabled, true);
+});
+
+test('other advertisers retain feedback options without owner actions', () => {
+  const html = renderPreview('classic', 0, false, { published: true, optionsOpen: true, post: { isMine: false } });
+  assert.match(html, /Ẩn quảng cáo/); assert.match(html, /Báo cáo quảng cáo/);
+  assert.doesNotMatch(html, /Xóa bài viết|Quảng cáo bài viết/);
+});
 
 test('delivered ads use the preview presentation and retain live options', () => {
   for (const theme of ['classic', 'premium-ocean']) {
@@ -76,7 +107,8 @@ test('preview places sponsorship at author and destination CTA before real inter
     const html = renderPreview(theme);
     assert.match(html, /Được tài trợ/); assert.match(html, /ANKT.VN/); assert.match(html, /Tìm hiểu thêm/);
     assert.match(html, /Công khai/);
-    assert.doesNotMatch(html, /yesterday|Tùy chọn bài viết/);
+    assert.doesNotMatch(html, /yesterday/);
+    assert.match(html, /aria-label="Tùy chọn bài viết"[^>]*aria-disabled="true"|aria-disabled="true"[^>]*aria-label="Tùy chọn bài viết"/);
     assert.ok(html.indexOf('Được tài trợ') < html.indexOf('Kết nối cộng đồng'));
     assert.ok(html.indexOf('ANKT.VN') < html.indexOf('Tìm hiểu thêm'));
   }

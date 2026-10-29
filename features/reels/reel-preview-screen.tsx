@@ -17,6 +17,7 @@ import { CommentsModal } from "@/components/comments/comments-modal";
 import { ResponsiveContent } from "@/components/layout/responsive-content";
 import { getReelContentWidth } from "@/components/layout/responsive-layout";
 import { ReelCard } from "@/components/reels/reel-card";
+import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { formatReelCount, getReelById } from "@/services/reel.service";
 import { reactPost, savePost } from "@/services/post.service";
@@ -169,6 +170,9 @@ export function ReelPreviewScreen() {
           ) : reel && reelHeight > 0 ? (
             <ReelCard
               active
+              onAdvertisementPress={(item) => {
+                if (item.advertisement) void openAdvertisement(item.advertisement, { id: item.id, authorId: item.authorId, postType: 1 });
+              }}
               height={reelHeight}
               onComment={setCommentsPostId}
               onDelete={handleDeleted}

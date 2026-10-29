@@ -25,7 +25,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { useResponsive } from "@/hooks/use-responsive";
-import { searchHashtags } from "@/services/reel.service";
+import { HashtagPicker } from "@/components/common/hashtag-picker";
+import { normalizeHashtag, dedupeHashtags } from "@/utils/hashtag-selection";
 import { spacing } from "@/theme";
 import type { Hashtag } from "@/types/reel";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -590,68 +591,6 @@ function VideoDetailsStep({
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [suggestions, setSuggestions] = useState<Hashtag[]>([]);
-  const [isLoadingTags, setIsLoadingTags] = useState(false);
-  const [tagError, setTagError] = useState("");
-  const keyword = normalizeHashtag(hashtagQuery);
-  const shouldShowHashtagSuggestions = keyword.length > 0;
-
-  useEffect(() => {
-    let isActive = true;
-
-    if (!shouldShowHashtagSuggestions) {
-      setSuggestions([]);
-      setIsLoadingTags(false);
-      setTagError("");
-      return;
-    }
-
-    setIsLoadingTags(true);
-    setTagError("");
-    const timeout = setTimeout(async () => {
-      try {
-        const tags = await searchHashtags({ keyword, page: 1, pageSize: 8 });
-        if (isActive) setSuggestions(tags);
-      } catch {
-        if (isActive) {
-          setSuggestions([]);
-          setTagError("Không thể tìm hashtag lúc này.");
-        }
-      } finally {
-        if (isActive) setIsLoadingTags(false);
-      }
-    }, 250);
-
-    return () => {
-      isActive = false;
-      clearTimeout(timeout);
-    };
-  }, [keyword, shouldShowHashtagSuggestions]);
-
-  const addHashtag = (value: string | Hashtag) => {
-    const name = normalizeHashtag(typeof value === "string" ? value : value.name);
-    if (!name) return;
-    const hashtag =
-      typeof value === "string"
-        ? { id: `custom-${name}`, name, postCount: 0 }
-        : { ...value, name };
-    const nextHashtags = [...selectedHashtags, hashtag].filter(
-      (tag, index, all) =>
-        all.findIndex((item) => normalizeHashtag(item.name) === tag.name) ===
-        index,
-    );
-
-    onSelectedHashtagsChange(nextHashtags);
-    onHashtagQueryChange("");
-    setSuggestions([]);
-  };
-
-  const removeHashtag = (value: string) => {
-    onSelectedHashtagsChange(
-      selectedHashtags.filter((tag) => normalizeHashtag(tag.name) !== value),
-    );
-  };
-
   return (
     <SafeAreaView edges={["top"]} style={styles.detailsScreen}>
       <KeyboardAvoidingView
@@ -713,93 +652,7 @@ function VideoDetailsStep({
           />
           <Text style={styles.counter}>{caption.length}/500</Text>
 
-          <Text style={styles.label}>Hashtag</Text>
-          {shouldShowHashtagSuggestions && (
-            <View style={styles.suggestions}>
-              {isLoadingTags ? (
-                <View style={styles.suggestionState}>
-                  <ActivityIndicator color={colors.primary} size="small" />
-                  <Text style={styles.suggestionMuted}>Đang tìm hashtag...</Text>
-                </View>
-              ) : tagError ? (
-                <Text style={styles.suggestionError}>{tagError}</Text>
-              ) : (
-                <>
-                  {suggestions.map((tag) => (
-                    <Pressable
-                      accessibilityLabel={`Chọn hashtag ${tag.name}`}
-                      accessibilityRole="button"
-                      key={tag.id}
-                      onPress={() => addHashtag(tag)}
-                      style={styles.suggestionItem}
-                    >
-                      <View style={styles.suggestionHash}>
-                        <Text style={styles.suggestionHashText}>#</Text>
-                      </View>
-                      <View style={styles.suggestionCopy}>
-                        <Text style={styles.suggestionName}>
-                          #{tag.name.replace(/^#/, "")}
-                        </Text>
-                        <Text style={styles.suggestionCount}>
-                          {tag.postCount} bài viết
-                        </Text>
-                      </View>
-                      <Ionicons color={colors.textMuted} name="add" size={18} />
-                    </Pressable>
-                  ))}
-                  {!suggestions.some((tag) => normalizeHashtag(tag.name) === keyword) && (
-                    <Pressable
-                      accessibilityLabel={`Dùng hashtag ${keyword}`}
-                      accessibilityRole="button"
-                      onPress={() => addHashtag(keyword)}
-                      style={styles.suggestionItem}
-                    >
-                      <View style={styles.suggestionHash}>
-                        <Text style={styles.suggestionHashText}>#</Text>
-                      </View>
-                      <View style={styles.suggestionCopy}>
-                        <Text style={styles.suggestionName}>Dùng #{keyword}</Text>
-                        <Text style={styles.suggestionCount}>
-                          Thêm hashtag này vào video
-                        </Text>
-                      </View>
-                      <Ionicons color={colors.textMuted} name="add" size={18} />
-                    </Pressable>
-                  )}
-                </>
-              )}
-            </View>
-          )}
-          <View style={styles.hashtagBox}>
-            {selectedHashtags.length > 0 && (
-              <View style={styles.hashtagChips}>
-                {selectedHashtags.map((tag) => (
-                  <Pressable
-                    accessibilityLabel={`Xóa hashtag ${tag}`}
-                    accessibilityRole="button"
-                    key={tag.id}
-                    onPress={() => removeHashtag(normalizeHashtag(tag.name))}
-                    style={styles.hashtagChip}
-                  >
-                    <Text style={styles.hashtagChipText}>#{tag.name}</Text>
-                    <Ionicons color={colors.primary} name="close" size={14} />
-                  </Pressable>
-                ))}
-              </View>
-            )}
-            <TextInput
-              accessibilityLabel="Tìm hashtag video"
-              autoCapitalize="none"
-              maxLength={80}
-              onChangeText={onHashtagQueryChange}
-              onSubmitEditing={() => addHashtag(hashtagQuery)}
-              placeholder="Tìm hoặc nhập hashtag"
-              placeholderTextColor={colors.textMuted}
-              returnKeyType="done"
-              style={styles.hashtagInput}
-              value={hashtagQuery}
-            />
-          </View>
+          <HashtagPicker query={hashtagQuery} onQueryChange={onHashtagQueryChange} selected={selectedHashtags} onChange={onSelectedHashtagsChange} />
         </ScrollView>
         <View style={styles.footer}>
           <Pressable
@@ -839,14 +692,6 @@ function VideoDetailsStep({
       )}
     </SafeAreaView>
   );
-}
-
-function normalizeHashtag(value: string) {
-  return value.replace(/^#/, "").trim().replace(/\s+/g, "");
-}
-
-function dedupeHashtags(values: string[]) {
-  return Array.from(new Set(values.map(normalizeHashtag).filter(Boolean)));
 }
 
 function formatDuration(duration: number | null) {

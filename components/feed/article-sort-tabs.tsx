@@ -59,6 +59,7 @@ function SortButton({
     <Pressable
       accessibilityRole="tab"
       accessibilityState={{ selected: active }}
+      hitSlop={4}
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
@@ -66,7 +67,7 @@ function SortButton({
         pressed && styles.buttonPressed,
       ]}
     >
-      <Ionicons color={active ? colors.primary : colors.textMuted} name={icon} size={18} />
+      <Ionicons color={active ? colors.primary : colors.textMuted} name={icon} size={16} />
       <Text style={[styles.text, active && styles.textActive]}>{label}</Text>
     </Pressable>
   );
@@ -77,11 +78,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surfaceElevated,
     borderColor: colors.borderSubtle,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.xs,
-    minHeight: 34,
+    minHeight: 30,
     paddingHorizontal: spacing.sm,
   },
   buttonActive: {
@@ -90,6 +91,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   buttonPressed: { opacity: 0.68 },
   row: { flexDirection: "row", gap: spacing.sm },
-  text: { color: colors.textMuted, fontSize: 13, fontWeight: "700" },
+  text: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
   textActive: { color: colors.primary },
 });

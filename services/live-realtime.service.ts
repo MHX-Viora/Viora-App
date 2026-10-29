@@ -7,7 +7,7 @@ export type LiveRealtimeComment = {
   text: string; createdAt: string;
 };
 export type LiveRealtimeSnapshot = { viewerCount: number; reactionCount: number; comments: LiveRealtimeComment[]; pinnedComment: LiveRealtimeComment | null };
-export type LiveRealtimeGift = { id: string; transactionId?: string; liveId: string; senderUserId: string; senderName: string; senderAvatarUrl?: string | null; giftId: string; giftName: string; imageUrl: string; quantity: number; totalAmount: number; effectType?: number; effectTier?: number; effectDurationMs?: number };
+export type LiveRealtimeGift = { id: string; transactionId?: string; liveId: string; senderUserId: string; senderName: string; senderAvatarUrl?: string | null; giftId: string; giftName: string; imageUrl: string; animationUrl?: string | null; animationDurationMs?: number; quantity: number; totalAmount: number; effectType?: number; effectTier?: number; effectDurationMs?: number };
 
 const REACTION_BATCH_DELAY_MS = 250;
 const MAX_REACTIONS_PER_BATCH = 20;

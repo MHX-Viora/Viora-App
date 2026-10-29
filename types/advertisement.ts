@@ -136,4 +136,5 @@ export type AdvertisementPresentation = {
   ctaType: AdvertisementCtaType;
   destinationUrl: string | null;
   isPreview?: boolean;
+  isOwnerView?: boolean;
 };

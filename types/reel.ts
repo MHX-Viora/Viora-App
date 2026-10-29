@@ -27,6 +27,7 @@ export type Reel = {
 export type ReelSort = "friends" | "following" | "popular";
 
 export type ApiReel = {
+  advertisement?: AdvertisementPresentation | null;
   id: string;
   content: string;
   location: string | null;

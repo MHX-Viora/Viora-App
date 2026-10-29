@@ -10,7 +10,7 @@ export async function openAdvertisement(
   advertisement: AdvertisementPresentation,
   content: { id: string; authorId: string | null; postType: number },
 ) {
-  if (!advertisement.isPreview) {
+  if (!advertisement.isPreview && !advertisement.isOwnerView) {
     await trackAdvertisementClick(advertisement.id, createAdvertisementEventId("click", advertisement.id)).catch(() => undefined);
   }
 

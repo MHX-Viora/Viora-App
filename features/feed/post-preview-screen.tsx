@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
 import { PostCard } from "@/components/feed/post-card";
+import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { ResponsiveContent } from "@/components/layout/responsive-content";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { getArticle } from "@/services/article.service";
@@ -174,6 +175,9 @@ export function PostPreviewScreen() {
             showsVerticalScrollIndicator={false}
           >
             <PostCard
+              onAdvertisementPress={(item) => {
+                if (item.advertisement) void openAdvertisement(item.advertisement, { id: item.id, authorId: item.authorId, postType: item.postType });
+              }}
               onComment={setCommentsPostId}
               onDeleted={handleDeleted}
               onOpenAuthor={openUserProfile}

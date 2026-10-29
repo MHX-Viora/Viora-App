@@ -48,6 +48,7 @@ export type SavePostResponse = {
 };
 
 export type ApiPost = {
+  advertisement?: AdvertisementPresentation | null;
   id: string;
   content: string | null;
   postType: number;
