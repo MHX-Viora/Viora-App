@@ -79,7 +79,7 @@ export function PostComposer({
               </Pressable>
               {canCreateArticle ? (
                 <Pressable
-                  accessibilityLabel="Tạo bài báo"
+                  accessibilityLabel="Viết bài"
                   accessibilityRole="button"
                   onPress={onArticlePress}
                   style={({ pressed }) => [
@@ -93,7 +93,7 @@ export function PostComposer({
                     size={21}
                   />
                   <Text numberOfLines={1} style={styles.articlePublishText}>
-                    Tạo bài báo
+                    Viết bài
                   </Text>
                 </Pressable>
               ) : null}

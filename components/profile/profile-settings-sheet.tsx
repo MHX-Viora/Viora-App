@@ -41,6 +41,7 @@ const SETTINGS = [
 ] as const;
 
 type ProfileSettingsSheetProps = {
+  onOpenArticles?: () => void;
   inline?: boolean;
   onClose: () => void;
   onLogout: () => void;
@@ -54,6 +55,7 @@ type ProfileSettingsSheetProps = {
 };
 
 export function ProfileSettingsSheet({
+  onOpenArticles,
   inline = false,
   onClose,
   onLogout,
@@ -107,6 +109,11 @@ export function ProfileSettingsSheet({
         )}
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {onOpenArticles ? <Pressable accessibilityRole="button" onPress={onOpenArticles} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+          <Ionicons color={theme.colors.primary} name="newspaper-outline" size={23} />
+          <Text style={styles.rowText}>Quản lý bài báo</Text>
+          <Ionicons color={theme.colors.textMuted} name="chevron-forward" size={19} />
+        </Pressable> : null}
         {SETTINGS.map((item) => (
           <Pressable
             accessibilityRole="button"

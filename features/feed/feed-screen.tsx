@@ -51,11 +51,11 @@ import {
   subscribePostDeleted,
 } from "@/services/post.service";
 import { getPostShareLink } from "@/services/share-link.service";
-import { getSession } from "@/stores/session-store";
 import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing } from "@/theme";
 import type { CreatePostInput, FeedPost, PostFeedSort } from "@/types/feed";
 import { canCreateArticle } from "@/types/account-style";
+import { refreshCurrentUser } from "@/services/current-user.service";
 import { AdvertisementFeedbackType, AdvertisementPlacement, AdvertisementStatus, type Advertisement } from "@/types/advertisement";
 import { AD_PLACEMENT_GAPS, insertAdvertisements, shouldLoadFeedAdvertisements } from "@/utils/advertisement-insertion";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -75,6 +75,7 @@ export function FeedScreen() {
   const { isDesktopWeb, isLargeDesktop, isWeb } = useResponsive();
   const [activeCategory, setActiveCategory] =
     useState<FeedContentCategory>(initialCategory);
+  const articleColumns = activeCategory === "articles" && isDesktopWeb ? 2 : 1;
   const isFocused = useIsFocused();
   const hasBeenFocusedRef = useRef(false);
   const activeCategoryRef = useRef<FeedContentCategory>(initialCategory);
@@ -88,7 +89,7 @@ export function FeedScreen() {
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: ViewToken<FeedPost>[] }) => {
       viewableItems.forEach(({ item }) => {
-        if (activeCategoryRef.current !== "articles" && item.advertisement && !item.advertisement.isPreview && !viewedAdvertisementIdsRef.current.has(item.advertisement.id) && !pendingAdvertisementIdsRef.current.has(item.advertisement.id)) {
+        if (activeCategoryRef.current !== "articles" && item.advertisement && !item.advertisement.isPreview && !item.advertisement.isOwnerView && !viewedAdvertisementIdsRef.current.has(item.advertisement.id) && !pendingAdvertisementIdsRef.current.has(item.advertisement.id)) {
           const adId = item.advertisement.id;
           pendingAdvertisementIdsRef.current.add(adId);
           const eventId = advertisementEventIdsRef.current.get(adId) ?? createAdvertisementEventId("impression", adId);
@@ -178,7 +179,7 @@ export function FeedScreen() {
           Date.parse(advertisement.startAt) <= now && Date.parse(advertisement.endAt) > now &&
           !deliveredIds.has(advertisement.id))
         .slice(0, 1)
-        .map((advertisement) => advertisementToFeedPost(advertisement, true)) : [];
+        .map((advertisement) => advertisementToFeedPost(advertisement, false, advertisement.advertiserId, true)) : [];
       setPosts((current) => {
         if (nextPage === 1) {
           const organic = result.posts.filter((post) => !isPostDeletedLocally(post.id));
@@ -226,18 +227,25 @@ export function FeedScreen() {
   };
 
   useEffect(() => {
+    if (!isFocused) return;
+    let mounted = true;
     const loadCurrentUser = async () => {
-      const session = await getSession();
-      if (session?.user?.avatarUrl) {
-        setMyAvatar(session.user.avatarUrl);
+      const user = await refreshCurrentUser();
+      if (!mounted) return;
+      if (user?.avatarUrl) {
+        setMyAvatar(user.avatarUrl);
       }
-      if (session?.user?.displayName) {
-        setMyDisplayName(session.user.displayName);
+      if (user?.displayName) {
+        setMyDisplayName(user.displayName);
       }
-      setCanPublishArticle(canCreateArticle(session?.user?.accountStyle));
+      setCanPublishArticle(canCreateArticle(user?.accountStyle));
     };
 
-    loadCurrentUser();
+    void loadCurrentUser();
+    return () => { mounted = false; };
+  }, [isFocused]);
+
+  useEffect(() => {
     loadPosts(1, initialCategory);
   }, []);
 
@@ -460,6 +468,8 @@ export function FeedScreen() {
         </View>
       ) : (
         <FlatList
+          key={`feed-${articleColumns}`}
+          numColumns={articleColumns}
           contentContainerStyle={[
             { paddingBottom: feedBottomPadding, paddingTop: feedTopPadding },
             posts.length === 0 && styles.emptyContent,
@@ -484,11 +494,13 @@ export function FeedScreen() {
           onEndReachedThreshold={0.35}
           onViewableItemsChanged={onViewableItemsChanged}
           viewabilityConfig={viewabilityConfig}
-          onRefresh={() =>
-            loadPosts(1, activeCategoryRef.current, articleSortRef.current)
-          }
+          onRefresh={() => {
+            void refreshCurrentUser().then(user => setCanPublishArticle(canCreateArticle(user?.accountStyle)));
+            void loadPosts(1, activeCategoryRef.current, articleSortRef.current);
+          }}
           refreshing={isLoading}
           renderItem={({ item }) => (
+            <View style={articleColumns === 2 ? styles.articleGridItem : undefined}>
             <PostCard
               onAdvertise={(post) => router.push({ pathname: "/advertise/[postId]", params: { postId: post.id, postType: String(post.postType) } })}
               onAdvertisementFeedback={handleAdvertisementFeedback}
@@ -504,6 +516,7 @@ export function FeedScreen() {
               post={item}
               variant={activeCategory === "articles" ? "news" : "default"}
             />
+            </View>
           )}
           showsVerticalScrollIndicator={false}
         />
@@ -610,6 +623,7 @@ function PostSkeleton() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  articleGridItem: { width: "50%", minWidth: 0, paddingHorizontal: spacing.xs },
   emptyContent: { flexGrow: 1 },
   emptyState: {
     alignItems: "center",

@@ -26,6 +26,7 @@ import { type ThemeColors, useTheme } from "@/theme";
 const PAGE_SIZE = 10;
 
 export function FeedSearchModal({
+  initialQuery = "",
   articleSort,
   category,
   onClose,
@@ -35,6 +36,7 @@ export function FeedSearchModal({
   onShare,
   visible,
 }: {
+  initialQuery?: string;
   articleSort: PostFeedSort;
   category: FeedCategory;
   onClose: () => void;
@@ -48,11 +50,12 @@ export function FeedSearchModal({
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isDesktopWeb } = useResponsive();
+  const articleColumns = category === 'articles' && isDesktopWeb ? 2 : 1;
   const dialogLayout = getResponsiveDialogLayout({
     isDesktopWeb,
     maxWidth: 960,
   });
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<FeedPost[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -220,6 +223,8 @@ export function FeedSearchModal({
 
         {normalizedQuery ? (
           <FlatList
+            key={`search-${articleColumns}`}
+            numColumns={articleColumns}
             contentContainerStyle={results.length === 0 && styles.emptyList}
             data={results}
             keyExtractor={(item) => item.id}
@@ -241,6 +246,7 @@ export function FeedSearchModal({
             onEndReached={loadMoreResults}
             onEndReachedThreshold={0.35}
             renderItem={({ item }) => (
+              <View style={articleColumns === 2 ? styles.articleGridItem : undefined}>
               <PostCard
                 onOpenArticle={onOpenArticle}
                 onOpenAuthor={onOpenAuthor}
@@ -248,6 +254,7 @@ export function FeedSearchModal({
                 post={item}
                 variant={category === "articles" ? "news" : "default"}
               />
+              </View>
             )}
             showsVerticalScrollIndicator={false}
           />
@@ -332,6 +339,7 @@ function EmptySearch({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  articleGridItem: { width: '50%', minWidth: 0, paddingHorizontal: spacing.xs },
   desktopModalRoot: { backgroundColor: colors.visuals.rgb_0_0_0_0_42 },
   desktopScreen: {
     borderColor: colors.border,
@@ -361,8 +369,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md,

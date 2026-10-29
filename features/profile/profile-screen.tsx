@@ -1,6 +1,7 @@
 import { router } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { useEffect, useState, useMemo } from "react";
-import { Alert, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CommentsModal } from "@/components/comments/comments-modal";
@@ -30,6 +31,8 @@ import {
 } from "@/services/share-link.service";
 import { getMyStatistics } from "@/services/user.service";
 import { getSession } from "@/stores/session-store";
+import { refreshCurrentUser } from "@/services/current-user.service";
+import { canCreateArticle } from "@/types/account-style";
 import { useResponsive } from "@/hooks/use-responsive";
 import type { User } from "@/types/auth";
 import type { FeedPost } from "@/types/feed";
@@ -46,6 +49,7 @@ const formatCount = (value: number) => {
 };
 
 export function ProfileScreen() {
+  const isFocused = useIsFocused();
   const { theme } = useTheme();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -81,6 +85,7 @@ export function ProfileScreen() {
   const [profileShareUrl, setProfileShareUrl] = useState("");
 
   useEffect(() => {
+    if (!isFocused) return;
     const loadUser = async () => {
       const session = await getSession();
 
@@ -96,13 +101,15 @@ export function ProfileScreen() {
         return;
       }
 
-      setUser(session.user);
+      const currentUser = await refreshCurrentUser();
+      if (!currentUser) return;
+      setUser(currentUser);
       setIsLoading(false);
 
       try {
         const [statistics, postsResponse, reelsResponse, shareLink] = await Promise.all([
           getMyStatistics(),
-          getProfilePosts(session.user.id, session.user.accountStyle, PROFILE_PAGE_SIZE),
+          getProfilePosts(currentUser.id, currentUser.accountStyle, PROFILE_PAGE_SIZE),
           getReels({
             page: 1,
             pageSize: PROFILE_PAGE_SIZE,
@@ -135,7 +142,7 @@ export function ProfileScreen() {
     };
 
     loadUser();
-  }, []);
+  }, [isFocused]);
 
   if (isLoading || user === null) {
     return (
@@ -333,6 +340,12 @@ export function ProfileScreen() {
         onEdit={() => router.push("/edit-profile")}
         showEditButton
       />
+      {canCreateArticle(user.accountStyle) ? (
+        <Pressable accessibilityRole="button" onPress={() => router.push("/article/manage")} style={[styles.articleManagement, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={{ color: colors.primary, fontSize: 15, fontWeight: "700" }}>Quản lý bài báo</Text>
+          <Text style={{ color: colors.textMuted }}>Xem và chỉnh sửa bài báo của bạn ›</Text>
+        </Pressable>
+      ) : null}
       <ProfileContent
         key={user.id}
         accountStyle={user.accountStyle}
@@ -373,6 +386,7 @@ export function ProfileScreen() {
 
   const settings = (
     <ProfileSettingsSheet
+      onOpenArticles={canCreateArticle(user.accountStyle) ? () => { setShowSettings(false); router.push("/article/manage"); } : undefined}
       inline={showDesktopRails}
       onClose={() => setShowSettings(false)}
       onLogout={async () => {
@@ -469,6 +483,7 @@ export function ProfileScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  articleManagement: { borderWidth: 1, borderRadius: 12, gap: spacing.xs, margin: spacing.md, padding: spacing.md },
   content: { backgroundColor: colors.background, flexGrow: 1 },
   desktopShell: {
     alignSelf: "center",
