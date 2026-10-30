@@ -32,6 +32,7 @@ const result=await build({
  stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import{HostAgoraPreview}from'./features/live/host-agora-preview.web';
  function Fixture(){const ref=React.useRef(null),[camera,setCamera]=React.useState(true),[sharing,setSharing]=React.useState(false),[mounted,setMounted]=React.useState(true);const run=fn=>void fn().then(()=>document.getElementById('result').textContent='ok').catch(e=>document.getElementById('result').textContent=e.message);return <>
  <button id="share" onClick={()=>run(()=>ref.current.shareScreen())}>Share</button><button id="stop" onClick={()=>run(()=>ref.current.stopScreenShare())}>Stop</button>
+ <button id="unsupported" onClick={()=>{window.originalCapture=navigator.mediaDevices.getDisplayMedia;Object.defineProperty(navigator.mediaDevices,'getDisplayMedia',{configurable:true,value:undefined})}}>Unsupported phone</button><button id="supported" onClick={()=>Object.defineProperty(navigator.mediaDevices,'getDisplayMedia',{configurable:true,value:window.originalCapture})}>Restore capture</button>
  <button id="join" onClick={()=>run(()=>ref.current.join({appId:'fixture',role:'broadcaster',channelName:'test',uid:1,token:'fixture'}))}>Join</button>
  <button id="camera" onClick={()=>setCamera(v=>!v)}>Camera</button><button id="end" onClick={()=>window.screenTrack.end()}>OS Stop</button><button id="deny" onClick={()=>window.fixtureDeny=!window.fixtureDeny}>Deny</button><button id="unmount" onClick={()=>setMounted(false)}>Close</button>
  <div id="result"/><div id="sharing">{String(sharing)}</div>{mounted&&<HostAgoraPreview ref={ref} appId="fixture" cameraOn={camera} microphoneOn facing="front" style={{width:'100%',maxWidth:960,height:540}} onReady={()=>document.getElementById('result').textContent='ready'} onError={()=>{throw Error('camera error')}} onTokenWillExpire={()=>{}} onScreenShareChanged={setSharing}/>}</>};createRoot(document.getElementById('root')).render(<Fixture/>);`,resolveDir:process.cwd(),loader:'tsx'},
@@ -45,6 +46,10 @@ try{
  await browser.wait('document.querySelector("#result")?.textContent==="ready"');
  await browser.click('#deny');await browser.click('#share');await browser.wait('document.querySelector("#result").textContent==="permission denied"');
  assert.equal(await browser.read('window.camera.media.readyState'),'live');assert.equal(await browser.read('document.querySelector("#sharing").textContent'),'false');
+ await browser.click('#unsupported');await browser.click('#share');await browser.wait('document.querySelector("#result").textContent.includes("ứng dụng Android")');
+ assert.equal(await browser.read('!!window.screenTrack'),false);
+ assert.equal(await browser.read('window.camera.media.readyState'),'live');
+ await browser.click('#supported');
  await browser.click('#deny');await browser.click('#join');await browser.wait('window.calls.includes("publish:mic")');
  await browser.click('#share');await browser.wait('document.querySelector("#sharing").textContent==="true" && document.querySelector("video")?.readyState>=2');
  await browser.read(`(async()=>{window.output=document.createElement('video');window.output.muted=true;window.output.srcObject=new MediaStream([window.composed.media]);await window.output.play()})()`);

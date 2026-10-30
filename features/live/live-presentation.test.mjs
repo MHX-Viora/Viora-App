@@ -25,7 +25,7 @@ test('packed sources do not overlap and metadata rejects unsafe sizes and positi
  assert.deepEqual(parseLivePresentation(p),p);
  for(const patch of [{width:NaN},{height:0},{width:10000},{width:1279},{version:2},{cameraX:Infinity},{cameraY:-1},{cameraOn:'true'}])assert.equal(parseLivePresentation({...p,...patch}),null);
 });
-test('gift animations span phone width and center vertically with bounded desktop width',()=>{
- assert.equal(giftEffectFrame({width:375,height:800},true).width,375);
- assert.deepEqual(giftEffectFrame({width:1600,height:900},false),{left:490,top:99,width:620,height:702});
+test('gift animation viewports use the full stage without bottom or side gaps',()=>{
+ assert.deepEqual(giftEffectFrame({width:375,height:800}),{left:0,top:0,width:375,height:800});
+ assert.deepEqual(giftEffectFrame({width:1600,height:900}),{left:0,top:0,width:1600,height:900});
 });

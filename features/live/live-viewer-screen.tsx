@@ -42,17 +42,11 @@ import { followUser, getUserProfile } from "@/services/user.service";
 import { rememberGiftTransaction } from "./live-gift-payment";
 import { nextViewerPlaybackState } from "./live-viewer-lifecycle";
 import type { LivePresentation } from './live-presentation';
+import { BASIC_EMOJIS } from './live-basic-emojis';
 
 type RoomTab = "chat" | "supporters";
 
 const PINK = "#FF347B";
-const BASIC_EMOJIS = [
-  "😀", "😃", "😄", "😁", "😆", "😂", "🤣", "😊",
-  "🙂", "😉", "😍", "🥰", "😘", "😎", "🤩", "🥳",
-  "😋", "😜", "🤔", "😮", "😢", "😭", "😅", "🥺",
-  "👍", "👎", "👏", "🙌", "🙏", "💪", "👋", "👌",
-  "❤️", "🧡", "💛", "💚", "💙", "💜", "🔥", "🎉",
-] as const;
 const roomTabs: { id: RoomTab; label: string }[] = [
   { id: "chat", label: "Trò chuyện" },
   { id: "supporters", label: "Top người tặng" },

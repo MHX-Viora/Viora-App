@@ -8,6 +8,7 @@ import { createGameStream } from './game-stream-compositor';
 import { GameCameraDrag } from './game-camera-drag';
 import { gameStreamLayout, type GameCameraPosition } from './game-stream-layout';
 import { describeGamePresentation } from './live-presentation';
+import { webScreenShareUnavailableReason } from './web-screen-share-support';
 
 type GameShare = { screen: ILocalVideoTrack; video: ILocalVideoTrack; composition: Awaited<ReturnType<typeof createGameStream>>; ended: () => void };
 const disposeShare = (share: GameShare) => { share.screen.off('track-ended', share.ended); share.video.stop(); share.video.close(); share.composition.stop(); share.screen.close(); };
@@ -134,6 +135,8 @@ export const HostAgoraPreview = forwardRef<HostAgoraPreviewHandle, HostAgoraPrev
   }, []);
 
   const shareScreen = useCallback(async () => {
+    const unavailable = webScreenShareUnavailableReason();
+    if (unavailable) throw new Error(unavailable);
     const camera = video.current, rtc = client.current;
     if (!camera || !rtc) throw new Error('Camera chưa sẵn sàng.');
     if (sharing.current || shareBusy.current) return;

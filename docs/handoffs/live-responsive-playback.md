@@ -13,8 +13,11 @@
   desktop, use the host's inset placement. Camera off hides only the face region.
 - Desktop video is centered with a 1100px cap. The existing blurred cover fills
   unused space. Gift banners retain their original right-aligned placement
-  (compact: 30% from top, 10px from right; desktop: 40%, 16px). Only SVGA animations
-  are centered on screen, spanning compact stage width or capped at 620px.
+  (compact: 30% from top, 10px from right; desktop: 72px from top, 16px from right).
+  The SVGA viewport fills the stage. Artwork is centered horizontally and flush
+  with the stage bottom: mobile scales to full width, desktop fits the full stage
+  while preserving the complete movie. Tall mobile artwork may clip above the
+  viewport, avoiding side/bottom letterboxing without distorting the animation.
 
 ## Protocol / deployment
 
@@ -44,9 +47,11 @@
   fixture-backed; no real gift asset or production session was contacted.
 - `svga-player.browser.mjs` uses the actual shipped SVGA renderer with a synthetic
   portrait movie. It reproduced double scaling/offset caused by RN Web flex sizing
-  and verifies the plain block player container at 320/375/768/1280px. Asset parsing
-  is substituted; canvas sizing/rendering uses the real library. Responsive browser
-  checks also verify banner right edges independently from centered scene bounds.
+  and verifies the plain block player container at 320/375/768/1280px. It now also
+  verifies width-filling mobile artwork, full-height desktop artwork and bottom
+  alignment on both web and generated native WebView HTML. Asset parsing is
+  substituted; canvas sizing/rendering uses the real library. Responsive browser
+  checks verify desktop banner top/right edges and mobile's unchanged banner lane.
 - TypeScript and focused lint pass. Viewer screen retains a pre-existing
   `accessGeneration.current` cleanup warning. Backend authorization/validation/cache
   tests pass. Web export and Android Hermes export pass.

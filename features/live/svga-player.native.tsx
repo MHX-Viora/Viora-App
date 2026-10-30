@@ -4,8 +4,8 @@ import { StyleSheet, View } from 'react-native';
 import type { SvgaPlayerProps } from './svga-player';
 import { svgaHtml, svgaSource } from './svga-source';
 
-export function SvgaPlayer({ url, onFinished, style }: SvgaPlayerProps) {
-  const html = useMemo(() => svgaHtml(url), [url]);
+export function SvgaPlayer({ url, onFinished, style, fillWidth = false }: SvgaPlayerProps) {
+  const html = useMemo(() => svgaHtml(url, fillWidth), [url, fillWidth]);
   const baseUrl = svgaSource('/');
   return <View pointerEvents="none" style={style}><WebView source={{ html, baseUrl }} style={styles.webview}
     originWhitelist={['*']} javaScriptEnabled scrollEnabled={false} bounces={false} opaque={false}
