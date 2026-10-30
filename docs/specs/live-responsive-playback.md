@@ -10,9 +10,14 @@
   Relay validated presentation metadata through the existing authenticated live
   hub, host only, with a late-join snapshot and reconnect refresh. No DB migration.
   Old/metadata-free streams use aspect-fit playback.
-- Gift animation and banners sit centered below the video midpoint, above input.
+- Gift notification banners retain their original right-aligned position. Only
+  the animation scene is centered on screen, independently of the banner.
   Mobile effects span stage width; desktop effects have a bounded centered width.
   Spare stage space uses the existing blurred cover. No visible drag icon/text.
+
+SVGA web must render inside a plain block container: RN Web's flex layout changes
+the intrinsic canvas dimensions before SVGA applies its scale transform, causing
+a second shrink and an off-center result. Test with the shipped SVGA renderer.
 
 Plan: fit playback/gift placement; bounded layout and packed-video tests; host
 packing/preview; authenticated metadata relay; web/native audience crops and

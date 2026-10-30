@@ -34,7 +34,7 @@ const bundle = await build({
 });
 const server=createServer((req,res)=>{if(req.url==='/app.js'){res.setHeader('Content-Type','text/javascript');res.end(bundle.outputFiles[0].contents);}else{res.setHeader('Content-Type','text/html; charset=utf-8');res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}*{box-sizing:border-box}</style><div id="root"></div><script src="/app.js"></script>');}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
-const rects=`(()=>{const r=id=>{const x=document.querySelector('[data-testid="'+id+'"]').getBoundingClientRect();return{left:x.left,top:x.top,width:x.width,height:x.height}};return{screen:r('audience-screen'),camera:r('audience-camera'),gift:r('live-gift-effect-frame')}})()`;
+const rects=`(()=>{const r=id=>{const x=document.querySelector('[data-testid="'+id+'"]').getBoundingClientRect();return{left:x.left,top:x.top,width:x.width,height:x.height}};return{screen:r('audience-screen'),camera:r('audience-camera'),gift:r('live-gift-effect-frame'),banner:r('live-gift-banner')}})()`;
 try{
   browser=await openDocsBrowser();
   await browser.rpc('Emulation.setDeviceMetricsOverride',{width:375,height:800,deviceScaleFactor:1,mobile:false});
@@ -42,7 +42,8 @@ try{
   await browser.wait('document.querySelector("[data-testid=audience-camera] video")?.readyState>=2&&!!document.querySelector("[data-testid=live-gift-effect-frame]")');
   let r=await browser.read(rects);
   assert.equal(r.screen.width,375);assert.ok(r.camera.top+r.camera.height<=r.screen.top);
-  assert.equal(r.gift.width,375);assert.equal(r.gift.left,0);assert.ok(r.gift.top+r.gift.height<=704);
+  assert.equal(r.gift.width,375);assert.equal(r.gift.left,0);assert.ok(Math.abs(r.gift.top+r.gift.height/2-400)<1);
+  assert.ok(Math.abs(r.banner.left+r.banner.width-365)<1);assert.ok(r.banner.width<304);assert.equal(r.banner.top,240);
   const screenshot=await browser.rpc('Page.captureScreenshot',{format:'png'});
   await writeFile('.codex-tmp/live-viewer-responsive-375-upper.png',Buffer.from(screenshot.data,'base64'));
   const colors=await browser.read(`(async()=>{const image=new Image();image.src='data:image/png;base64,${screenshot.data}';await image.decode();const c=document.createElement('canvas');c.width=375;c.height=800;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(image,0,0);return [Array.from(x.getImageData(3,${r.screen.top+r.screen.height/2},1,1).data),Array.from(x.getImageData(371,${r.screen.top+r.screen.height/2},1,1).data)]})()`);
@@ -55,10 +56,12 @@ try{
     await browser.wait(`Math.abs(document.querySelector('[data-testid="audience-screen"]').getBoundingClientRect().width-${Math.min(width,1100)})<1`);
     r=await browser.read(rects);assert.ok(r.screen.left>=0&&r.screen.left+r.screen.width<=width);
     assert.ok(r.camera.left>=0&&r.camera.left+r.camera.width<=width);
+    assert.ok(Math.abs(r.gift.top+r.gift.height/2-450)<1);
+    assert.ok(Math.abs(r.banner.left+r.banner.width-(width-(width<900?10:16)))<1);
     if(width>=900){assert.equal(r.gift.width,620);assert.equal(r.gift.left,(width-620)/2);}
   }
   await writeFile('.codex-tmp/live-viewer-responsive-1600.png',Buffer.from((await browser.rpc('Page.captureScreenshot',{format:'png'})).data,'base64'));
   assert.equal(await browser.read('window.viewerFit'),'contain');
   assert.deepEqual(browser.issues.filter(e=>!e.includes('shadow*')&&!e.includes('props.pointerEvents')),[]);
-  console.log('PASS: real viewer crops preserve both screen edges, phone camera upper/lower bands, camera off/on, 320–1600px sizing, centered lower gift effects and contained fallback.');
+  console.log('PASS: real viewer crops preserve screen edges, phone camera upper/lower bands, 320–1600px sizing, centered animations and right-aligned gift banners.');
 }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}

@@ -18,9 +18,9 @@ function load() {
   return loading;
 }
 export function SvgaPlayer({ url, onFinished, style }: SvgaPlayerProps) {
-  const host = useRef<View>(null); const done = useRef(onFinished); done.current = onFinished;
+  const host = useRef<HTMLDivElement>(null); const done = useRef(onFinished); done.current = onFinished;
   useEffect(() => {
-    const element = host.current as unknown as HTMLElement | null; if (!element) return;
+    const element = host.current; if (!element) return;
     let disposed = false; let player: Player | undefined;
     const finish = () => { if (!disposed) done.current(); };
     void load().then(library => {
@@ -30,5 +30,7 @@ export function SvgaPlayer({ url, onFinished, style }: SvgaPlayerProps) {
     }).catch(finish);
     return () => { disposed = true; player?.stopAnimation(); player?.clear(); element.replaceChildren(); };
   }, [url]);
-  return <View pointerEvents="none" ref={host} style={style} />;
+  // SVGA computes transforms from the canvas's intrinsic size. A flex container
+  // stretches/shrinks that canvas before the transform, scaling it twice.
+  return <View pointerEvents="none" style={style}><div ref={host} style={{ position: 'absolute', inset: 0, display: 'block', overflow: 'hidden' }} /></View>;
 }

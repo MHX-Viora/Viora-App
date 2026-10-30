@@ -33,15 +33,19 @@ export const LiveGiftOverlay = memo(function LiveGiftOverlay({ manager, compact 
 
 const styles = StyleSheet.create({
   overlay: {
-    alignItems: "center",
+    alignItems: "flex-end",
     gap: 8,
+    maxWidth: 352,
     position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 28,
+    right: 16,
+    top: "40%",
+    width: "72%",
     zIndex: 20,
   },
   compactOverlay: {
-    bottom: 96,
+    maxWidth: 304,
+    right: 10,
+    top: "30%",
+    width: "78%",
   },
 });
