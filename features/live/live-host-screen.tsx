@@ -25,10 +25,13 @@ import { invalidateWalletData } from "@/services/wallet.service";
 import { rememberGiftTransaction } from "./live-gift-payment";
 import { LiveHostGiftIncomeSummary } from "./live-host-gift-income-summary";
 import type { LivePresentation } from './live-presentation';
+import { webScreenShareUnavailableReason } from './web-screen-share-support';
 
 type Phase = "setup" | "check" | "countdown" | "live" | "summary";
 
 export function LiveHostScreen() {
+  const [screenShareUnavailableReason, setScreenShareUnavailableReason] = useState<string | null>(null);
+  useEffect(() => { if (Platform.OS === 'web') setScreenShareUnavailableReason(webScreenShareUnavailableReason()); }, []);
   const [presentation, setPresentation] = useState<LivePresentation | null>(null);
   const presentationRef = useRef(presentation);
   presentationRef.current = presentation;
@@ -306,6 +309,7 @@ export function LiveHostScreen() {
       cameraSession={cameraSession}
       screenSharing={screenSharing}
       screenSharePending={screenSharePending}
+      screenShareUnavailableReason={screenShareUnavailableReason}
       onScreenShare={() => void toggleScreenShare()}
       onScreenShareChanged={setScreenSharing}
       onPresentationChanged={setPresentation}

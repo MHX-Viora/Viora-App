@@ -1,13 +1,12 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { type CameraType } from "expo-camera";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from "react-native";
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 
 import { UserAvatar } from "@/components/common/user-avatar";
 import { showAppToast } from "@/components/common/app-toast";
-import { liveCommentErrorMessage } from "@/services/live-realtime.service";
 import { LiveHeartBurst, type LiveHeartBurstHandle } from "./live-heart-burst";
 import { LiveOverlayComment } from "./live-overlay-comment";
 import { LiveGiftOverlay } from "./live-gift-overlay";
@@ -23,6 +22,7 @@ import { isHostMobileViewport } from "./live-host-viewport";
 import { HostButton, HostHeading, HostIconButton, HostPanel, hostColors } from "./live-host-ui";
 
 import { DEFAULT_LIVE_COVER as previewImage } from "./live-cover";
+import { HostCommentComposer } from './host-comment-composer';
 const reportReasons = ["Spam", "Bạo lực", "Nội dung người lớn", "Kích động thù ghét", "Tin giả", "Lừa đảo", "Khác"];
 const formatLiveCount = (value: number | null | undefined): string =>
   (typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0).toLocaleString("vi-VN");
@@ -65,6 +65,7 @@ type Props = {
   onCameraError: () => void;
   screenSharing?: boolean;
   screenSharePending?: boolean;
+  screenShareUnavailableReason?: string | null;
   onScreenShare?: () => void;
   onScreenShareChanged?: (sharing: boolean) => void;
   onScreenShareError?: () => void;
@@ -82,7 +83,7 @@ export function LiveHostRoom(props: Props) {
   const sideBySide = width >= 1024 || (props.mode === "check" && width >= 900);
   const live = props.mode === "live";
   const mobileFullscreen = mobile && (live || props.mode === "countdown");
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState('');
   const [roomTab, setRoomTab] = useState<"chat" | "supporters">("chat");
   const [selectedComment, setSelectedComment] = useState<HostComment | null>(null);
   const [selectingReportReason, setSelectingReportReason] = useState(false);
@@ -100,11 +101,6 @@ export function LiveHostRoom(props: Props) {
   const chatComments = visibleComments.filter((comment) => !comment.gift);
   const overlayComments = selectLiveOverlayComments(chatComments, props.pinnedComment, getLiveOverlayCommentLimit(width, height));
   const ready = props.cameraGranted && props.cameraReady && !props.cameraError && props.microphoneGranted && (props.cameraOn || !!props.screenSharing) && props.microphoneOn && props.connected;
-  const sendComment = () => {
-    const text = draft.trim();
-    if (!text || !props.settings.allowComments) return;
-    void props.onSendComment(text).then(() => setDraft("")).catch((error) => showAppToast({ title: "Không gửi được bình luận", message: liveCommentErrorMessage(error), type: "error" }));
-  };
   const openModeration = (comment: HostComment) => { setSelectedComment(comment); setSelectingReportReason(false); };
   const closeModeration = () => { setSelectedComment(null); setSelectingReportReason(false); };
   const reportSelected = (reason: number) => {
@@ -133,7 +129,7 @@ export function LiveHostRoom(props: Props) {
     <HostIconButton compact={compactControls} small={smallControls} icon={props.microphoneGranted && props.microphoneOn ? "mic-outline" : "mic-off-outline"} label={props.microphoneGranted && props.microphoneOn ? "Tắt mic" : "Bật mic"} onPress={props.onMicrophoneToggle} />
     <HostIconButton compact={compactControls} small={smallControls} icon={props.cameraGranted && props.cameraOn ? "videocam-outline" : "videocam-off-outline"} label={props.cameraGranted && props.cameraOn ? "Tắt camera" : "Bật camera"} onPress={props.onCameraToggle} />
     <HostIconButton compact={compactControls} small={smallControls} icon="camera-reverse-outline" label="Đổi camera" onPress={props.onFlipCamera} />
-    {live && props.onScreenShare ? <HostIconButton compact={compactControls} small={smallControls} icon="desktop-outline" label={props.screenSharePending ? 'Đang chọn…' : props.screenSharing ? 'Dừng chia sẻ' : 'Chia sẻ màn hình'} onPress={props.onScreenShare} /> : null}
+    {live && props.onScreenShare && !props.screenShareUnavailableReason ? <HostIconButton compact={compactControls} small={smallControls} icon="desktop-outline" label={props.screenSharePending ? 'Đang chọn…' : props.screenSharing ? 'Dừng chia sẻ' : 'Chia sẻ màn hình'} onPress={props.onScreenShare} /> : null}
     {live ? <HostIconButton compact={compactControls} small={smallControls} danger icon="power-outline" label="Kết thúc" onPress={props.onEndRequest} /> : null}
   </View>;
 
@@ -156,7 +152,7 @@ export function LiveHostRoom(props: Props) {
       const isHost = isLiveHostComment(comment.userId, props.hostUserId);
       return <LiveOverlayComment avatarUrl={comment.avatarUrl} isHost={isHost} key={comment.id} name={comment.name} onPress={() => openModeration(comment)} text={comment.text} />;
     })}</> : <Text style={styles.muted}>Bình luận đang tắt</Text>}</View> : null}
-    {mobile && live ? <View style={[styles.mobileBottom, { bottom: insets.bottom + 8 }]}><View style={styles.mobileCompose}><TextInput accessibilityLabel="Bình luận với tư cách chủ Live" editable={props.settings.allowComments} onChangeText={setDraft} onSubmitEditing={sendComment} placeholder="Nhập bình luận..." placeholderTextColor={hostColors.muted} style={styles.chatInput} value={draft} /><Pressable accessibilityLabel="Gửi bình luận" accessibilityRole="button" disabled={!draft.trim()} onPress={sendComment} style={styles.send}><Ionicons color={draft.trim() ? hostColors.cyan : hostColors.muted} name="send" size={20} /></Pressable></View>{controls}</View> : null}
+    {mobile && live ? <View style={[styles.mobileBottom, { bottom: insets.bottom + 8 }]}><HostCommentComposer draft={draft} onDraftChange={setDraft} enabled={props.settings.allowComments} compact onSend={props.onSendComment} style={styles.mobileCompose} />{controls}</View> : null}
   </View>;
 
   return <><ScrollView contentContainerStyle={[styles.scrollContent, mobileFullscreen && styles.mobileScrollContent, mobileFullscreen && { minHeight: height }]} scrollEnabled={!mobileFullscreen} style={styles.root}>
@@ -174,7 +170,7 @@ export function LiveHostRoom(props: Props) {
           <StatusRow icon="wifi-outline" label="Kết nối Internet" ok={props.connected} detail={props.connected ? "Có kết nối · chưa đo tốc độ" : "Mất kết nối"} />
           <StatusRow icon="shield-checkmark-outline" label="Thiết bị" ok={ready} detail={ready ? "Sẵn sàng xem trước" : "Cần kiểm tra"} />
           {(!props.cameraGranted || !props.microphoneGranted || props.cameraError) ? <HostButton label={!props.cameraGranted || !props.microphoneGranted ? "Cho phép camera và micro" : "Thử lại camera"} icon={props.cameraError ? "refresh-outline" : "lock-open-outline"} onPress={props.onRequestPermissions} variant="secondary" style={styles.statusButton} /> : null}
-          {props.onScreenShare ? <><HostButton disabled={!ready || props.screenSharePending} label={props.screenSharePending ? 'Đang chọn màn hình…' : props.screenSharing ? 'Dừng chia sẻ màn hình' : 'Live màn hình / game'} icon="desktop-outline" onPress={props.onScreenShare} variant="secondary" style={styles.statusButton} /><Text style={styles.muted}>Màn hình là hình chính, camera ở góc. Micro tiếp tục thu giọng nói.</Text></> : null}
+          {props.onScreenShare ? <><HostButton disabled={!ready || props.screenSharePending || !!props.screenShareUnavailableReason} label={props.screenSharePending ? 'Đang chọn màn hình…' : props.screenSharing ? 'Dừng chia sẻ màn hình' : 'Live màn hình / game'} icon="desktop-outline" onPress={props.onScreenShare} variant="secondary" style={styles.statusButton} /><Text style={styles.muted}>{props.screenShareUnavailableReason ?? 'Màn hình là hình chính, camera ở góc. Micro tiếp tục thu giọng nói.'}</Text></> : null}
           <HostButton disabled={!ready || props.screenSharePending} label="Bắt đầu live" icon="radio-outline" onPress={props.onStart} style={styles.statusButton} />
         </HostPanel> : null}
         {live && !mobile ? <HostPanel style={[styles.chatPanel, sideBySide && { width: Math.min(390, width * 0.28) }]}>
@@ -183,7 +179,7 @@ export function LiveHostRoom(props: Props) {
           </View>
           {roomTab === "chat" && props.settings.allowComments && props.pinnedComment ? <View style={styles.pinnedSidebar}><LiveOverlayComment avatarUrl={props.pinnedComment.avatarUrl} isHost={isLiveHostComment(props.pinnedComment.userId, props.hostUserId)} isPinned name={props.pinnedComment.name} onPress={() => openModeration(props.pinnedComment!)} text={props.pinnedComment.text} /></View> : null}
           {roomTab === "chat" ? <ScrollView contentContainerStyle={styles.chatList} style={styles.chatScroll}>{props.settings.allowComments ? chatComments.filter((comment) => comment.id !== props.pinnedComment?.id).map((comment) => <HostChatLine comment={comment} isHost={isLiveHostComment(comment.userId, props.hostUserId)} key={comment.id} onFlag={openModeration} />) : <Text style={styles.muted}>Bình luận đang tắt</Text>}</ScrollView> : <LiveTopGifters gifters={props.topGifters} mode="sidebar" />}
-          <View style={styles.chatComposer}><TextInput accessibilityLabel="Bình luận với tư cách chủ Live" editable={props.settings.allowComments} onChangeText={setDraft} onSubmitEditing={sendComment} placeholder={props.settings.allowComments ? "Nhập bình luận..." : "Bình luận đang tắt"} placeholderTextColor={hostColors.muted} style={styles.chatInput} value={draft} /><Pressable accessibilityLabel="Gửi bình luận" accessibilityRole="button" disabled={!draft.trim()} onPress={sendComment} style={styles.send}><Ionicons color={draft.trim() ? hostColors.cyan : hostColors.muted} name="send" size={20} /></Pressable></View>
+          <HostCommentComposer draft={draft} onDraftChange={setDraft} enabled={props.settings.allowComments} compact={false} onSend={props.onSendComment} style={styles.chatComposer} />
         </HostPanel> : null}
       </View>
       {live && !props.connected ? <Text style={styles.networkWarning}>Kết nối không ổn định – đang thử kết nối lại…</Text> : null}
@@ -370,8 +366,6 @@ const styles = StyleSheet.create({
   chatText: { color: "#DAE5F1", fontSize: 13, lineHeight: 19, marginTop: 2 },
   pinned: { color: hostColors.pink, fontSize: 10, marginTop: 3 },
   chatComposer: { alignItems: "center", flexDirection: "row", padding: 8 },
-  chatInput: { color: hostColors.text, flex: 1, fontSize: 12, minHeight: 40, paddingHorizontal: 10 },
-  send: { alignItems: "center", height: 44, justifyContent: "center", width: 44 },
   mobileComments: { gap: 8, left: 8, maxWidth: "82%", position: "absolute", right: 8, zIndex: 4 },
   mobileBottom: { left: 8, position: "absolute", right: 8, zIndex: 4 },
   mobileCompose: { alignItems: "center", backgroundColor: "rgba(4, 14, 25, 0.88)", borderRadius: 22, flexDirection: "row", marginBottom: 8 },
