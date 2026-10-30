@@ -30,6 +30,6 @@ export function SvgaGiftEffects({ manager, compact = false }: { manager: LiveGif
     return () => clearTimeout(timer);
   }, [active, complete]);
   if (!active || reduced) return null;
-  return <View accessibilityLabel={`Hiệu ứng quà ${active.giftName}`} pointerEvents="none" onLayout={event => setSize(event.nativeEvent.layout)} style={styles.layer}>{size.width > 0 && size.height > 0 ? <View testID="live-gift-effect-frame" style={[styles.effect, giftEffectFrame(size, compact)]}><SvgaPlayer key={active.id} url={active.animationUrl!} onFinished={() => complete(active.id)} style={StyleSheet.absoluteFillObject} /></View> : null}</View>;
+  return <View accessibilityLabel={`Hiệu ứng quà ${active.giftName}`} pointerEvents="none" onLayout={event => setSize(event.nativeEvent.layout)} style={styles.layer}>{size.width > 0 && size.height > 0 ? <View testID="live-gift-effect-frame" style={[styles.effect, giftEffectFrame(size)]}><SvgaPlayer fillWidth={compact} key={active.id} url={active.animationUrl!} onFinished={() => complete(active.id)} style={StyleSheet.absoluteFillObject} /></View> : null}</View>;
 }
 const styles = StyleSheet.create({ layer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', zIndex: 18 }, effect: { position: 'absolute', overflow: 'hidden' } });

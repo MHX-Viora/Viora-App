@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     maxWidth: 352,
     position: "absolute",
     right: 16,
-    top: "40%",
+    top: 72,
     width: "72%",
     zIndex: 20,
   },

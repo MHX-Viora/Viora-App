@@ -11,8 +11,12 @@
   hub, host only, with a late-join snapshot and reconnect refresh. No DB migration.
   Old/metadata-free streams use aspect-fit playback.
 - Gift notification banners retain their original right-aligned position. Only
-  the animation scene is centered on screen, independently of the banner.
-  Mobile effects span stage width; desktop effects have a bounded centered width.
+  the animation scene is centered horizontally and anchored to the stage bottom.
+  Desktop banners sit near the top, below the live header; mobile keeps its
+  existing banner position. The animation viewport spans the entire stage.
+  Mobile artwork scales to stage width with its bottom flush to the viewport;
+  desktop artwork fits the available full stage size and remains bottom-aligned.
+  Preserve aspect ratio; tall mobile artwork may clip above the viewport.
   Spare stage space uses the existing blurred cover. No visible drag icon/text.
 
 SVGA web must render inside a plain block container: RN Web's flex layout changes

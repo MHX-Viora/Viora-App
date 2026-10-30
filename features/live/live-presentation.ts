@@ -45,8 +45,6 @@ export function audiencePresentationLayout(stage: Size, p: LivePresentation) {
   return { screen, camera: p.cameraOn ? camera : null, packed: packedGameFrame(layout) };
 }
 
-export function giftEffectFrame(stage: Size, compact: boolean) {
-  const width = compact ? stage.width : Math.min(stage.width, 620);
-  const height = Math.max(0, Math.min(stage.height * .78, width * 1.8));
-  return { left: (stage.width - width) / 2, top: (stage.height - height) / 2, width, height };
+export function giftEffectFrame(stage: Size) {
+  return { left: 0, top: 0, width: stage.width, height: stage.height };
 }
