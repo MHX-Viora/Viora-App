@@ -18,6 +18,7 @@ import { HostAgoraPreview, type HostAgoraPreviewHandle } from "./host-agora-prev
 import { LiveCoverBackdrop } from "./live-cover-backdrop";
 import { LiveTopGifters } from "./live-top-gifters";
 import type { LiveTopGifter } from "./live-top-gifters-model";
+import type { LivePresentation } from './live-presentation';
 import { isHostMobileViewport } from "./live-host-viewport";
 import { HostButton, HostHeading, HostIconButton, HostPanel, hostColors } from "./live-host-ui";
 
@@ -67,6 +68,7 @@ type Props = {
   onScreenShare?: () => void;
   onScreenShareChanged?: (sharing: boolean) => void;
   onScreenShareError?: () => void;
+  onPresentationChanged?: (presentation: LivePresentation | null) => void;
   onBack: () => void;
   onStart: () => void;
   onCancelCountdown: () => void;
@@ -137,7 +139,7 @@ export function LiveHostRoom(props: Props) {
 
   const media = <View style={[styles.stage, mobileFullscreen ? styles.mobileStage : width >= 768 ? styles.wideStage : styles.portraitStage]}>
     {props.cameraGranted && props.agoraAppId && (props.cameraOn || props.screenSharing) && props.cameraReady ? <LiveCoverBackdrop blurredOnly source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}
-    {props.cameraGranted && props.agoraAppId ? <><HostAgoraPreview appId={props.agoraAppId} cameraOn={props.cameraOn} facing={props.facing} onScreenShareChanged={props.onScreenShareChanged} onScreenShareError={props.onScreenShareError} key={props.cameraSession} microphoneOn={props.microphoneOn} onError={props.onCameraError} onReady={props.onCameraReady} onTokenWillExpire={props.onTokenWillExpire} ref={props.agoraRef} style={StyleSheet.absoluteFillObject} />{(!props.cameraOn && !props.screenSharing) || !props.cameraReady ? <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}</> : <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} />}
+    {props.cameraGranted && props.agoraAppId ? <><HostAgoraPreview appId={props.agoraAppId} cameraOn={props.cameraOn} facing={props.facing} onPresentationChanged={props.onPresentationChanged} onScreenShareChanged={props.onScreenShareChanged} onScreenShareError={props.onScreenShareError} key={props.cameraSession} microphoneOn={props.microphoneOn} onError={props.onCameraError} onReady={props.onCameraReady} onTokenWillExpire={props.onTokenWillExpire} ref={props.agoraRef} style={StyleSheet.absoluteFillObject} />{(!props.cameraOn && !props.screenSharing) || !props.cameraReady ? <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} /> : null}</> : <LiveCoverBackdrop source={props.settings.coverUri ? { uri: props.settings.coverUri } : previewImage} />}
     <View style={styles.stageShade} />
     {live ? <View style={[styles.reactionHearts, mobile && styles.mobileReactionHearts, { pointerEvents: "none" }]}><LiveHeartBurst ref={props.heartBurstRef} /></View> : null}
     {(!props.cameraOn && !props.screenSharing) || !props.cameraGranted || props.cameraError ? <View style={styles.cameraMessage}><Ionicons color={hostColors.text} name="videocam-off-outline" size={36} /><Text style={styles.cameraMessageText}>{!props.cameraOn ? "Camera đang tắt" : props.cameraError ? "Không thể mở camera" : "Cần cấp quyền camera để xem trước"}</Text></View> : null}
@@ -292,7 +294,7 @@ const styles = StyleSheet.create({
   mobileContainer: { flex: 1 },
   mobileLayout: { flex: 1, marginTop: 0 },
   mobileStage: { borderRadius: 0, borderWidth: 0, flex: 1 },
-  stageShade: { backgroundColor: "rgba(2, 7, 13, 0.16)", ...StyleSheet.absoluteFillObject },
+  stageShade: { pointerEvents: "none", backgroundColor: "rgba(2, 7, 13, 0.16)", ...StyleSheet.absoluteFillObject },
   cameraMessage: { alignItems: "center", backgroundColor: "rgba(2, 7, 13, 0.56)", gap: 10, justifyContent: "center", ...StyleSheet.absoluteFillObject },
   cameraMessageText: { color: hostColors.text, fontSize: 13, fontWeight: "700", textAlign: "center" },
   previewBadge: { backgroundColor: "rgba(4, 14, 25, 0.82)", borderRadius: 8, left: 12, paddingHorizontal: 10, paddingVertical: 7, position: "absolute", top: 12 },

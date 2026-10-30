@@ -1,6 +1,7 @@
-import { gameStreamLayout } from './game-stream-layout';
+import { gameStreamLayout, type GameCameraPosition } from './game-stream-layout';
+import { packedGameFrame } from './live-presentation';
 
-export async function createGameStream(screenTrack: MediaStreamTrack, cameraTrack: MediaStreamTrack, cameraEnabled: () => boolean) {
+export async function createGameStream(screenTrack: MediaStreamTrack, cameraTrack: MediaStreamTrack, cameraEnabled: () => boolean, cameraPosition: () => GameCameraPosition | undefined = () => undefined) {
   if (!HTMLCanvasElement.prototype.captureStream) throw new Error('Trình duyệt chưa hỗ trợ ghép màn hình và camera.');
   const screen = document.createElement('video'), camera = document.createElement('video');
   for (const video of [screen, camera]) { video.muted = true; video.playsInline = true; }
@@ -14,16 +15,17 @@ export async function createGameStream(screenTrack: MediaStreamTrack, cameraTrac
   try {
     await Promise.all([screen.play(), camera.play()]);
     const settings = screenTrack.getSettings();
-    const layout = gameStreamLayout(screen.videoWidth || settings.width || 1920, screen.videoHeight || settings.height || 1080);
-    canvas.width = layout.width; canvas.height = layout.height;
+    const layout = gameStreamLayout(screen.videoWidth || settings.width || 1920, screen.videoHeight || settings.height || 1080, cameraPosition());
+    const packed = packedGameFrame(layout);
+    canvas.width = packed.width; canvas.height = packed.height;
     const draw = () => {
       if (screen.readyState < 2) return;
       context.fillStyle = '#091725'; context.fillRect(0, 0, canvas.width, canvas.height);
-      const ratio = Math.min(canvas.width / screen.videoWidth, canvas.height / screen.videoHeight);
+      const ratio = Math.min(layout.width / screen.videoWidth, layout.height / screen.videoHeight);
       const w = screen.videoWidth * ratio, h = screen.videoHeight * ratio;
-      context.drawImage(screen, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+      context.drawImage(screen, (layout.width - w) / 2, (layout.height - h) / 2, w, h);
       if (cameraEnabled() && camera.readyState >= 2) {
-        const inset = layout.inset, ratio = Math.max(inset.width / camera.videoWidth, inset.height / camera.videoHeight);
+        const inset = { x: packed.camera.left, y: packed.camera.top, width: packed.camera.width, height: packed.camera.height }, ratio = Math.max(inset.width / camera.videoWidth, inset.height / camera.videoHeight);
         const sw = inset.width / ratio, sh = inset.height / ratio;
         context.save(); context.beginPath(); context.roundRect(inset.x, inset.y, inset.width, inset.height, 12); context.clip();
         context.drawImage(camera, (camera.videoWidth - sw) / 2, (camera.videoHeight - sh) / 2, sw, sh, inset.x, inset.y, inset.width, inset.height);
@@ -33,6 +35,6 @@ export async function createGameStream(screenTrack: MediaStreamTrack, cameraTrac
     draw(); timer = setInterval(draw, 1000 / 30);
     output = canvas.captureStream(30);
     const track = output.getVideoTracks()[0]; if (!track) throw new Error('Không tạo được video ghép.');
-    return { track, layout, stop };
+    return { track, layout, packed, stop };
   } catch (error) { stop(); throw error; }
 }

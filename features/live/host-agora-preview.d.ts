@@ -1,6 +1,7 @@
 import type { Ref } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import type { AgoraAccess } from "@/services/live.service";
+import type { LivePresentation } from './live-presentation';
 
 export type HostAgoraPreviewHandle = {
   join(access: AgoraAccess): Promise<void>;
@@ -21,6 +22,7 @@ export type HostAgoraPreviewProps = {
   onTokenWillExpire(): void;
   onScreenShareChanged?(sharing: boolean): void;
   onScreenShareError?(): void;
+  onPresentationChanged?(presentation: LivePresentation | null): void;
   style?: StyleProp<ViewStyle>;
 };
 

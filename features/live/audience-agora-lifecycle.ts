@@ -9,6 +9,7 @@ type Subscription = { user: IAgoraRTCRemoteUser; type: MediaType; track?: IRemot
 export function createAudiencePlayback(client: IAgoraRTCClient, callbacks: {
   onState: (state: LivePlaybackState) => void;
   onError: (error: unknown) => void;
+  onVideo?: (track: IRemoteVideoTrack | null) => void;
   log?: (event: string, details?: Record<string, unknown>) => void;
 }) {
   let disposed = false;
@@ -25,6 +26,7 @@ export function createAudiencePlayback(client: IAgoraRTCClient, callbacks: {
     if (!container) return;
     entry.cleanup?.();
     const track = entry.track as IRemoteVideoTrack;
+    callbacks.onVideo?.(track);
     const active = () => !disposed && subscriptions.get(key(entry.user.uid, "video")) === entry;
     const decoded = () => { if (active()) report("playing"); };
     const videoState = (value: number) => { if (active()) { if (value === 2) decoded(); else if (value === 3) report("reconnecting"); } };
@@ -32,7 +34,7 @@ export function createAudiencePlayback(client: IAgoraRTCClient, callbacks: {
     track.on("video-state-changed", videoState);
     entry.cleanup = () => { track.off("first-frame-decoded", decoded); track.off("video-state-changed", videoState); };
     try {
-      track.play(container, { fit: "cover", mirror: false });
+      track.play(container, { fit: "contain", mirror: false });
       // A resumed player may already have decoded frames before this listener.
       const video = container.querySelector?.("video");
       if (video && video.readyState >= 2 && !video.paused) decoded();
@@ -76,7 +78,7 @@ export function createAudiencePlayback(client: IAgoraRTCClient, callbacks: {
     subscriptions.delete(id);
     entry?.cleanup?.();
     entry?.track?.stop();
-    if (type === "video" && !disposed) report("waitingForHost");
+    if (type === "video" && !disposed) { callbacks.onVideo?.(null); report("waitingForHost"); }
   };
   const reconcile = () => {
     if (disposed) return;

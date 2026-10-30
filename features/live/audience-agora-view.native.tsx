@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { View } from "react-native";
-import { ChannelProfileType, ClientRoleType, ConnectionStateType, RemoteVideoState, RenderModeType, RtcSurfaceView, VideoMirrorModeType, createAgoraRtcEngine, type IRtcEngine, type IRtcEngineEventHandler } from "react-native-agora";
+import { ChannelProfileType, ClientRoleType, ConnectionStateType, RemoteVideoState, RenderModeType, RtcSurfaceView, VideoMirrorModeType, VideoViewSetupMode, createAgoraRtcEngine, type IRtcEngine, type IRtcEngineEventHandler } from "react-native-agora";
 
 import type { AudienceAgoraViewProps } from "./audience-agora-view";
+import { audiencePresentationLayout, type VideoRect } from './live-presentation';
 
-export function AudienceAgoraView({ access, style, onTokenWillExpire, onError, onPlaybackStateChange }: AudienceAgoraViewProps) {
+export function AudienceAgoraView({ access, presentation, style, onTokenWillExpire, onError, onPlaybackStateChange }: AudienceAgoraViewProps) {
+  const [stage, setStage] = useState({ width: 0, height: 0 });
+  const [videoSize, setVideoSize] = useState({ width: 0, height: 0 });
+  const frame = presentation ? audiencePresentationLayout(stage, presentation) : null;
   const [hostUid, setHostUid] = useState<number | null>(null);
   const engineRef = useRef<IRtcEngine | null>(null);
   const joined = useRef(false);
@@ -42,7 +46,8 @@ export function AudienceAgoraView({ access, style, onTokenWillExpire, onError, o
       },
       onUserJoined: (_connection, uid) => { if (!disposed) { log("user-joined", { remoteUid: uid }); setHostUid(uid); } },
       onUserOffline: (_connection, uid) => { if (!disposed) { setHostUid((current) => current === uid ? null : current); report("waitingForHost"); } },
-      onFirstRemoteVideoFrame: (_connection, uid) => { if (!disposed) { setHostUid(uid); report("playing"); log("first remote frame", { remoteUid: uid }); } },
+      onFirstRemoteVideoFrame: (_connection, uid, width, height) => { if (!disposed) { setVideoSize({ width, height }); setHostUid(uid); report("playing"); log("first remote frame", { remoteUid: uid }); } },
+      onVideoSizeChanged: (_connection, _source, _uid, width, height) => { if (!disposed) setVideoSize({ width, height }); },
       onRemoteVideoStateChanged: (_connection, uid, state) => {
         if (disposed) return;
         log("remote-video-state", { remoteUid: uid, state });
@@ -105,5 +110,14 @@ export function AudienceAgoraView({ access, style, onTokenWillExpire, onError, o
     }
   }, [access.token]);
 
-  return <View style={style}>{hostUid !== null ? <RtcSurfaceView canvas={{ uid: hostUid, mirrorMode: VideoMirrorModeType.VideoMirrorModeDisabled, renderMode: RenderModeType.RenderModeHidden }} style={{ flex: 1 }} /> : null}</View>;
+  const cropArea = (crop: VideoRect) => {
+    const sx = frame && videoSize.width ? videoSize.width / frame.packed.width : 1;
+    const sy = frame && videoSize.height ? videoSize.height / frame.packed.height : 1;
+    return { x: Math.round(crop.left * sx), y: Math.round(crop.top * sy), width: Math.round(crop.width * sx), height: Math.round(crop.height * sy) };
+  };
+  const canvas = { uid: hostUid ?? 0, mirrorMode: VideoMirrorModeType.VideoMirrorModeDisabled, renderMode: RenderModeType.RenderModeFit, setupMode: VideoViewSetupMode.VideoViewSetupAdd };
+  return <View style={style} onLayout={event => setStage(event.nativeEvent.layout)}>{hostUid !== null ? frame ? <>
+    <RtcSurfaceView key="packed-screen" canvas={{ ...canvas, cropArea: cropArea(frame.packed.screen) }} style={{ position: 'absolute', ...frame.screen }} />
+    {frame.camera ? <View testID="audience-camera" style={{ position: 'absolute', ...frame.camera, overflow: 'hidden', borderRadius: 12 }}><RtcSurfaceView canvas={{ ...canvas, cropArea: cropArea(frame.packed.camera) }} style={{ flex: 1 }} /></View> : null}
+  </> : <RtcSurfaceView key="legacy-video" canvas={canvas} style={{ flex: 1 }} /> : null}</View>;
 }

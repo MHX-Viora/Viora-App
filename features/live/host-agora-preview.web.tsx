@@ -5,12 +5,16 @@ import AgoraRTC, { type IAgoraRTCClient, type ICameraVideoTrack, type IMicrophon
 import type { HostAgoraPreviewHandle, HostAgoraPreviewProps } from "./host-agora-preview";
 import { getHostVideoFrame } from './host-video-frame';
 import { createGameStream } from './game-stream-compositor';
+import { GameCameraDrag } from './game-camera-drag';
+import { gameStreamLayout, type GameCameraPosition } from './game-stream-layout';
+import { describeGamePresentation } from './live-presentation';
 
 type GameShare = { screen: ILocalVideoTrack; video: ILocalVideoTrack; composition: Awaited<ReturnType<typeof createGameStream>>; ended: () => void };
 const disposeShare = (share: GameShare) => { share.screen.off('track-ended', share.ended); share.video.stop(); share.video.close(); share.composition.stop(); share.screen.close(); };
 
 export const HostAgoraPreview = forwardRef<HostAgoraPreviewHandle, HostAgoraPreviewProps>(function HostAgoraPreview(props, ref) {
   const container = useRef<View>(null);
+  const cameraContainer = useRef<View>(null);
   const client = useRef<IAgoraRTCClient | null>(null);
   const video = useRef<ICameraVideoTrack | null>(null);
   const audio = useRef<IMicrophoneAudioTrack | null>(null);
@@ -19,10 +23,17 @@ export const HostAgoraPreview = forwardRef<HostAgoraPreviewHandle, HostAgoraPrev
   const shareBusy = useRef(false);
   const alive = useRef(false);
   const published = useRef(false);
+  const cameraPosition = useRef<GameCameraPosition | undefined>(undefined);
+  const [dragLayout, setDragLayout] = useState<ReturnType<typeof gameStreamLayout> | null>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [videoSize, setVideoSize] = useState({ width: 16, height: 9 });
   const frame = getHostVideoFrame(stageSize, videoSize);
   callbacks.current = props;
+  const hasInset = !!dragLayout && props.cameraOn;
+  useEffect(() => {
+    if (hasInset && cameraContainer.current) video.current?.play(cameraContainer.current as unknown as HTMLElement, { fit: 'cover', mirror: false });
+  }, [hasInset]);
+  useEffect(() => { callbacks.current.onPresentationChanged?.(dragLayout ? describeGamePresentation(dragLayout, props.cameraOn) : null); }, [dragLayout, props.cameraOn]);
 
   useEffect(() => {
     if (!props.appId) return;
@@ -112,11 +123,12 @@ export const HostAgoraPreview = forwardRef<HostAgoraPreviewHandle, HostAgoraPrev
     shareBusy.current = true;
     try {
       if (published.current && rtc) { await rtc.unpublish(share.video); await rtc.publish(camera); }
-      share.video.stop(); camera.play(container.current as unknown as HTMLElement, { fit: 'contain', mirror: false });
+      share.screen.stop(); camera.play(container.current as unknown as HTMLElement, { fit: 'contain', mirror: false });
       const settings = camera.getMediaStreamTrack().getSettings();
       if (settings.width && settings.height) setVideoSize({ width: settings.width, height: settings.height });
     } finally {
       disposeShare(share); sharing.current = null; shareBusy.current = false;
+      if (alive.current) setDragLayout(null);
       if (alive.current) callbacks.current.onScreenShareChanged?.(false);
     }
   }, []);
@@ -132,19 +144,20 @@ export const HostAgoraPreview = forwardRef<HostAgoraPreviewHandle, HostAgoraPrev
       // Called from the share button so the browser retains the capture user gesture.
       screen = await AgoraRTC.createScreenVideoTrack({ encoderConfig: '1080p_2', optimizationMode: 'motion' }, 'disable');
       if (!alive.current || client.current !== rtc) throw new Error('Đã đóng màn hình live.');
-      composition = await createGameStream(screen.getMediaStreamTrack(), camera.getMediaStreamTrack(), () => callbacks.current.cameraOn);
+      composition = await createGameStream(screen.getMediaStreamTrack(), camera.getMediaStreamTrack(), () => callbacks.current.cameraOn, () => cameraPosition.current);
       if (!alive.current || client.current !== rtc) throw new Error('Đã đóng màn hình live.');
-      composed = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: composition.track, width: composition.layout.width, height: composition.layout.height, frameRate: 30 });
+      composed = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: composition.track, width: composition.packed.width, height: composition.packed.height, frameRate: 30 });
       if (published.current) {
         await rtc.unpublish(camera);
         try { await rtc.publish(composed); } catch (error) { await rtc.publish(camera); throw error; }
         switched = true;
       }
       if (!alive.current || client.current !== rtc) throw new Error('Đã đóng màn hình live.');
-      camera.stop(); composed.play(container.current as unknown as HTMLElement, { fit: 'contain', mirror: false });
+      camera.stop(); screen.play(container.current as unknown as HTMLElement, { fit: 'contain', mirror: false });
       const ended = () => { void stopScreenShare().catch(() => callbacks.current.onScreenShareError?.()); };
       sharing.current = { screen, video: composed, composition, ended }; screen.on('track-ended', ended);
       setVideoSize({ width: composition.layout.width, height: composition.layout.height });
+      setDragLayout(composition.layout);
       callbacks.current.onScreenShareChanged?.(true);
     } catch (error) {
       if (switched && composed && alive.current && client.current === rtc) {
@@ -191,5 +204,12 @@ export const HostAgoraPreview = forwardRef<HostAgoraPreviewHandle, HostAgoraPrev
 
   return <View style={props.style} onLayout={event => setStageSize(event.nativeEvent.layout)}>
     <View ref={container} style={frame ? { position: 'absolute', ...frame } : StyleSheet.absoluteFillObject} />
+    {hasInset && dragLayout && frame ? <View pointerEvents="none" ref={cameraContainer} style={{ position: 'absolute', overflow: 'hidden', borderRadius: 12,
+      left: frame.left + dragLayout.inset.x * frame.width / dragLayout.width, top: frame.top + dragLayout.inset.y * frame.height / dragLayout.height,
+      width: dragLayout.inset.width * frame.width / dragLayout.width, height: dragLayout.inset.height * frame.height / dragLayout.height }} /> : null}
+    {dragLayout && props.cameraOn ? <GameCameraDrag layout={dragLayout} onMove={position => {
+      cameraPosition.current = position;
+      setDragLayout(gameStreamLayout(dragLayout.width, dragLayout.height, position));
+    }} /> : null}
   </View>;
 });

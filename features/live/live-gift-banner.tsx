@@ -30,8 +30,8 @@ export const GiftBanner = memo(function GiftBanner({ event, compact }: {
 });
 
 const styles = StyleSheet.create({
-  banner: { alignItems: "center", alignSelf: "flex-end", borderRadius: 28, flexDirection: "row", maxWidth: "100%", minHeight: 54, paddingLeft: 5, paddingRight: 11, overflow: "hidden" },
-  compactBanner: { minHeight: 48, paddingRight: 8 },
+  banner: { alignItems: "center", alignSelf: "center", borderRadius: 28, flexDirection: "row", maxWidth: 420, width: "100%", minHeight: 54, paddingLeft: 5, paddingRight: 11, overflow: "hidden" },
+  compactBanner: { maxWidth: "100%", minHeight: 48, paddingRight: 8 },
   avatar: { borderColor: "rgba(255,255,255,0.86)", borderWidth: 1.5 },
   copy: { flexShrink: 1, marginLeft: 8, maxWidth: 150, minWidth: 0 },
   sender: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },

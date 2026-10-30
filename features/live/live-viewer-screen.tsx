@@ -41,6 +41,7 @@ import { followUser, getUserProfile } from "@/services/user.service";
 
 import { rememberGiftTransaction } from "./live-gift-payment";
 import { nextViewerPlaybackState } from "./live-viewer-lifecycle";
+import type { LivePresentation } from './live-presentation';
 
 type RoomTab = "chat" | "supporters";
 
@@ -81,6 +82,7 @@ export function LiveViewerScreen() {
   const ended = useRef(false);
   const [playbackState, setPlaybackState] = useState<LivePlaybackState>("connecting");
   const [videoSession, setVideoSession] = useState(0);
+  const [presentation, setPresentation] = useState<LivePresentation | null>(null);
   const [viewerCount, setViewerCount] = useState(0);
   const stream = live ? toLiveStreamPreview(live) : null;
   const { width, height } = useWindowDimensions();
@@ -182,11 +184,13 @@ export function LiveViewerScreen() {
         if (!active) return;
         void getLiveTopGifters(streamId).then((items) => { if (active) setTopGifters(items); }).catch(() => undefined);
         setViewerCount(snapshot.viewerCount);
+        setPresentation(snapshot.presentation ?? null);
         setLikes(snapshot.reactionCount);
         setPinnedComment(snapshot.pinnedComment && !deletedCommentIds.current.has(snapshot.pinnedComment.id) ? snapshot.pinnedComment : null);
         setMessages((current) => mergeLiveChat(current, snapshot.comments.filter((comment) => !deletedCommentIds.current.has(comment.id)).map((comment) => ({ id: comment.id, createdAt: comment.createdAt, userId: comment.userId, name: comment.name, avatarUrl: comment.avatarUrl ?? undefined, text: comment.text }))));
       },
       onComment: (comment) => { if (active && !deletedCommentIds.current.has(comment.id)) { setMessages((current) => mergeLiveChat(current, [{ id: comment.id, createdAt: comment.createdAt, userId: comment.userId, name: comment.name, avatarUrl: comment.avatarUrl ?? undefined, text: comment.text }])); if (!chatAtBottom.current) setNewComments(true); } },
+      onPresentation: (value) => { if (active) setPresentation(value); },
       onCommentDeleted: (commentId) => { if (active) { rememberDeletedComment(deletedCommentIds.current, commentId); setMessages((current) => current.filter((item) => item.id !== commentId)); setPinnedComment((current) => current?.id === commentId ? null : current); } },
       onPinnedComment: (comment) => { if (active) setPinnedComment(comment && !deletedCommentIds.current.has(comment.id) ? comment : null); },
       onViewerCount: (count) => { if (active) setViewerCount(count); },
@@ -212,6 +216,7 @@ export function LiveViewerScreen() {
     clearGiftEvents();
     setTopGifters([]);
     setPinnedComment(null);
+    setPresentation(null);
   }, [streamId, clearGiftEvents]);
 
   useEffect(() => {
@@ -392,8 +397,8 @@ export function LiveViewerScreen() {
         <View style={[styles.desktopRow, { width: roomWidth }]}>
           <View style={{ width: stageWidth }}>
             <View style={[styles.stage, { height: stageHeight }]}>
-              {(playbackState === "connecting" || playbackState === "waitingForHost") ? <LiveCoverBackdrop source={source} /> : null}
-              {access ? <AudienceAgoraView key={videoSession} access={access} onPlaybackStateChange={updatePlaybackState} onError={handleVideoError} onTokenWillExpire={() => void renewToken()} style={styles.stageImage} /> : null}
+              <LiveCoverBackdrop blurredOnly source={source} />
+              {access ? <AudienceAgoraView key={videoSession} access={access} presentation={presentation} onPlaybackStateChange={updatePlaybackState} onError={handleVideoError} onTokenWillExpire={() => void renewToken()} style={styles.stageImage} /> : null}
               <StageShade />
               <PlaybackStatus state={playbackState} onRetry={() => void retryVideo()} />
               <View style={styles.desktopTop}><View>{host}</View><View style={styles.statusRight}>{liveStatus}<Pressable accessibilityLabel="Đóng Live" accessibilityRole="button" onPress={closeRoom} style={styles.closeButton}><Ionicons color="#FFFFFF" name="close" size={21} /></Pressable></View></View>
@@ -415,8 +420,8 @@ export function LiveViewerScreen() {
       </ScrollView>
     ) : (
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={[styles.mobileStage, width >= 600 && styles.tabletStage]}>
-        {(playbackState === "connecting" || playbackState === "waitingForHost") ? <LiveCoverBackdrop source={source} /> : null}
-        {access ? <AudienceAgoraView key={videoSession} access={access} onPlaybackStateChange={updatePlaybackState} onError={handleVideoError} onTokenWillExpire={() => void renewToken()} style={styles.stageImage} /> : null}
+        <LiveCoverBackdrop blurredOnly source={source} />
+        {access ? <AudienceAgoraView key={videoSession} access={access} presentation={presentation} onPlaybackStateChange={updatePlaybackState} onError={handleVideoError} onTokenWillExpire={() => void renewToken()} style={styles.stageImage} /> : null}
         <StageShade mobile />
         <PlaybackStatus state={playbackState} onRetry={() => void retryVideo()} />
         <LiveGiftOverlay compact manager={giftQueue} />
