@@ -1,11 +1,13 @@
 import type { StyleProp, ViewStyle } from "react-native";
 import type { AgoraAccess } from "@/services/live.service";
+import type { LivePresentation } from './live-presentation';
 
 export type LivePlaybackState = "connecting" | "waitingForHost" | "playing" | "reconnecting" | "ended" | "error";
 
 export type AudienceAgoraViewProps = {
   access: AgoraAccess;
   style?: StyleProp<ViewStyle>;
+  presentation?: LivePresentation | null;
   onTokenWillExpire: () => void;
   onError: () => void;
   onPlaybackStateChange?: (state: LivePlaybackState) => void;

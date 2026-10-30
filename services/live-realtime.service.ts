@@ -1,12 +1,13 @@
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 
 import { getRealtimeAccessToken } from "@/services/authenticated-fetch";
+import { parseLivePresentation, type LivePresentation } from '@/features/live/live-presentation';
 
 export type LiveRealtimeComment = {
   id: string; liveId: string; userId: string; name: string; avatarUrl: string | null;
   text: string; createdAt: string;
 };
-export type LiveRealtimeSnapshot = { viewerCount: number; reactionCount: number; comments: LiveRealtimeComment[]; pinnedComment: LiveRealtimeComment | null };
+export type LiveRealtimeSnapshot = { viewerCount: number; reactionCount: number; comments: LiveRealtimeComment[]; pinnedComment: LiveRealtimeComment | null; presentation?: LivePresentation | null };
 export type LiveRealtimeGift = { id: string; transactionId?: string; liveId: string; senderUserId: string; senderName: string; senderAvatarUrl?: string | null; giftId: string; giftName: string; imageUrl: string; animationUrl?: string | null; animationDurationMs?: number; quantity: number; totalAmount: number; effectType?: number; effectTier?: number; effectDurationMs?: number };
 
 const REACTION_BATCH_DELAY_MS = 250;
@@ -21,6 +22,7 @@ export function normalizeLiveRealtimeSnapshot(snapshot: Partial<LiveRealtimeSnap
     reactionCount: toSafeCount(snapshot?.reactionCount),
     comments: Array.isArray(snapshot?.comments) ? snapshot.comments : [],
     pinnedComment: snapshot?.pinnedComment ?? null,
+    presentation: parseLivePresentation(snapshot?.presentation),
   };
 }
 
@@ -42,6 +44,7 @@ export async function connectLiveRoom(liveId: string, handlers: {
   onGift: (gift: LiveRealtimeGift) => void;
   onEnded: () => void;
   onDisconnected?: () => void;
+  onPresentation?: (presentation: LivePresentation | null) => void;
 }) {
   const connection = new HubConnectionBuilder()
     .withUrl(`${process.env.EXPO_PUBLIC_API_URL ?? ""}/hubs/realtime`, { accessTokenFactory: getRealtimeAccessToken })
@@ -102,12 +105,14 @@ export async function connectLiveRoom(liveId: string, handlers: {
   connection.on("LiveReaction", (payload: { liveId: string; count: number }) => { if (payload.liveId === liveId) handlers.onReaction(toSafeCount(payload.count)); });
   connection.on("LiveEnded", (payload: { id: string }) => { if (payload.id === liveId) endRoom(); });
   connection.on("LiveGift", (payload: LiveRealtimeGift) => { if (payload.liveId === liveId) handlers.onGift(payload); });
+  connection.on("LivePresentation", (payload: { liveId: string; presentation: unknown }) => { if (payload.liveId === liveId) handlers.onPresentation?.(parseLivePresentation(payload.presentation)); });
   connection.onreconnected(() => { void rejoin(); });
   connection.onclose(() => { if (!closed) handlers.onDisconnected?.(); });
   await connection.start();
   try { handlers.onSnapshot(normalizeLiveRealtimeSnapshot(await connection.invoke<LiveRealtimeSnapshot>("JoinLive", liveId))); }
   catch (error) { await connection.stop(); throw error; }
   return {
+    setPresentation: (presentation: LivePresentation | null) => connection.invoke("SetLivePresentation", liveId, presentation),
     sendComment: (text: string) => connection.invoke("SendLiveComment", liveId, text),
     deleteComment: (commentId: string) => connection.invoke("DeleteLiveComment", liveId, commentId),
     setPinnedComment: (commentId: string | null) => connection.invoke("SetLivePinnedComment", liveId, commentId),

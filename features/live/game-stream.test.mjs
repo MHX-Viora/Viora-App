@@ -8,3 +8,18 @@ test('game stream layout preserves screen shape, caps resolution and places a ca
  }
  assert.deepEqual(gameStreamLayout(3840,2160),gameStreamLayout(1920,1080));
 });
+
+test('camera positions clamp within the video and survive portrait rotation', () => {
+ const {gameStreamLayout,moveGameCamera}=compile('features/live/game-stream-layout.ts');
+ const original=gameStreamLayout(1920,1080);
+ const position=moveGameCamera(original,-10000,-10000);
+ for(const [w,h] of [[1920,1080],[1080,1920],[720,1280]]){
+  const topLeft=gameStreamLayout(w,h,position);
+  assert.equal(topLeft.inset.x,Math.max(8,Math.round(topLeft.width*.018)));
+  assert.equal(topLeft.inset.y,topLeft.inset.x);
+  const bottomRight=gameStreamLayout(w,h,{x:100,y:100});
+  assert.ok(bottomRight.inset.x+bottomRight.inset.width<bottomRight.width);
+  assert.ok(bottomRight.inset.y+bottomRight.inset.height<bottomRight.height);
+ }
+ assert.deepEqual(moveGameCamera(original,0,0),moveGameCamera(original,NaN,Infinity));
+});

@@ -26,26 +26,22 @@ export const LiveGiftOverlay = memo(function LiveGiftOverlay({ manager, compact 
 }) {
   const state = useSyncExternalStore(manager.subscribe, manager.getSnapshot, manager.getSnapshot);
   const events = state.visible;
-  return <><SvgaGiftEffects manager={manager} /><View accessibilityLiveRegion="polite" pointerEvents="none" style={[styles.overlay, compact && styles.compactOverlay]}>
+  return <><SvgaGiftEffects compact={compact} manager={manager} /><View accessibilityLiveRegion="polite" pointerEvents="none" style={[styles.overlay, compact && styles.compactOverlay]}>
     {events.map((event) => <GiftBanner compact={compact} event={event} key={event.id} />)}
   </View></>;
 });
 
 const styles = StyleSheet.create({
   overlay: {
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 8,
-    maxWidth: 352,
     position: "absolute",
-    right: 16,
-    top: "40%",
-    width: "72%",
+    left: 0,
+    right: 0,
+    bottom: 28,
     zIndex: 20,
   },
   compactOverlay: {
-    maxWidth: 304,
-    right: 10,
-    top: "30%",
-    width: "78%",
+    bottom: 96,
   },
 });

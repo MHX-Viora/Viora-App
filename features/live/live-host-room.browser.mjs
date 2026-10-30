@@ -13,7 +13,7 @@ const mocks = {
   './live-heart-burst': 'export const LiveHeartBurst=()=>null;',
   'expo-image': 'export const Image=()=>null;',
   './live-gift-overlay': 'export const LiveGiftOverlay=()=>null;',
-  './host-agora-preview': 'export const HostAgoraPreview=()=>null;',
+  './host-agora-preview': `import React from 'react';export const HostAgoraPreview=()=>React.createElement('button',{id:'fixture-camera-drag',style:{position:'absolute',left:70,top:110},onClick:()=>{window.dragClicks=(window.dragClicks||0)+1}},'Camera');`,
   './live-cover-backdrop': 'export const LiveCoverBackdrop=()=>null;',
   './live-top-gifters': 'export const LiveTopGifters=()=>null;',
   './live-cover': 'export const DEFAULT_LIVE_COVER=null;',
@@ -30,7 +30,7 @@ const result = await build({
       <LiveHostRoom mode={mode} settings={{...initialHostSettings,title:'Live test'}} comments={comments} pinnedComment={null} hostUserId="host"
         onPinComment={resolved} giftQueue={{}} topGifters={[]} elapsed={90} countdown={3} viewerCount={7} reactionCount={12} heartBurstRef={{current:null}}
         onSendComment={resolved} onReportComment={resolved} onMuteUser={resolved} onDeleteComment={resolved}
-        cameraGranted={ready} cameraReady={ready} cameraError={false} cameraSession={0} agoraAppId="" agoraRef={{current:null}}
+        cameraGranted={ready} cameraReady={ready} cameraError={false} cameraSession={0} agoraAppId="fixture" agoraRef={{current:null}}
         onTokenWillExpire={noop} microphoneGranted={ready} cameraOn microphoneOn facing="front" connected
         onRequestPermissions={noop} onCameraToggle={noop} onMicrophoneToggle={noop} onFlipCamera={noop} onCameraReady={noop} onCameraError={noop}
         onBack={noop} onStart={()=>{document.getElementById('result').textContent='start'}} onCancelCountdown={noop} onEndRequest={noop}/><div id="result"/>
@@ -61,6 +61,8 @@ try {
   }
   await browser.click('#ready');
   await browser.wait('[...document.querySelectorAll("[role=button]")].some(e=>e.textContent.includes("Bắt đầu live") && e.getAttribute("aria-disabled")!=="true")');
+  await browser.click('#fixture-camera-drag');
+  assert.equal(await browser.read('window.dragClicks'),1,'Host stage decoration must allow camera drag interactions');
   const start = await browser.read(`(()=>{const r=[...document.querySelectorAll('[role=button]')].find(e=>e.textContent.includes('Bắt đầu live')).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
   await browser.rpc('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', clickCount: 1, ...start });
   await browser.rpc('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', clickCount: 1, ...start });

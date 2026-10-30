@@ -5,8 +5,10 @@ import type { LiveGiftOverlayEvent } from './live-gift-overlay-model';
 import { SvgaPlayer } from './svga-player';
 import { useLiveReducedMotion } from './use-live-reduced-motion';
 import { useReducedGiftEffects } from './premium-gift-effect-preference';
+import { giftEffectFrame } from './live-presentation';
 
-export function SvgaGiftEffects({ manager }: { manager: LiveGiftQueueManager }) {
+export function SvgaGiftEffects({ manager, compact = false }: { manager: LiveGiftQueueManager; compact?: boolean }) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const state = useSyncExternalStore(manager.subscribe, manager.getSnapshot, manager.getSnapshot);
   const reducedBySystem = useLiveReducedMotion();
   const reducedByUser = useReducedGiftEffects();
@@ -28,6 +30,6 @@ export function SvgaGiftEffects({ manager }: { manager: LiveGiftQueueManager }) 
     return () => clearTimeout(timer);
   }, [active, complete]);
   if (!active || reduced) return null;
-  return <View accessibilityLabel={`Hiệu ứng quà ${active.giftName}`} pointerEvents="none" style={styles.layer}><SvgaPlayer key={active.id} url={active.animationUrl!} onFinished={() => complete(active.id)} style={StyleSheet.absoluteFillObject} /></View>;
+  return <View accessibilityLabel={`Hiệu ứng quà ${active.giftName}`} pointerEvents="none" onLayout={event => setSize(event.nativeEvent.layout)} style={styles.layer}>{size.width > 0 && size.height > 0 ? <View testID="live-gift-effect-frame" style={[styles.effect, giftEffectFrame(size, compact)]}><SvgaPlayer key={active.id} url={active.animationUrl!} onFinished={() => complete(active.id)} style={StyleSheet.absoluteFillObject} /></View> : null}</View>;
 }
-const styles = StyleSheet.create({ layer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', zIndex: 18 } });
+const styles = StyleSheet.create({ layer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden', zIndex: 18 }, effect: { position: 'absolute', overflow: 'hidden' } });

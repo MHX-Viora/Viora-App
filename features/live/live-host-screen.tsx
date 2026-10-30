@@ -24,10 +24,15 @@ import { HostButton, HostHeading, HostPanel, hostColors } from "./live-host-ui";
 import { invalidateWalletData } from "@/services/wallet.service";
 import { rememberGiftTransaction } from "./live-gift-payment";
 import { LiveHostGiftIncomeSummary } from "./live-host-gift-income-summary";
+import type { LivePresentation } from './live-presentation';
 
 type Phase = "setup" | "check" | "countdown" | "live" | "summary";
 
 export function LiveHostScreen() {
+  const [presentation, setPresentation] = useState<LivePresentation | null>(null);
+  const presentationRef = useRef(presentation);
+  presentationRef.current = presentation;
+  const presentationFailed = useRef(false);
   const { width, height } = useWindowDimensions();
   const mobileViewport = isHostMobileViewport(width, height);
   const giftTransactions = useRef(new Set<string>());
@@ -155,9 +160,20 @@ export function LiveHostScreen() {
       },
       onEnded: () => { if (active) { setEndedAt(new Date()); setPhase("summary"); } },
       onDisconnected: () => { if (active) { setConnected(false); setRealtimeRetry((value) => value + 1); } },
-    }).then((connection) => { if (active) realtimeRef.current = connection; else void connection.close(); }).catch(() => { if (active) { setConnected(false); retryTimer = setTimeout(() => setRealtimeRetry((value) => value + 1), 5000); } });
+    }).then((connection) => { if (active) { realtimeRef.current = connection; void connection.setPresentation(presentationRef.current).catch(() => undefined); } else void connection.close(); }).catch(() => { if (active) { setConnected(false); retryTimer = setTimeout(() => setRealtimeRetry((value) => value + 1), 5000); } });
     return () => { active = false; if (retryTimer) clearTimeout(retryTimer); const connection = realtimeRef.current; realtimeRef.current = null; void connection?.close(); };
   }, [phase, liveId, realtimeRetry, showGiftEvent]);
+
+  useEffect(() => {
+    if (phase !== 'live') return;
+    let active = true;
+    const send = () => { void realtimeRef.current?.setPresentation(presentationRef.current).then(() => { presentationFailed.current = false; }).catch(() => {
+      if (active && !presentationFailed.current) { presentationFailed.current = true; showAppToast({ title: 'Không đồng bộ được bố cục Live', message: 'Kiểm tra kết nối và phiên bản máy chủ để người xem nhận đúng vị trí camera.', type: 'error' }); }
+    }); };
+    const timeout = setTimeout(send, 180);
+    const timer = setInterval(send, 10_000);
+    return () => { active = false; clearTimeout(timeout); clearInterval(timer); };
+  }, [presentation, phase]);
 
   const leave = () => router.canGoBack() ? router.back() : router.replace("/(tabs)/live");
   const setLivePinnedComment = async (commentId: string | null) => {
@@ -292,6 +308,7 @@ export function LiveHostScreen() {
       screenSharePending={screenSharePending}
       onScreenShare={() => void toggleScreenShare()}
       onScreenShareChanged={setScreenSharing}
+      onPresentationChanged={setPresentation}
       onScreenShareError={() => showAppToast({ title: 'Chia sẻ màn hình đã dừng', message: 'Vui lòng chọn lại màn hình nếu muốn tiếp tục.', type: 'error' })}
       agoraAppId={agoraAppId}
       agoraRef={agoraRef}

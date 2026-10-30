@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useRef } from "react";
-import { View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import type { IAgoraRTCClient } from "agora-rtc-sdk-ng";
 
 import type { AudienceAgoraViewProps } from "./audience-agora-view";
 import { createAudiencePlayback } from "./audience-agora-lifecycle";
+import { AudienceVideoCrop } from './audience-packed-video.web';
+import { audiencePresentationLayout } from './live-presentation';
 
-export function AudienceAgoraView({ access, style, onTokenWillExpire, onError, onPlaybackStateChange }: AudienceAgoraViewProps) {
+export function AudienceAgoraView({ access, presentation, style, onTokenWillExpire, onError, onPlaybackStateChange }: AudienceAgoraViewProps) {
+  const [source, setSource] = useState<MediaStreamTrack | null>(null);
+  const [stage, setStage] = useState({ width: 0, height: 0 });
+  const frame = presentation ? audiencePresentationLayout(stage, presentation) : null;
   const container = useRef<View>(null);
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const playbackRef = useRef<ReturnType<typeof createAudiencePlayback> | null>(null);
@@ -34,6 +39,7 @@ export function AudienceAgoraView({ access, style, onTokenWillExpire, onError, o
     };
     const playback = createAudiencePlayback(client, {
       onState: (state) => callbacks.current.onPlaybackStateChange?.(state), onError: fail, log,
+      onVideo: track => setSource(track?.getMediaStreamTrack() ?? null),
     });
     playbackRef.current = playback;
     playback.setContainer(container.current as unknown as HTMLElement | null);
@@ -78,5 +84,9 @@ export function AudienceAgoraView({ access, style, onTokenWillExpire, onError, o
     return () => { active = false; };
   }, [access.token]);
 
-  return <View ref={attachContainer} style={style} />;
+  return <View style={style} onLayout={event => setStage(event.nativeEvent.layout)}>
+    <View ref={attachContainer} style={[StyleSheet.absoluteFillObject, frame && source ? { opacity: 0, pointerEvents: 'none' } : null]} />
+    {frame && source ? <><AudienceVideoCrop track={source} frame={frame.screen} crop={frame.packed.screen} packed={frame.packed} name="screen" />
+      {frame.camera ? <AudienceVideoCrop track={source} frame={frame.camera} crop={frame.packed.camera} packed={frame.packed} name="camera" /> : null}</> : null}
+  </View>;
 }
