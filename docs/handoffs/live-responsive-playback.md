@@ -12,8 +12,9 @@
   on the host's normalized vertical position. With insufficient spare space or on
   desktop, use the host's inset placement. Camera off hides only the face region.
 - Desktop video is centered with a 1100px cap. The existing blurred cover fills
-  unused space. Gift banners and SVGA effects are centered near the bottom, above
-  the composer; effects span the compact stage or cap at 620px on larger stages.
+  unused space. Gift banners retain their original right-aligned placement
+  (compact: 30% from top, 10px from right; desktop: 40%, 16px). Only SVGA animations
+  are centered on screen, spanning compact stage width or capped at 620px.
 
 ## Protocol / deployment
 
@@ -41,6 +42,11 @@
   camera off/on, gift bounds and 320/375/430/768/1600px stages. Host drag/capture
   and host-room browser regressions pass. SVGA playback and Agora transport are
   fixture-backed; no real gift asset or production session was contacted.
+- `svga-player.browser.mjs` uses the actual shipped SVGA renderer with a synthetic
+  portrait movie. It reproduced double scaling/offset caused by RN Web flex sizing
+  and verifies the plain block player container at 320/375/768/1280px. Asset parsing
+  is substituted; canvas sizing/rendering uses the real library. Responsive browser
+  checks also verify banner right edges independently from centered scene bounds.
 - TypeScript and focused lint pass. Viewer screen retains a pre-existing
   `accessGeneration.current` cleanup warning. Backend authorization/validation/cache
   tests pass. Web export and Android Hermes export pass.
@@ -51,5 +57,6 @@
 Commands: `node --test --experimental-test-isolation=none features/live/*test.mjs`,
 `node features/live/game-stream.browser.mjs`,
 `node features/live/live-presentation.browser.mjs`,
+`node features/live/svga-player.browser.mjs`,
 `node features/live/live-host-room.browser.mjs`, `npx tsc --noEmit`.
 Backend: `dotnet test Viora.Application.Tests/Viora.Application.Tests.csproj --filter FullyQualifiedName~LivePresentationTests`.

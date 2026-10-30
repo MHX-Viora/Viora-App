@@ -11,7 +11,7 @@ export const GiftBanner = memo(function GiftBanner({ event, compact }: {
   compact: boolean;
 }) {
   const gradientId = `gift-${event.id.replace(/[^a-zA-Z0-9]/g, "")}`;
-  return <View accessibilityLabel={`${event.senderName} đã tặng ${event.giftName} ×${event.quantity}`} style={[styles.banner, compact && styles.compactBanner]}>
+  return <View testID="live-gift-banner" accessibilityLabel={`${event.senderName} đã tặng ${event.giftName} ×${event.quantity}`} style={[styles.banner, compact && styles.compactBanner]}>
     <Svg height="100%" pointerEvents="none" style={StyleSheet.absoluteFillObject} width="100%">
       <Defs><LinearGradient id={gradientId} x1="0%" x2="100%" y1="0%" y2="30%">
         <Stop offset="0%" stopColor="#BD7528" stopOpacity={0.93} />
@@ -30,8 +30,8 @@ export const GiftBanner = memo(function GiftBanner({ event, compact }: {
 });
 
 const styles = StyleSheet.create({
-  banner: { alignItems: "center", alignSelf: "center", borderRadius: 28, flexDirection: "row", maxWidth: 420, width: "100%", minHeight: 54, paddingLeft: 5, paddingRight: 11, overflow: "hidden" },
-  compactBanner: { maxWidth: "100%", minHeight: 48, paddingRight: 8 },
+  banner: { alignItems: "center", alignSelf: "flex-end", borderRadius: 28, flexDirection: "row", maxWidth: "100%", minHeight: 54, paddingLeft: 5, paddingRight: 11, overflow: "hidden" },
+  compactBanner: { minHeight: 48, paddingRight: 8 },
   avatar: { borderColor: "rgba(255,255,255,0.86)", borderWidth: 1.5 },
   copy: { flexShrink: 1, marginLeft: 8, maxWidth: 150, minWidth: 0 },
   sender: { color: "#FFFFFF", fontSize: 13, fontWeight: "800" },

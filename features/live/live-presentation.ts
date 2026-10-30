@@ -47,5 +47,6 @@ export function audiencePresentationLayout(stage: Size, p: LivePresentation) {
 
 export function giftEffectFrame(stage: Size, compact: boolean) {
   const width = compact ? stage.width : Math.min(stage.width, 620);
-  return { left: (stage.width - width) / 2, width, height: Math.max(0, Math.min(stage.height * .58, width * 1.25)), bottom: compact ? 96 : 28 };
+  const height = Math.max(0, Math.min(stage.height * .78, width * 1.8));
+  return { left: (stage.width - width) / 2, top: (stage.height - height) / 2, width, height };
 }
