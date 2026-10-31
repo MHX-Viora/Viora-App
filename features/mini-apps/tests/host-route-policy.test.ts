@@ -16,7 +16,19 @@ test('public host CSP applies only to exact app route and composes without chang
   const csp = rule.headers.find((x: { key: string }) => x.key === 'Content-Security-Policy').value;
   assert.ok(csp.includes('frame-src https://host.example;')); assert.ok(csp.includes("frame-ancestors 'none'"));
   assert.ok(!/frame-src https:[;\s]/.test(csp)); assert.ok(!JSON.stringify(config.rewrites).includes('mini-app-host'));
-  assert.deepEqual(configureMiniAppPolicy(base, {}), base);
+  assert.throws(() => configureMiniAppPolicy(base, {}));
+});
+
+test('default Auth Bridge route policy allows partner frames without feature flags', () => {
+  const config = configureMiniAppPolicy(base, { EXPO_PUBLIC_API_URL: 'https://api.example' });
+  assert.deepEqual(config.rewrites, base.rewrites);
+  assert.deepEqual(config.headers.slice(0, base.headers.length), base.headers);
+  const rule = config.headers.at(-1);
+  assert.equal(rule.source, '/mini-apps/(app_[A-Za-z0-9_-]{43})(/)?');
+  const csp = rule.headers.find((x: { key: string }) => x.key === 'Content-Security-Policy').value;
+  assert.ok(csp.includes('frame-src https:;'));
+  assert.ok(csp.includes("frame-ancestors 'none'"));
+  assert.throws(() => configureMiniAppPolicy(base, { EXPO_PUBLIC_API_URL: 'http://api.example' }));
 });
 test('enabled config rejects privileged, ambiguous and malformed host origins before build', () => {
   for (const host of ['http://host.example', 'https://user:pass@host.example', 'https://host.example/x', 'https://host.example/?grant=x',

@@ -6,14 +6,13 @@ function exactOrigin(value) {
 }
 function configureMiniAppPolicy(base, environment) {
   const config = structuredClone(base);
-  if (environment.EXPO_PUBLIC_MINI_APP_AUTH_BRIDGE_ENABLED === 'true') {
+  if (environment.EXPO_PUBLIC_MINI_APP_AUTH_BRIDGE_ENABLED === 'true' || environment.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED !== 'true') {
     exactOrigin(environment.EXPO_PUBLIC_API_URL);
     config.headers.push({source:'/mini-apps/(app_[A-Za-z0-9_-]{43})(/)?',headers:[
       {key:'Cache-Control',value:'private, no-store'},{key:'Referrer-Policy',value:'no-referrer'},
       {key:'Content-Security-Policy',value:"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' https: wss:; frame-src https:; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"}]});
     return config;
   }
-  if (environment.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED !== 'true') return config;
   const host = exactOrigin(environment.EXPO_PUBLIC_MINI_APP_HOST_ORIGIN);
   const app = exactOrigin(environment.EXPO_PUBLIC_APP_ORIGIN || environment.DEVELOPER_SITE_ORIGIN);
   const api = exactOrigin(environment.EXPO_PUBLIC_API_URL), issuer = exactOrigin(environment.EXPO_PUBLIC_OPEN_API_ISSUER);

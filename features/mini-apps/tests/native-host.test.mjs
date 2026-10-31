@@ -27,6 +27,8 @@ function fixture({ enabled = true, installed = true, platform = 'android', mount
     '../lib/native-host-channel': { createNativeHostChannel: value => { options = value; return { receive() {}, dispose: () => disposed++ }; } },
   };
   const previous = process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED;
+  const previousRuntime = process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED;
+  process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED = 'true';
   process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED = String(enabled);
   try {
     const module = new Module(filename); module.filename = filename;
@@ -39,13 +41,14 @@ function fixture({ enabled = true, installed = true, platform = 'android', mount
     return { cleanup, events, statuses, states, options, resolved: () => resolved,
       disposed: () => disposed, stops: () => stops, request: () => request, hostProps };
   } finally {
+    if (previousRuntime === undefined) delete process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED; else process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED = previousRuntime;
     if (previous === undefined) delete process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED;
     else process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED = previous;
   }
 }
 
-test('native host default off and missing development module fail before loading any document', () => {
-  for (const input of [{ enabled: false }, { installed: false }]) {
+test('legacy native host missing development module fails before loading any document', () => {
+  for (const input of [{ installed: false }]) {
     const f = fixture(input);
     assert.deepEqual(f.statuses, ['host.error']); assert.equal(f.resolved(), 0);
     assert.equal(f.states.some(value => value?.url), false); f.cleanup();

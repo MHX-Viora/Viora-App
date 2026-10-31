@@ -14,6 +14,8 @@ test('Web adapter attaches before navigating, targets exact host and disposes on
   globalThis.window = { location: { origin: 'https://app.example' }, crypto: { randomUUID: () => 'request-id' },
     addEventListener: (type, callback) => listeners.set(type, callback), removeEventListener: type => listeners.delete(type) };
   const originalHost = process.env.EXPO_PUBLIC_MINI_APP_HOST_ORIGIN, originalApi = process.env.EXPO_PUBLIC_API_URL;
+  const originalRuntime = process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED;
+  process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED = 'true';
   process.env.EXPO_PUBLIC_MINI_APP_HOST_ORIGIN = 'https://host.example'; process.env.EXPO_PUBLIC_API_URL = 'https://api.example';
   const overrides = {
     './auth-host.web': {default:()=>null},
@@ -39,5 +41,6 @@ test('Web adapter attaches before navigating, targets exact host and disposes on
     globalThis.window = previousWindow;
     if (originalHost === undefined) delete process.env.EXPO_PUBLIC_MINI_APP_HOST_ORIGIN; else process.env.EXPO_PUBLIC_MINI_APP_HOST_ORIGIN = originalHost;
     if (originalApi === undefined) delete process.env.EXPO_PUBLIC_API_URL; else process.env.EXPO_PUBLIC_API_URL = originalApi;
+    if (originalRuntime === undefined) delete process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED; else process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED = originalRuntime;
   }
 });

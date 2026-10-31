@@ -9,7 +9,6 @@ import { WalletSummaryCard } from "@/components/wallet/wallet-summary-card";
 import { WalletPromotionRow } from "@/components/utilities/wallet-promotion-row";
 import { MiniAppSection } from "@/components/mini-apps/mini-app-section";
 import { FeaturedBrandsSection } from '@/components/utilities/featured-brands-section';
-import { miniAppsEnabled } from "@/features/mini-apps/lib/host-controller";
 import { useResponsive } from "@/hooks/use-responsive";
 import { getWallet } from "@/services/wallet.service";
 import { spacing, type ThemeColors, useTheme } from "@/theme";
@@ -30,7 +29,7 @@ export function UtilitiesScreen() {
   const [bannerActive, setBannerActive] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const [miniAppY, setMiniAppY] = useState(0);
-  const showMiniApps = miniAppsEnabled && Platform.OS === "web";
+  const showMiniApps = Platform.OS === "web" || Platform.OS === "android" || Platform.OS === "ios";
 
   const loadWallet = useCallback(async () => {
     setLoading(true);

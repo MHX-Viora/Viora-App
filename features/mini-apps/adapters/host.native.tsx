@@ -13,10 +13,11 @@ type Methods = { send: (value: string) => Promise<void>; stop: () => Promise<voi
 type Props = ViewProps & { configuration: { origin: string; url: string }; ref?: Ref<Methods>;
   onHostMessage: (event: { nativeEvent: unknown }) => void; onHostError: () => void };
 
-// Resolve only when mounted by an explicitly enabled development build. Expo Go
-// and old binaries lacking the local module fail safely without a render crash.
+// Auth Bridge is the default. The custom legacy module is resolved only when
+// explicitly selected and missing modules fail safely without a render crash.
 export default function MiniAppHost(props: HostProps) {
-  return process.env.EXPO_PUBLIC_MINI_APP_AUTH_BRIDGE_ENABLED === 'true' ? <AuthHost {...props}/> : <LegacyMiniAppHost {...props}/>;
+  const legacy = process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED === 'true' && process.env.EXPO_PUBLIC_MINI_APP_AUTH_BRIDGE_ENABLED !== 'true';
+  return legacy ? <LegacyMiniAppHost {...props}/> : <AuthHost {...props}/>;
 }
 function LegacyMiniAppHost({ appId, attempt, onStatus }: HostProps) {
   const view = useRef<Methods>(null), status = useRef(onStatus);
@@ -36,8 +37,7 @@ function LegacyMiniAppHost({ appId, attempt, onStatus }: HostProps) {
     };
     terminal.current = finish;
     try {
-      if (process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED !== 'true' ||
-        !['android', 'ios'].includes(Platform.OS) || !requireOptionalNativeModule('MiniAppHost')) throw Error('NATIVE_HOST_UNAVAILABLE');
+      if (!['android', 'ios'].includes(Platform.OS) || !requireOptionalNativeModule('MiniAppHost')) throw Error('NATIVE_HOST_UNAVAILABLE');
       const app = process.env.EXPO_PUBLIC_APP_ORIGIN ?? '', api = process.env.EXPO_PUBLIC_API_URL ?? '';
       const origin = productionHostOrigin(process.env.EXPO_PUBLIC_MINI_APP_HOST_ORIGIN ?? '', app, api);
       const client = createMiniAppLaunchClient(api, origin, app), requestId = randomUUID();
