@@ -109,6 +109,7 @@ export function FeedScreen() {
   const loadRequestIdRef = useRef(0);
   const isCompactWeb = isWeb && !isDesktopWeb;
   const feedTopPadding = getFixedTopBarLayout({
+    topInset: insets.top,
     isArticle: activeCategory === "articles",
     isCompactWeb,
     isDesktopWeb,

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { readFileSync, existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { createRequire, Module } from 'node:module';
@@ -14,6 +15,7 @@ function compile(filename, overrides = {}, expose = '') {
   const mod = new Module(filename); mod.paths = Module._nodeModulePaths(path.dirname(filename));
   mod.require = name => {
     if (Object.hasOwn(overrides, name)) return overrides[name];
+    if (name === 'react-native-safe-area-context') return { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };
     if (name.startsWith('.')) {
       const file = path.resolve(path.dirname(filename), name) + '.ts';
       if (existsSync(file)) return compile(file, overrides);

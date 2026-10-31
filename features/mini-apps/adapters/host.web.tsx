@@ -6,7 +6,8 @@ import { createProductionTransport } from '../lib/host-transport';
 import AuthHost from './auth-host.web';
 
 export default function MiniAppHost(props: HostProps) {
-  return process.env.EXPO_PUBLIC_MINI_APP_AUTH_BRIDGE_ENABLED === 'true' ? <AuthHost {...props}/> : <LegacyMiniAppHost {...props}/>;
+  const legacy = process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED === 'true' && process.env.EXPO_PUBLIC_MINI_APP_AUTH_BRIDGE_ENABLED !== 'true';
+  return legacy ? <LegacyMiniAppHost {...props}/> : <AuthHost {...props}/>;
 }
 function LegacyMiniAppHost({ appId, attempt, onStatus }: HostProps) {
   const frame = useRef<HTMLIFrameElement>(null), status = useRef(onStatus);

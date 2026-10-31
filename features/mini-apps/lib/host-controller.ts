@@ -1,6 +1,6 @@
 import { validMiniAppId, type MiniAppDetail } from './contracts';
 
-export const miniAppsEnabled = process.env.EXPO_PUBLIC_MINI_APP_RUNTIME_ENABLED === 'true' || process.env.EXPO_PUBLIC_MINI_APP_AUTH_BRIDGE_ENABLED === 'true';
+export const miniAppsEnabled = true;
 export const isPublicMiniAppRoute = (segments: readonly string[], enabled: boolean) =>
   enabled && segments.length === 2 && segments[0] === 'mini-apps' && segments[1] === '[appId]';
 type State = { phase: 'idle' | 'loading' | 'running' | 'failed' | 'closed'; detail: MiniAppDetail | null; attempt: number; status: string };

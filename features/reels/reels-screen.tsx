@@ -2,6 +2,7 @@
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import type {
   LayoutChangeEvent,
@@ -123,6 +124,7 @@ export function ReelsScreen() {
     isDesktopWeb,
   });
   const categoryTopBarLayout = getFixedTopBarLayout({
+    topInset: useSafeAreaInsets().top,
     categoryOnly: true,
     isCompactWeb: isWeb && !isDesktopWeb,
     isDesktopWeb,
@@ -603,6 +605,7 @@ export function ReelsScreen() {
         )
       )}
       <ReelsHeader
+        top={isWeb ? 0 : categoryTopBarLayout.height}
         activeSort={sort}
         height={reelsOverlayLayout.headerHeight}
         overlay={!isLoadingReels && reelItems.length > 0}

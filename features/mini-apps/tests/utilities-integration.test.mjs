@@ -5,11 +5,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url), React = require('react'), native = require('react-native-web');
 const ts = require('typescript'), { renderToStaticMarkup } = require('react-dom/server');
-function render(enabled, { isDesktopWeb = false, bottom = 0 } = {}) {
+function render(enabled, { isDesktopWeb = false, bottom = 0, platform = 'web', nativeEnabled = false } = {}) {
   const filename = fileURLToPath(new URL('../../utilities/utilities-screen.tsx', import.meta.url));
   const routes = []; let wallet, section, promotion, contentStyle;
   const overrides = {
-    'react-native': { ...native, ScrollView: React.forwardRef((props, ref) => {
+    'react-native': { ...native, Platform: { ...native.Platform, OS: platform }, ScrollView: React.forwardRef(function TestScrollView(props, ref) {
       contentStyle = native.StyleSheet.flatten(props.contentContainerStyle);
       return React.createElement(native.ScrollView, { ...props, ref });
     }) }, '@react-navigation/native': { useFocusEffect: () => {} },
@@ -29,7 +29,15 @@ function render(enabled, { isDesktopWeb = false, bottom = 0 } = {}) {
   const module = new Module(filename); module.filename = filename;
   module.require = name => Object.hasOwn(overrides, name) ? overrides[name] : require(name);
   module._compile(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, filename);
-  const html = renderToStaticMarkup(React.createElement(module.exports.UtilitiesScreen));
+  const previousNativeFlag = process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED;
+  let html;
+  try {
+    process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED = String(nativeEnabled);
+    html = renderToStaticMarkup(React.createElement(module.exports.UtilitiesScreen));
+  } finally {
+    if (previousNativeFlag === undefined) delete process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED;
+    else process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED = previousNativeFlag;
+  }
   return { html, routes, wallet, section, promotion, contentStyle };
 }
 
@@ -52,8 +60,27 @@ test('catalog follows Wallet before featured brands; Wallet actions survive cata
   const appId = 'app_' + 'a'.repeat(43); result.section.onOpen(appId);
   assert.deepEqual(result.routes, ['/wallet/deposit', '/wallet/history', '/wallet/withdraw', `/mini-apps/${appId}`]);
 });
-test('default-off integration mounts no catalog and leaves Wallet intact', () => {
-  const result = render(false); assert.equal(result.section, undefined);
-  assert.equal(result.promotion.onExplore, undefined);
-  assert.ok(result.wallet); assert.equal(result.html.includes('CATALOG_ERROR_RETRY'), false);
+test('catalog stays available without the old runtime flags and leaves Wallet intact', () => {
+  const result = render(false);
+  assert.ok(result.section);
+  assert.equal(typeof result.promotion.onExplore, 'function');
+  assert.ok(result.wallet);
+});
+
+test('Android and iOS expose catalog navigation regardless of old runtime flags', () => {
+  for (const platform of ['android', 'ios']) {
+    const result = render(true, { platform, nativeEnabled: true });
+    assert.ok(result.section, `${platform} must show Mini Apps when native runtime is enabled`);
+    assert.equal(typeof result.promotion.onExplore, 'function');
+    const appId = 'app_' + 'a'.repeat(43);
+    result.section.onOpen(appId);
+    assert.deepEqual(result.routes, [`/mini-apps/${appId}`]);
+    for (const [enabled, nativeEnabled] of [[true, false], [false, true], [false, false]]) {
+      const available = render(enabled, { platform, nativeEnabled });
+      assert.ok(available.section);
+      assert.equal(typeof available.promotion.onExplore, 'function');
+      assert.ok(available.wallet);
+    }
+  }
+  assert.equal(render(true, { platform: 'windows', nativeEnabled: true }).section, undefined);
 });

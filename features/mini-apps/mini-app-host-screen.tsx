@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { miniAppCatalog } from '@/services/mini-app.service';
 import { miniAppCatalogCache } from './lib/catalog-cache';
-import { MiniAppHostController, miniAppsEnabled } from './lib/host-controller';
+import { MiniAppHostController } from './lib/host-controller';
 import MiniAppHost from './adapters/host';
 import { spacing, useTheme } from '@/theme';
 
@@ -28,8 +28,7 @@ export function MiniAppHostScreen({ appId }: { appId: string }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
   const [logoFailed, setLogoFailed] = useState(false);
   const closeControl = useRef<View>(null);
-  const supported = miniAppsEnabled && (Platform.OS === 'web' ||
-    (['android', 'ios'].includes(Platform.OS) && process.env.EXPO_PUBLIC_MINI_APP_NATIVE_RUNTIME_ENABLED === 'true'));
+  const supported = ['web', 'android', 'ios'].includes(Platform.OS);
   useEffect(() => { if (Platform.OS === 'web') closeControl.current?.focus(); }, []);
   useFocusEffect(useCallback(() => {
     if (supported) void controller.open();
