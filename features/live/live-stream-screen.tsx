@@ -3,6 +3,7 @@ import { LiveCoverImage } from "./live-cover-image";
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LiveCreatorAvatar } from "@/features/live/live-creator-avatar";
 import { FeedCategoryHeader } from "@/components/feed/feed-category-header";
@@ -25,6 +26,7 @@ export function LiveStreamScreen() {
   const { width, isDesktopWeb, isLargeDesktop, isWeb } = useResponsive();
   const showDesktopCategoryRail = isDesktopWeb && isLargeDesktop;
   const categoryTopBarLayout = getFixedTopBarLayout({
+    topInset: useSafeAreaInsets().top,
     categoryOnly: true,
     isCompactWeb: isWeb && !isDesktopWeb,
     isDesktopWeb,

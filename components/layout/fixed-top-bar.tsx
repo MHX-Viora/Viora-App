@@ -24,6 +24,7 @@ export function FixedTopBar({
     isCompactWeb: isWeb && !isDesktopWeb,
     isDesktopWeb,
     useDesktopSideRails: isDesktopWeb && isLargeDesktop,
+    topInset: insets.top,
   });
   const backgroundLayout = getFixedTopBarBackgroundLayout({
     barHeight: barLayout.height,

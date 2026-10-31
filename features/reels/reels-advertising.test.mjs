@@ -17,6 +17,7 @@ test('personal account can open the reel advertising form without article publis
     react: { ...React, useState: value => [value === true ? false : value === 0 ? 600 : typeof value === 'function' ? value() : value, noop],
       useEffect: noop, useRef: value => ({ current: value }), useMemo: fn => fn(), useCallback: fn => fn },
     'react-native': native,
+    'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) },
     'expo-router': { router: { push: value => navigations.push(value) } },
     '@react-navigation/native': { useIsFocused: () => true, useNavigation: () => ({}) },
     '@/stores/session-store': { getSession: async () => ({ user: { accountStyle: 0 } }) },

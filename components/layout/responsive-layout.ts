@@ -79,25 +79,31 @@ export const getResponsiveBottomPadding = ({
   mobilePadding: number;
 }) => (isDesktopWeb ? desktopPadding : mobilePadding);
 
+const getNativeTopBarPadding = (topInset: number) =>
+  (Number.isFinite(topInset) && topInset > 0 ? topInset : 0) + 8;
+
 export const getFixedTopBarLayout = ({
   categoryOnly = false,
   isArticle = false,
   isCompactWeb = false,
   isDesktopWeb,
   useDesktopSideRails = false,
+  topInset = 0,
 }: {
   categoryOnly?: boolean;
   isArticle?: boolean;
   isCompactWeb?: boolean;
   isDesktopWeb: boolean;
   useDesktopSideRails?: boolean;
+  topInset?: number;
 }) => {
+  const nativeTopPadding = getNativeTopBarPadding(topInset);
   if (categoryOnly) {
     return useDesktopSideRails
       ? ({ height: 0, paddingTop: 0 } as const)
       : isDesktopWeb || isCompactWeb
       ? ({ height: 50, paddingTop: 0 } as const)
-      : ({ height: 55, paddingTop: 0 } as const);
+      : ({ height: 55 + nativeTopPadding, paddingTop: nativeTopPadding } as const);
   }
 
   if (isArticle) {
@@ -105,14 +111,14 @@ export const getFixedTopBarLayout = ({
       ? ({ height: 112, paddingTop: 0 } as const)
       : isDesktopWeb || isCompactWeb
       ? ({ height: 170, paddingTop: 0 } as const)
-      : ({ height: 175, paddingTop: 0 } as const);
+      : ({ height: 175 + nativeTopPadding, paddingTop: nativeTopPadding } as const);
   }
 
   return useDesktopSideRails
     ? ({ height: 68, paddingTop: 0 } as const)
     : isDesktopWeb || isCompactWeb
       ? ({ height: 126, paddingTop: 0 } as const)
-      : ({ height: 131, paddingTop: 0 } as const);
+      : ({ height: 131 + nativeTopPadding, paddingTop: nativeTopPadding } as const);
 };
 
 export const getFixedTopBarBackgroundLayout = ({
@@ -124,15 +130,12 @@ export const getFixedTopBarBackgroundLayout = ({
   isWeb: boolean;
   topInset: number;
 }) => {
-  const safeTopInset =
-    Number.isFinite(topInset) && topInset > 0 ? topInset : 0;
-
   return isWeb
     ? ({ height: barHeight, paddingTop: 0, top: 0 } as const)
     : ({
-        height: barHeight + safeTopInset,
-        paddingTop: safeTopInset,
-        top: -safeTopInset,
+        height: barHeight,
+        paddingTop: getNativeTopBarPadding(topInset),
+        top: 0,
       } as const);
 };
 
