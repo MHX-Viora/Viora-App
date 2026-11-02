@@ -2,8 +2,10 @@ import { readMiniAppDetail, readMiniAppPage, validMiniAppId } from "../features/
 
 export function createMiniAppCatalogClient(baseUrl: string, transport: typeof fetch = fetch) {
   async function get(path: string, signal?: AbortSignal): Promise<unknown> {
+    // React Native's fetch polyfill appends `_=` for cache: 'no-store'; the
+    // catalog rejects extra query parameters. Use HTTP cache directives instead.
     const response = await transport(`${baseUrl}${path}`, {
-      method: "GET", headers: { Accept: "application/json" }, credentials: "omit", cache: "no-store", redirect: "error", signal,
+      method: "GET", headers: { Accept: "application/json", "Cache-Control": "no-store" }, credentials: "omit", redirect: "error", signal,
     });
     if (!response.ok) throw new Error(response.status === 404 ? "APP_NOT_FOUND" : "CATALOG_UNAVAILABLE");
     const body = await response.text();

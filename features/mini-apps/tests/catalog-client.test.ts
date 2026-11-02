@@ -6,12 +6,32 @@ import { MiniAppCatalogCache } from "../lib/catalog-cache";
 const item = { id: "app_" + "a".repeat(43), name: "Ứng dụng", logoUrl: "https://partner.example/logo.png", description: "Mô tả", category: "utilities", version: "1.0" };
 const page = { items: [item], page: 1, pageSize: 20, total: 1 };
 
+test("React Native fetch preserves exact catalog URLs without cache-busting query parameters", async () => {
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const { Request: NativeRequest } = require('whatwg-fetch');
+  const seen: string[] = [];
+  const client = createMiniAppCatalogClient('https://api.example', async (url, init) => {
+    const request = new NativeRequest(url, init);
+    seen.push(request.url);
+    const expected = seen.length === 1
+      ? 'https://api.example/api/mini-apps?page=1&pageSize=20'
+      : `https://api.example/api/mini-apps/${item.id}`;
+    assert.equal(request.url, expected);
+    return Response.json(seen.length === 1 ? page : { app: item, canOpen: true, loginAvailable: false, capabilities: [] });
+  });
+  assert.deepEqual(await client.list(), page);
+  assert.equal((await client.detail(item.id)).app.id, item.id);
+  assert.equal(seen.length, 2);
+});
+
 test("catalog uses anonymous no-store bounded GET and propagates abort", async () => {
   const abort = new AbortController(); let calls = 0;
   const client = createMiniAppCatalogClient("https://api.example", async (url, init) => {
     calls++;
     assert.equal(url, "https://api.example/api/mini-apps?page=1&pageSize=20");
-    assert.equal(init?.credentials, "omit"); assert.equal(init?.cache, "no-store");
+    assert.equal(init?.credentials, "omit"); assert.equal(init?.cache, undefined);
+    assert.equal(new Headers(init?.headers).get("Cache-Control"), "no-store");
     assert.equal(init?.signal, abort.signal);
     assert.equal(new Headers(init?.headers).has("Authorization"), false);
     return Response.json(page);

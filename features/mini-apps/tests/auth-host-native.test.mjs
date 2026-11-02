@@ -1,10 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {Buffer} from 'node:buffer';
 import Module,{createRequire} from 'node:module';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 const require=createRequire(import.meta.url),ts=require('typescript');
 const clientId='app_'+'a'.repeat(43),url='https://mini.example/start',origin='https://mini.example';
+const documentId='22222222-2222-4222-8222-222222222222';
+const envelope=(data,id=documentId)=>JSON.stringify({nonce:Buffer.alloc(32,1).toString('base64url'),documentId:id,data:JSON.stringify(data)});
+const bindDocument=(web,platform='ios',id=documentId)=>web.props.onMessage({nativeEvent:{url:platform==='android'?origin:url,
+  data:envelope({channel:'ankt.auth.transport',type:'document'},id)}});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
 function fixture(platform='ios'){
   const filename=fileURLToPath(new URL('../adapters/auth-host.native.tsx',import.meta.url)),localRequire=createRequire(filename);
@@ -36,21 +41,129 @@ for(const platform of ['ios','android'])test(platform+' AuthHost mounts RN WebVi
     assert.equal(web.type,'WebView');assert.equal(web.props.source.uri,url);assert.equal(web.props.sharedCookiesEnabled,false);
     assert.ok(!JSON.stringify(web.props).includes('ANKT_MAIN_TOKEN'));
     const message={channel:'ankt.auth',version:1,type:'request',id:crypto.randomUUID(),method:'auth.login',params:{clientId,codeChallenge:'p'.repeat(43)}};
-    const envelope=JSON.stringify({nonce:Buffer.alloc(32,1).toString('base64url'),data:JSON.stringify(message)});
-    web.props.onMessage({nativeEvent:{url:'https://evil.example',data:envelope}});await flush();assert.equal(f.requests.length,1);
-    web.props.onLoadStart({nativeEvent:{url}});web.props.onMessage({nativeEvent:{url,data:envelope}});await flush();
+    web.props.onMessage({nativeEvent:{url:'https://evil.example',data:envelope(message)}});await flush();assert.equal(f.requests.length,1);
+    bindDocument(web,platform);
+    web.props.onLoadStart({nativeEvent:{url}});web.props.onMessage({nativeEvent:{url:platform==='android'?origin:url,data:envelope(message)}});await flush();
     assert.equal(f.requests[1].options.headers.Authorization,'Bearer ANKT_MAIN_TOKEN');assert.equal(f.requests[1].options.headers['X-Ankt-Platform'],platform==='ios'?'iOS':'Android');
     assert.equal(f.injections.length,1);assert.ok(!f.injections[0].includes('ANKT_MAIN_TOKEN'));
     f.background();await flush();assert.equal(f.stops(),1);assert.ok(f.requests.some(request=>request.path.endsWith('/revoke')));
   }finally{f.cleanup();}
 });
-test('reload and redirects destroy the native auth channel before any further grant',async()=>{
-  for(const redirect of [false,true]){const f=fixture();try{await flush();const web=f.render().props.children;
+for(const platform of ['ios','android'])test(platform+' revokes a backgrounded session with the installed React Native abort polyfill',async()=>{
+  const {AbortController:NativeAbortController,AbortSignal:NativeAbortSignal}=require('abort-controller/dist/abort-controller');
+  const oldController=globalThis.AbortController,oldSignal=globalThis.AbortSignal;
+  let f;
+  try{
+    globalThis.AbortController=NativeAbortController;globalThis.AbortSignal=NativeAbortSignal;
+    assert.equal(typeof NativeAbortSignal.timeout,'undefined','exercise the actual RN API rather than Node AbortSignal');
+    f=fixture(platform);await flush();const web=f.render().props.children;
+    const sessionSignal=f.requests[0].options.signal;
+    const message={channel:'ankt.auth',version:1,type:'request',id:crypto.randomUUID(),method:'auth.login',params:{clientId,codeChallenge:'p'.repeat(43)}};
+    bindDocument(web,platform);
     web.props.onLoadStart({nativeEvent:{url}});
+    web.props.onMessage({nativeEvent:{url:platform==='android'?origin:url,data:envelope(message)}});await flush();
+    assert.equal(f.injections.length,1,'a session was created before closing the app');
+    f.background();await flush();
+    const revoke=f.requests.find(request=>request.path.endsWith('/revoke'));
+    assert.ok(revoke,'closing must send revoke when native AbortSignal has no timeout API');
+    assert.ok(revoke.options.signal instanceof NativeAbortSignal);
+    assert.notEqual(revoke.options.signal,sessionSignal,'revocation must survive cancellation of the mounted host');
+    assert.equal(sessionSignal.aborted,true);
+    assert.equal(revoke.options.signal.aborted,false);
+    assert.deepEqual(JSON.parse(revoke.options.body),{sessionId:'11111111-1111-4111-8111-111111111111'});
+  }finally{
+    f?.cleanup();globalThis.AbortController=oldController;globalThis.AbortSignal=oldSignal;
+  }
+});
+
+test('iOS reload and redirects destroy the native auth channel before any further grant',async()=>{
+  for(const redirect of [false,true]){const f=fixture();try{await flush();const web=f.render().props.children;
+    web.props.onLoadStart({nativeEvent:{url}});web.props.onLoad({nativeEvent:{url}});
     if(redirect)assert.equal(web.props.onShouldStartLoadWithRequest({url:'https://evil.example'}),false);
     else web.props.onLoadStart({nativeEvent:{url}});
     assert.equal(f.stops(),1);assert.equal(f.render().props.children,null);
   }finally{f.cleanup();}}
+});
+
+test('Android history callbacks preserve a document until actual replacement is announced',async()=>{
+  const f=fixture('android');try{await flush();const web=f.render().props.children;
+    bindDocument(web,'android');
+    web.props.onLoadStart({nativeEvent:{url}});
+    web.props.onLoadStart({nativeEvent:{url}});
+    assert.equal(f.stops(),0);
+    assert.equal(f.render().props.children.type,'WebView');
+    web.props.onLoad({nativeEvent:{url}});
+    web.props.onLoadStart({nativeEvent:{url}});
+    assert.equal(f.stops(),0,'a history callback after load does not prove document replacement');
+    bindDocument(web,'android','33333333-3333-4333-8333-333333333333');
+    assert.equal(f.stops(),1);
+    assert.equal(f.render().props.children,null);
+  }finally{f.cleanup();}
+});
+
+test('same-document Android history updates after load do not destroy the native channel',async()=>{
+  const f=fixture('android');try{await flush();const web=f.render().props.children;
+    web.props.onLoadStart({nativeEvent:{url,loading:true}});
+    web.props.onLoad({nativeEvent:{url}});
+    web.props.onLoadStart({nativeEvent:{url,loading:false}});
+    assert.equal(f.stops(),0);
+    assert.equal(f.render().props.children.type,'WebView');
+    web.props.onLoadStart({nativeEvent:{url,loading:true}});
+    assert.equal(f.stops(),0,'loading=true history notifications also preserve the same document');
+  }finally{f.cleanup();}
+});
+
+test('Android same-document loading history after SDK connection keeps the session usable',async()=>{
+  const f=fixture('android');try{await flush();const web=f.render().props.children;
+    bindDocument(web,'android');
+    web.props.onLoadStart({nativeEvent:{url}});
+    const message={channel:'ankt.auth',version:1,type:'request',id:crypto.randomUUID(),method:'auth.login',params:{clientId,codeChallenge:'p'.repeat(43)}};
+    web.props.onMessage({nativeEvent:{url:origin,data:envelope(message)}});await flush();
+    assert.equal(f.requests.filter(request=>request.path.endsWith('/launch')).length,1);
+    const ready={channel:'ankt.auth',version:1,type:'request',id:crypto.randomUUID(),method:'auth.ready',params:{clientId,sessionId:'11111111-1111-4111-8111-111111111111'}};
+    web.props.onMessage({nativeEvent:{url:origin,data:envelope(ready)}});await flush();
+    assert.equal(f.statuses.at(-1),'bridge.connected');
+    web.props.onLoadStart({nativeEvent:{url,loading:true}});
+    assert.equal(f.stops(),0);
+    assert.equal(f.render().props.children.type,'WebView');
+    assert.equal(f.requests.some(request=>request.path.endsWith('/revoke')),false);
+    web.props.onMessage({nativeEvent:{url:origin,data:envelope(ready)}});await flush();
+    assert.equal(f.statuses.at(-1),'bridge.connected');
+  }finally{f.cleanup();}
+});
+
+test('Android document replacement at the same URL closes and revokes the previous SDK session',async()=>{
+  const f=fixture('android');try{await flush();const web=f.render().props.children;
+    bindDocument(web,'android');
+    const message={channel:'ankt.auth',version:1,type:'request',id:crypto.randomUUID(),method:'auth.login',params:{clientId,codeChallenge:'p'.repeat(43)}};
+    web.props.onMessage({nativeEvent:{url:origin,data:envelope(message)}});await flush();
+    assert.equal(f.requests.filter(request=>request.path.endsWith('/launch')).length,1);
+    bindDocument(web,'android','33333333-3333-4333-8333-333333333333');await flush();
+    assert.equal(f.stops(),1);
+    assert.equal(f.render().props.children,null);
+    assert.ok(f.requests.some(request=>request.path.endsWith('/revoke')));
+    web.props.onMessage({nativeEvent:{url:origin,data:envelope({...message,id:crypto.randomUUID()},'33333333-3333-4333-8333-333333333333')}});await flush();
+    assert.equal(f.requests.filter(request=>request.path.endsWith('/launch')).length,1,'replacement cannot receive another grant');
+  }finally{f.cleanup();}
+});
+
+test('Android Mini App tab routes keep the authenticated document running',async()=>{
+  const f=fixture('android');try{await flush();const web=f.render().props.children;
+    bindDocument(web,'android');
+    web.props.onLoadStart({nativeEvent:{url}});web.props.onLoad({nativeEvent:{url}});
+    const tab=origin+'/community?tab=latest#posts';
+    web.props.onNavigationStateChange({url:tab});
+    assert.equal(f.stops(),0,'a tab route within the configured origin must not destroy the host');
+    assert.equal(web.props.onShouldStartLoadWithRequest({url:tab}),true);
+    web.props.onLoadStart({nativeEvent:{url:tab,loading:true}});
+    const message={channel:'ankt.auth',version:1,type:'request',id:crypto.randomUUID(),method:'auth.login',params:{clientId,codeChallenge:'p'.repeat(43)}};
+    web.props.onMessage({nativeEvent:{url:tab,data:envelope(message)}});await flush();
+    assert.equal(f.injections.length,1);
+    assert.equal(f.render().props.children.type,'WebView');
+    assert.equal(web.props.onShouldStartLoadWithRequest({url:'https://evil.example/community'}),false);
+    await flush();assert.equal(f.stops(),1);
+    assert.ok(f.requests.some(request=>request.path.endsWith('/revoke')));
+  }finally{f.cleanup();}
 });
 
 test('social logout immediately removes native Mini App and stops further auth grants',async()=>{
