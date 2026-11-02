@@ -79,8 +79,13 @@ export const getResponsiveBottomPadding = ({
   mobilePadding: number;
 }) => (isDesktopWeb ? desktopPadding : mobilePadding);
 
-const getNativeTopBarPadding = (topInset: number) =>
-  (Number.isFinite(topInset) && topInset > 0 ? topInset : 0) + 8;
+const getSafeTopInset = (topInset: number) =>
+  Number.isFinite(topInset) && topInset > 0 ? topInset : 0;
+
+const getNativeTopBarPadding = (topInset: number) => getSafeTopInset(topInset);
+
+export const getFeedCategoryHeaderLayout = ({ isWeb, topInset }: { isWeb: boolean; topInset: number }) =>
+  isWeb ? null : { height: 50 + getNativeTopBarPadding(topInset), paddingTop: getNativeTopBarPadding(topInset), paddingBottom: 8 };
 
 export const getFixedTopBarLayout = ({
   categoryOnly = false,
@@ -103,7 +108,7 @@ export const getFixedTopBarLayout = ({
       ? ({ height: 0, paddingTop: 0 } as const)
       : isDesktopWeb || isCompactWeb
       ? ({ height: 50, paddingTop: 0 } as const)
-      : ({ height: 55 + nativeTopPadding, paddingTop: nativeTopPadding } as const);
+      : ({ height: 50 + nativeTopPadding, paddingTop: 0 } as const);
   }
 
   if (isArticle) {
@@ -111,14 +116,14 @@ export const getFixedTopBarLayout = ({
       ? ({ height: 112, paddingTop: 0 } as const)
       : isDesktopWeb || isCompactWeb
       ? ({ height: 170, paddingTop: 0 } as const)
-      : ({ height: 175 + nativeTopPadding, paddingTop: nativeTopPadding } as const);
+      : ({ height: 170 + nativeTopPadding, paddingTop: 0 } as const);
   }
 
   return useDesktopSideRails
     ? ({ height: 68, paddingTop: 0 } as const)
     : isDesktopWeb || isCompactWeb
       ? ({ height: 126, paddingTop: 0 } as const)
-      : ({ height: 131 + nativeTopPadding, paddingTop: nativeTopPadding } as const);
+      : ({ height: 126 + nativeTopPadding, paddingTop: 0 } as const);
 };
 
 export const getFixedTopBarBackgroundLayout = ({
@@ -130,12 +135,13 @@ export const getFixedTopBarBackgroundLayout = ({
   isWeb: boolean;
   topInset: number;
 }) => {
+  const safeTopInset = getSafeTopInset(topInset);
   return isWeb
     ? ({ height: barHeight, paddingTop: 0, top: 0 } as const)
     : ({
-        height: barHeight,
-        paddingTop: getNativeTopBarPadding(topInset),
-        top: 0,
+        height: barHeight + safeTopInset,
+        paddingTop: 0,
+        top: safeTopInset > 0 ? -safeTopInset : 0,
       } as const);
 };
 

@@ -14,6 +14,7 @@ export default function AuthHost({appId,attempt,onStatus}:HostProps){
   const receive=useRef<(event:{url:string;data:string})=>void>(()=>{});
   const navigate=useRef<(url:string)=>boolean>(()=>false),stop=useRef<()=>void>(()=>{});
   const start=useRef<(url:string)=>void>(()=>{});
+  const complete=useRef<(url:string)=>void>(()=>{});
   useEffect(()=>{
     let ended=false,host:ReturnType<typeof createAuthBridgeHost>|undefined,transport:ReturnType<typeof createNativeAuthTransport>|undefined;
     const source={},abort=new AbortController();
@@ -28,12 +29,18 @@ export default function AuthHost({appId,attempt,onStatus}:HostProps){
       const session=await getSession();
       if(path!=='revoke'&&(!sourceGuard.check(session)||ended))throw Object.assign(Error('SESSION_EXPIRED'),{code:'SESSION_EXPIRED'});
       if(body!==undefined&&!session?.accessToken)throw Object.assign(Error('SESSION_EXPIRED'),{code:'SESSION_EXPIRED'});
-      const response=await fetch(api+'/api/miniapp/auth/'+path,{method:body===undefined?'GET':'POST',credentials:'omit',redirect:'error',cache:'no-store',
-        signal:path==='revoke'?AbortSignal.timeout(5000):signal??abort.signal,
-        headers:{'Content-Type':'application/json','X-Ankt-Platform':Platform.OS==='ios'?'iOS':'Android',...(session?.accessToken?{Authorization:'Bearer '+session.accessToken}:{})},
-        ...(body===undefined?{}:{body:JSON.stringify(body)})});
-      const data=response.status===204?null:await response.json();
-      if(!response.ok){const code=data?.error?.code??'AUTH_EXCHANGE_FAILED';throw Object.assign(Error(code),{code});}return data as T;
+      // React Native's AbortSignal has no timeout(); revocation must outlive
+      // the disposed host's aborted signal, with its own bounded request.
+      const revokeAbort=path==='revoke'?new AbortController():undefined;
+      const revokeTimer=revokeAbort?setTimeout(()=>revokeAbort.abort(),5000):undefined;
+      try{
+        const response=await fetch(api+'/api/miniapp/auth/'+path,{method:body===undefined?'GET':'POST',credentials:'omit',redirect:'error',cache:'no-store',
+          signal:revokeAbort?.signal??signal??abort.signal,
+          headers:{'Content-Type':'application/json','X-Ankt-Platform':Platform.OS==='ios'?'iOS':'Android',...(session?.accessToken?{Authorization:'Bearer '+session.accessToken}:{})},
+          ...(body===undefined?{}:{body:JSON.stringify(body)})});
+        const data=response.status===204?null:await response.json();
+        if(!response.ok){const code=data?.error?.code??'AUTH_EXCHANGE_FAILED';throw Object.assign(Error(code),{code});}return data as T;
+      }finally{if(revokeTimer!==undefined)clearTimeout(revokeTimer);}
     }
     void call<{clientId:string;launchUrl:string;origin:string}>('config?clientId='+encodeURIComponent(appId)).then(async value=>{
       const url=new URL(value.launchUrl);
@@ -44,21 +51,29 @@ export default function AuthHost({appId,attempt,onStatus}:HostProps){
       for(const byte of bytes){buffer=(buffer<<8)|byte;bits+=8;while(bits>=6){bits-=6;nonce+=alphabet[(buffer>>>bits)&63];}}
       if(bits)nonce+=alphabet[(buffer<<(6-bits))&63];
       if(ended)return;
-      transport=createNativeAuthTransport(url.href,nonce);
+      transport=createNativeAuthTransport(url.href,nonce,()=>{status.current('host.close_unconfirmed');finish();});
       host=createAuthBridgeHost({clientId:appId,origin:value.origin,source:()=>source,
         send:data=>{if(!ended&&transport)view.current?.injectJavaScript(transport.injection(data));},
         launch:(codeChallenge,signal)=>call<AuthLaunch>('launch',{clientId:appId,codeChallenge,origin:value.origin,scope:'profile'},signal),
         revoke:sessionId=>call<void>('revoke',{sessionId}),
         close:finish,
         status:state=>{if(!ended)status.current(state==='Connected'?'bridge.connected':state==='Closed'?'host.closed':state==='Failed'?'host.error':'host.running');}});
-      receive.current=event=>{const data=transport?.receive(event);if(!ended&&data)void host?.handle({origin:value.origin,source,data});};
+      let started=false,loaded=false,bridgeTraffic=false;
+      receive.current=event=>{const data=transport?.receive(event);if(!ended&&data){bridgeTraffic=true;void host?.handle({origin:value.origin,source,data});}};
       navigate.current=next=>{if(transport?.matches(next))return true;status.current('host.error');finish();return false;};
-      let started=false;
-      start.current=next=>{if(started){status.current('host.close_unconfirmed');finish();return;}started=true;navigate.current(next);};
+      start.current=next=>{
+        if(!navigate.current(next))return;
+        // Android routes history updates through onLoadStart even while loading.
+        // The authenticated document binding detects actual replacement instead.
+        if(Platform.OS==='android'){started=true;return;}
+        if(started&&(loaded||bridgeTraffic)){status.current('host.close_unconfirmed');finish();return;}
+        started=true;
+      };
+      complete.current=next=>{if(navigate.current(next)){started=true;loaded=true;}};
       setConfig({url:url.href,origin:value.origin,bootstrap:transport.bootstrap});status.current('host.running');
     }).catch(()=>{if(!ended){status.current('host.error');finish();}});
     const subscription=AppState.addEventListener('change',state=>{if(state!=='active'){status.current('host.close_unconfirmed');finish();}});
-    return()=>{finish();unsubscribe();clearInterval(sourceTimer);receive.current=()=>{};navigate.current=()=>false;start.current=()=>{};subscription.remove();};
+    return()=>{finish();unsubscribe();clearInterval(sourceTimer);receive.current=()=>{};navigate.current=()=>false;start.current=()=>{};complete.current=()=>{};subscription.remove();};
   },[appId,attempt]);
   return <View style={{flex:1}}>{config&&<WebView ref={view} style={{flex:1}} source={{uri:config.url}}
     originWhitelist={[config.origin]} incognito sharedCookiesEnabled={false} thirdPartyCookiesEnabled={false}
@@ -70,6 +85,7 @@ export default function AuthHost({appId,attempt,onStatus}:HostProps){
     onMessage={event=>receive.current(event.nativeEvent)}
     onShouldStartLoadWithRequest={request=>navigate.current(request.url)}
     onLoadStart={event=>{start.current(event.nativeEvent.url);}}
+    onLoad={event=>{complete.current(event.nativeEvent.url);}}
     onNavigationStateChange={state=>{navigate.current(state.url);}}
     onOpenWindow={()=>{status.current('host.error');stop.current();}}
     onError={()=>{status.current('host.error');stop.current();}}

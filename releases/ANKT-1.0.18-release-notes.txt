@@ -1,0 +1,3 @@
+<vi>
+Sửa lỗi xác minh phiên khi chuyển tab Mini App, giúp trải nghiệm sử dụng ổn định hơn.
+</vi>

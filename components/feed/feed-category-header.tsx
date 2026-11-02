@@ -1,8 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getFeedCategorySidebarLayout } from "@/components/layout/responsive-layout";
+import { getFeedCategoryHeaderLayout, getFeedCategorySidebarLayout } from "@/components/layout/responsive-layout";
 import { useResponsive } from "@/hooks/use-responsive";
 import { layout, spacing, type ThemeColors, useTheme } from "@/theme";
 
@@ -25,6 +26,7 @@ export function FeedCategoryHeader({
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors, theme.isDark), [colors, theme.isDark]);
   const { isDesktopWeb, width } = useResponsive();
+  const insets = useSafeAreaInsets();
   const desktopLayout = getFeedCategorySidebarLayout({
     feedMaxWidth: layout.feedMaxWidth,
     isDesktopWeb,
@@ -69,7 +71,7 @@ export function FeedCategoryHeader({
         styles.container,
         usesDesktopSideRails && styles.desktopContainer,
         desktopLayout,
-        Platform.OS !== "web" && styles.nativeContainer,
+        getFeedCategoryHeaderLayout({ isWeb: Platform.OS === "web", topInset: insets.top }),
       ]}
     >
       {items.map((item) => (
@@ -81,6 +83,7 @@ export function FeedCategoryHeader({
           onPress={item.onPress}
           style={({ pressed }) => [
             styles.item,
+            Platform.OS !== "web" && styles.nativeItem,
             usesDesktopSideRails && styles.desktopItem,
             item.active && styles.activeItem,
             item.active && usesDesktopSideRails && styles.desktopActiveItem,
@@ -91,7 +94,7 @@ export function FeedCategoryHeader({
             color={theme.isDark ? item.darkColor : item.color}
             name={item.icon}
             size={24}
-            style={[styles.icon, usesDesktopSideRails && styles.desktopIcon]}
+            style={[styles.icon, usesDesktopSideRails && styles.desktopIcon, Platform.OS !== "web" && styles.nativeIcon]}
           />
           {usesDesktopSideRails ? <Text style={styles.label}>{item.label}</Text> : null}
         </Pressable>
@@ -144,6 +147,8 @@ const createStyles = (colors: ThemeColors, isDark: boolean) =>
       width: "100%",
     },
     icon: { transform: [{ translateY: 5 }] },
+    nativeIcon: { transform: [] },
+    nativeItem: { paddingTop: 0, height: 40, alignSelf: "center" },
     item: {
       alignItems: "center",
       borderBottomColor: "transparent",
@@ -158,6 +163,5 @@ const createStyles = (colors: ThemeColors, isDark: boolean) =>
       fontSize: 15,
       fontWeight: "700",
     },
-    nativeContainer: { height: 55, paddingTop: 5 },
     pressedItem: { opacity: 0.68 },
   });

@@ -605,7 +605,7 @@ export function ReelsScreen() {
         )
       )}
       <ReelsHeader
-        top={isWeb ? 0 : categoryTopBarLayout.height}
+        top={0}
         activeSort={sort}
         height={reelsOverlayLayout.headerHeight}
         overlay={!isLoadingReels && reelItems.length > 0}
