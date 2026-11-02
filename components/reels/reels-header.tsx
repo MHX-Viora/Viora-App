@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { spacing } from "@/theme";
 import type { ReelSort } from "@/types/reel";
@@ -36,8 +36,8 @@ export function ReelsHeader({
   const colors = overlay ? theme.reels : theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <View style={[styles.container, { height, paddingTop, top }, overlay && styles.overlay]}>
-      <View style={[styles.row, overlay && styles.overlayRow]}>
+    <View style={[styles.container, { height, paddingTop, top }, overlay && styles.overlay, Platform.OS !== "web" && styles.nativeContainer]}>
+      <View style={[styles.row, overlay && styles.overlayRow, Platform.OS !== "web" && styles.nativeRow]}>
         <Pressable
           accessibilityHint="Mở màn hình tạo bài đăng video mới"
           accessibilityLabel="Tạo bài đăng video mới"
@@ -46,6 +46,7 @@ export function ReelsHeader({
           style={({ pressed }) => [
             styles.createButton,
             overlay && styles.overlayCreateButton,
+            Platform.OS !== "web" && styles.nativeCreateButton,
             pressed && styles.createButtonPressed,
           ]}
         >
@@ -99,6 +100,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   overlay: { backgroundColor: "transparent", justifyContent: "center" },
   overlayRow: { alignItems: "center", paddingBottom: 0 },
+  nativeContainer: { justifyContent: "flex-start", paddingTop: 7 },
+  nativeRow: { alignItems: "flex-start", paddingBottom: 0 },
+  nativeCreateButton: { marginTop: 0 },
   overlayCreateButton: { marginTop: 0 },
   overlayText: { color: colors.text },
   createButton: {

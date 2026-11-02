@@ -33,17 +33,25 @@ export function FixedTopBar({
   });
 
   return (
-    <View style={[styles.container, barLayout, backgroundLayout]}>{children}</View>
+    <View style={[styles.container, barLayout]}>
+      <View pointerEvents="none" style={[styles.background, backgroundLayout]} />
+      {children}
+    </View>
   );
 }
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
-    backgroundColor: theme.colors.background,
     left: 0,
     position: "absolute",
     right: 0,
     top: 0,
     zIndex: 10,
+  },
+  background: {
+    backgroundColor: theme.colors.background,
+    position: "absolute",
+    left: 0,
+    right: 0,
   },
 });

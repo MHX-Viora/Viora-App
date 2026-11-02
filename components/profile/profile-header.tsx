@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { spacing } from "@/theme";
 import { type ThemeColors, useTheme } from "@/theme";
@@ -16,13 +17,14 @@ export function ProfileHeader({
   onOpenSettings: () => void;
 }) {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const colors = theme.colors;
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View
       style={[
         styles.header,
-        Platform.OS !== "web" && styles.nativeHeader,
+        Platform.OS !== "web" && { paddingTop: Math.max(0, insets.top) + 4 },
       ]}
     >
       <View style={styles.leftActions}>
@@ -81,5 +83,4 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 40,
   },
   leftActions: { flexDirection: "row", gap: spacing.xs },
-  nativeHeader: { paddingTop: spacing.sm + 10 },
 });

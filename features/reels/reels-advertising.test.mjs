@@ -22,11 +22,11 @@ test('personal account can open the reel advertising form without article publis
     '@react-navigation/native': { useIsFocused: () => true, useNavigation: () => ({}) },
     '@/stores/session-store': { getSession: async () => ({ user: { accountStyle: 0 } }) },
     '@/types/account-style': { canCreateArticle: () => false },
-    '@/hooks/use-responsive': { useResponsive: () => ({ isDesktopWeb: false, isWeb: true }) },
+    '@/hooks/use-responsive': { useResponsive: () => ({ isDesktopWeb: false, isWeb: false }) },
     '@/features/reels/data': { reels: [reel] },
     '@/theme': { useTheme: () => ({ theme: { colors: { visuals: {} } } }), layout: {}, spacing: {} },
     '@/components/layout/responsive-layout': {
-      getReelsOverlayLayout: () => ({}), getFixedTopBarLayout: () => ({}),
+      getReelsOverlayLayout: () => ({}), getFixedTopBarLayout: () => ({ height: 80 }),
       getResponsiveContentLayout: () => ({}), getReelContentWidth: () => 375,
     },
     '@/components/layout/tab-bar-style': { createFloatingTabBarStyle: () => ({}), TAB_BAR_BOTTOM: 0, TAB_BAR_HEIGHT: 0 },
@@ -52,7 +52,17 @@ test('personal account can open the reel advertising form without article publis
     }
     return null;
   };
-  const list = findList(mod.exports.ReelsScreen());
+  const page = mod.exports.ReelsScreen();
+  const pending = [page]; let sortHeader;
+  while (pending.length) {
+    const node = pending.pop();
+    if (!node || typeof node !== 'object') continue;
+    if (node.type === 'ReelsHeader') sortHeader = node;
+    pending.push(...React.Children.toArray(node.props?.children));
+  }
+  assert.ok(sortHeader, 'sort header renders inside the already-offset content');
+  assert.equal(sortHeader.props.top ?? 0, 0, 'sort must not add the category header offset a second time');
+  const list = findList(page);
   assert.ok(list, 'reels list renders');
   const card = list.props.renderItem({ index: 0, item: reel });
   assert.equal(typeof card.props.onAdvertise, 'function', 'personal accounts retain the advertising entry point');
