@@ -4,6 +4,7 @@
 - Reuse composer, PostCard, Cloudinary multipart upload and current colors/layout. Keep 50,000-character limit.
 - Select/add/remove up to 20 images. Preview all with 8px gaps: odd count starts with a full-width image, remaining tiles form two columns; even counts form two columns. Header/footer stay fixed while body scrolls.
 - Feed renders at most four previews. Three images use a full-width first tile. More than four uses a 2x2 grid and overlay `+(total - 3)` on tile four.
+- Single-photo correction: set explicit outer tile height (460px desktop, min(460, 60% viewport height) mobile; promoted single photos 340px). Contain the foreground inside that same frame with blurred letterboxing; never let a natural-height child overflow a 180px tile. Reduce overlay typography to 24px. Verify landscape/portrait/square and multi-image regression using the real browser fixture, plus TypeScript/lint/build.
 - Clicking any preview opens the full ordered gallery at that index; full images use contain on dark background. Counter, close, Web arrows/keyboard, mobile paging/pinch/pan, loading/error states.
 - Preserve full URLs for viewer; use existing or Cloudinary-derived thumbnails in feed. Virtualize mobile viewer; mount Web active image only.
 - Backend accepts 20/rejects 21 before upload. Failed image upload must not persist a partial post. Preserve order on create, feed/detail/profile reload; no schema migration if existing timestamps suffice.

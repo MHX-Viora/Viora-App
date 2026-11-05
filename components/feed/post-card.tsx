@@ -193,7 +193,7 @@ export function PostCard({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isDesktopWeb } = useResponsive();
   const { height: viewportHeight } = useWindowDimensions();
-  const imageMaxHeight = isDesktopWeb ? 420 : Math.min(420, viewportHeight * 0.55);
+  const imageMaxHeight = isDesktopWeb ? 460 : Math.min(460, viewportHeight * 0.6);
   const displayBody = useMemo(() => withoutHashtags(post.body), [post.body]);
   const dialogLayout = getResponsiveDialogLayout({
     isDesktopWeb,
@@ -852,7 +852,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   advertisementHeadline: { color: colors.text, fontSize: 15, fontWeight: "800", lineHeight: 20 },
   advertisementMediaGrid: { backgroundColor: colors.secondaryBackground },
   advertisementPreview: { flex: 1, gap: 4, minWidth: 0 },
-  advertisementSingleMedia: { height: 300 },
+  advertisementSingleMedia: { height: 340 },
   articleCard: { backgroundColor: colors.surfaceElevated, borderColor: colors.border, borderRadius: 12, borderWidth: 1, marginHorizontal: spacing.md, marginBottom: spacing.sm, overflow: "hidden" },
   articleContent: { gap: 7, padding: spacing.md },
   articleMeta: { color: colors.textMuted, fontSize: 12 },

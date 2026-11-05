@@ -31,6 +31,9 @@ Paths relative to `viora-BE/`:
 - Browser network inspection on a fresh twenty-image feed fixture requested only images 1–4; the Web viewer mounted one full-size image at a time. Opening image one reported 1/20 with previous disabled.
 
 ## Practical limits / release follow-up
+
+Single-image display correction: browser reproduced an outer tile stuck at 180px while its natural-sized image child was taller, clipping the foreground. The single tile now has an explicit shared frame: 460px desktop, min(460px, 60% viewport height) mobile, 340px for promoted single photos. Foreground uses contain inside that frame; existing blurred background fills the gaps. Overlay font is 24px. Browser verified all four borders on landscape, portrait and square fixtures, matching frame/image heights on desktop and 390px mobile, and unchanged 180px multi-image tiles with four-preview limit. TypeScript, targeted lint and web export pass. Native hardware verification remains pending.
+
 - Actual Android/iOS swipe/pinch, native library picker, keyboard/safe-area behavior and memory on low-end devices still require hardware/emulator QA.
 - No real Cloudinary upload, production API posting, PostgreSQL-backed HTTP round trip or deployment was performed. Persistence tests use SQLite; the PostgreSQL detail projection uses APPLY and cannot run under SQLite. Real-provider ordering remains release verification.
 - Check hosted proxy/IIS body limits and timeouts for 100 MB and sequential uploads. Cloudinary plan limits/transform restrictions may be lower; existing upload errors remain explicit. Earlier successfully uploaded assets may remain in Cloudinary after a later upload fails; no partial post is saved.

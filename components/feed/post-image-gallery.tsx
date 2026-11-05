@@ -24,11 +24,10 @@ export function PostImageGallery({ images, previews, author, maxHeight, style, s
         accessibilityLabel={`Ảnh ${index + 1} trong bài viết của ${author}${overlayCount ? `. Xem ${overlayCount} ảnh từ vị trí này` : ""}`}
         accessibilityRole="button" key={`${index}-${images[index]}`}
         onPress={event => { event.stopPropagation(); setViewerIndex(index); }}
-        style={[styles.tile, wide && styles.wide, single && styles.single, single && singleImageStyle]}
+        style={[styles.tile, wide && styles.wide, single && { height: maxHeight }, single && singleImageStyle]}
       >
         <AdaptiveMediaImage accessibilityLabel={`Ảnh ${index + 1}`} source={{ uri: previews?.[index] || postImagePreviewUrl(images[index]) }}
-          naturalSize={single && !singleImageStyle} maxHeight={maxHeight}
-          style={single && !singleImageStyle ? undefined : StyleSheet.absoluteFill} />
+          style={StyleSheet.absoluteFill} />
         {overlayCount > 0 ? <View pointerEvents="none" style={[styles.overlay, { backgroundColor: theme.colors.visuals.rgb_0_0_0_0_54 }]}>
           <Text style={[styles.overlayText, { color: theme.colors.white }]}>+{overlayCount}</Text>
         </View> : null}
@@ -41,7 +40,7 @@ export function PostImageGallery({ images, previews, author, maxHeight, style, s
 const styles = StyleSheet.create({
   grid: { width: "100%", flexDirection: "row", flexWrap: "wrap", gap: 2 },
   tile: { flexBasis: "45%", flexGrow: 1, height: 180, overflow: "hidden" },
-  wide: { flexBasis: "100%", width: "100%" }, single: { height: undefined },
+  wide: { flexBasis: "100%", width: "100%" },
   overlay: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
-  overlayText: { fontSize: 36, fontWeight: "800" },
+  overlayText: { fontSize: 24, fontWeight: "800" },
 });
