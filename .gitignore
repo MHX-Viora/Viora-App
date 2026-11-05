@@ -12,6 +12,7 @@ node_modules/
 .expo/
 dist/
 web-build/
+.codex-tmp/community-post-images*/
 expo-env.d.ts
 
 # Native

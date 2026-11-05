@@ -21,6 +21,7 @@ import { ViewableImage } from "@/components/common/viewable-image";
 import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { MentionSuggestions } from "@/components/mentions/mention-suggestions";
 import { normalizeFeedImageUri } from "@/features/feed/image-source";
+import { getPostImageTiles, MAX_POST_IMAGES } from "@/features/feed/post-images";
 import { useResponsive } from "@/hooks/use-responsive";
 import { spacing, typography } from "@/theme";
 import type { CreatePostInput } from "@/types/feed";
@@ -254,7 +255,7 @@ export function CreatePostModal({
             <TextInput
               autoFocus
               editable={!isSubmitting}
-              maxLength={3000}
+              maxLength={50000}
               multiline
               onChangeText={setBody}
               placeholder="Bạn muốn chia sẻ điều gì?"
@@ -330,10 +331,8 @@ export function CreatePostModal({
 
             {imageUris.length > 0 && (
               <View style={styles.previewGrid}>
-                {imageUris.map((uri, index) => {
-                  const isWideTile =
-                    imageUris.length === 1 ||
-                    (imageUris.length === 3 && index === 0);
+                {getPostImageTiles(imageUris.length, "composer").map(({ index, wide: isWideTile }) => {
+                  const uri = imageUris[index];
 
                   return (
                     <View
@@ -341,10 +340,7 @@ export function CreatePostModal({
                       style={[
                         styles.previewTile,
                         isWideTile ? styles.wideTile : styles.halfTile,
-                        imageUris.length === 1 && styles.singleTile,
-                        imageUris.length === 3 &&
-                          index > 0 &&
-                          styles.compactTile,
+                        isWideTile && styles.singleTile,
                       ]}
                     >
                       <ViewableImage
@@ -370,6 +366,9 @@ export function CreatePostModal({
             )}
 
           </ScrollView>
+          {imageUris.length >= MAX_POST_IMAGES ? <Text accessibilityLiveRegion="polite" style={styles.imageLimitNotice}>
+            Đã chọn đủ {MAX_POST_IMAGES} ảnh. Xóa một ảnh để chọn ảnh khác.
+          </Text> : null}
           <View
             style={[
               styles.footer,
@@ -378,7 +377,7 @@ export function CreatePostModal({
           >
             <Pressable
               accessibilityRole="button"
-              disabled={isSubmitting || imageUris.length >= 4}
+              disabled={isSubmitting || imageUris.length >= MAX_POST_IMAGES}
               onPress={() => {
                 inputRef.current?.blur();
                 Keyboard.dismiss();
@@ -386,14 +385,14 @@ export function CreatePostModal({
               }}
               style={[
                 styles.footerButton,
-                (isSubmitting || imageUris.length >= 4) &&
+                (isSubmitting || imageUris.length >= MAX_POST_IMAGES) &&
                   styles.footerButtonDisabled,
               ]}
             >
               <View style={[styles.footerIconWrap, styles.photoIconWrap]}>
                 <Ionicons color={colors.visuals.hex_00B140} name="image" size={19} />
               </View>
-              <Text style={styles.footerButtonText}>Ảnh {imageUris.length}/4</Text>
+              <Text style={styles.footerButtonText}>Ảnh {imageUris.length}/{MAX_POST_IMAGES}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -519,7 +518,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   footerButtonDisabled: { opacity: 0.55 },
-  footerButtonText: { color: colors.text, fontSize: 13, fontWeight: "800" },
+  footerButtonText: { color: colors.text, flexShrink: 1, fontSize: 13, fontWeight: "800" },
   footerIconWrap: {
     alignItems: "center",
     borderRadius: 999,
@@ -569,8 +568,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: spacing.lg,
     textAlignVertical: "top",
   },
-  compactTile: { height: 136 },
-  halfTile: { height: 160, width: "48.5%" },
+  imageLimitNotice: { color: colors.textMuted, backgroundColor: colors.surface, fontSize: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  halfTile: { height: 160, flexBasis: "45%", flexGrow: 1 },
   preview: { height: "100%", width: "100%" },
   previewGrid: {
     flexDirection: "row",

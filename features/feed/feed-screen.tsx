@@ -32,6 +32,7 @@ import {
   TAB_BAR_HEIGHT,
 } from "@/components/layout/tab-bar-style";
 import { feedPosts as initialPosts } from "@/features/feed/data";
+import { appendPickedImages, MAX_POST_IMAGES } from "@/features/feed/post-images";
 import { openProfileByUserId } from "@/features/profile/open-profile";
 import { openAdvertisement } from "@/features/advertisements/open-advertisement";
 import { createPost, getPosts } from "@/services/feed.service";
@@ -288,8 +289,11 @@ export function FeedScreen() {
   };
 
   const pickImages = async (): Promise<string[] | null> => {
-    const remainingSlots = 4 - draftImages.length;
-    if (remainingSlots === 0) return null;
+    const remainingSlots = MAX_POST_IMAGES - draftImages.length;
+    if (remainingSlots <= 0) {
+      Alert.alert("Đã đủ ảnh", `Mỗi bài viết được chọn tối đa ${MAX_POST_IMAGES} ảnh.`);
+      return null;
+    }
 
     if (Platform.OS !== "web") {
       const permission =
@@ -309,10 +313,13 @@ export function FeedScreen() {
       selectionLimit: remainingSlots,
     });
     if (result.canceled) return null;
+    if (result.assets.length > remainingSlots) {
+      Alert.alert("Giới hạn ảnh", `Chỉ thêm ${remainingSlots} ảnh đầu tiên để không vượt quá ${MAX_POST_IMAGES} ảnh mỗi bài.`);
+    }
     const selectedUris = result.assets
       .slice(0, remainingSlots)
       .map((asset) => asset.uri);
-    setDraftImages((current) => [...current, ...selectedUris].slice(0, 4));
+    setDraftImages((current) => appendPickedImages(current, selectedUris));
     return selectedUris;
   };
 
