@@ -11,6 +11,7 @@ import type {
 import { formatPostTime } from "@/utils/post-format";
 import { normalizePostLink } from "@/utils/post-link";
 import { appendPostImage } from "@/utils/post-upload";
+import { MAX_POST_IMAGES, postImagePreviewUrl } from "@/features/feed/post-images";
 import { isOwnPost } from "@/utils/post-ownership";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
@@ -70,6 +71,9 @@ export const mapFeedPost = (
   images: (post.media ?? [])
     .map((media) => media.mediaUrl || media.url || media.thumbnailUrl || "")
     .filter(Boolean),
+  imagePreviews: (post.media ?? [])
+    .filter(media => media.mediaUrl || media.url || media.thumbnailUrl)
+    .map(media => media.thumbnailUrl || postImagePreviewUrl(media.mediaUrl || media.url || "")),
   isAuthorVerified: post.user?.isVerified ?? false,
   authorAccountStyle: post.user?.accountStyle ?? 0,
   isMine: isOwnPost(post, currentUser?.id),
@@ -156,6 +160,9 @@ export const getPostById = async (postId: string): Promise<FeedPost> => {
 export const createPost = async (
   payload: CreatePostInput,
 ): Promise<FeedPost> => {
+  if (payload.files.length > MAX_POST_IMAGES) {
+    throw new Error(`Mỗi bài viết được chọn tối đa ${MAX_POST_IMAGES} ảnh.`);
+  }
   const formData = new FormData();
   formData.append("content", payload.content);
   formData.append("visibility", String(payload.visibility));
@@ -189,6 +196,9 @@ export const createPost = async (
     headers: FORM_HEADERS,
     body: formData,
   });
+  if (response.status === 413) {
+    throw new Error("Bộ ảnh vượt giới hạn dung lượng tải lên. Hãy giảm dung lượng ảnh hoặc chọn ít ảnh hơn.");
+  }
   const text = await response.text();
   const data = parseResponseText(text);
 

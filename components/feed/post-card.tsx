@@ -17,7 +17,7 @@ import {
 import { showAppToast } from "@/components/common/app-toast";
 import { UserAvatar } from "@/components/common/user-avatar";
 import { VerifiedBadge } from "@/components/common/verified-badge";
-import { ViewableImage } from "@/components/common/viewable-image";
+import { PostImageGallery } from "@/components/feed/post-image-gallery";
 import { getResponsiveDialogLayout } from "@/components/layout/responsive-layout";
 import { MentionText } from "@/components/mentions/mention-text";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -616,23 +616,9 @@ export function PostCard({
       ) : null}
 
       {post.postType !== 2 && post.images.length > 0 && (
-        <View style={[styles.mediaGrid, isAdvertisement && styles.advertisementMediaGrid]}>
-          {post.images.map((uri, index) => (
-            <ViewableImage
-              accessibilityLabel={`Ảnh ${index + 1} trong bài viết của ${post.author}`}
-              adaptive
-              naturalSize={post.images.length === 1}
-              maxHeight={imageMaxHeight}
-              key={`${post.id}-${index}`}
-              source={{ uri }}
-              style={[
-                styles.media,
-                post.images.length === 1 && styles.singleMedia,
-                isAdvertisement && post.images.length === 1 && styles.advertisementSingleMedia,
-              ]}
-            />
-          ))}
-        </View>
+        <PostImageGallery images={post.images} previews={post.imagePreviews} author={post.author} maxHeight={imageMaxHeight}
+          style={isAdvertisement ? styles.advertisementMediaGrid : undefined}
+          singleImageStyle={isAdvertisement ? styles.advertisementSingleMedia : undefined} />
       )}
 
       {post.advertisement && (!isNewsLayout || !post.article?.thumbnailUrl || post.advertisement.headline || post.advertisement.description) ? (
@@ -1028,13 +1014,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     lineHeight: 20,
     textDecorationLine: "underline",
   },
-  media: { backgroundColor: colors.border, height: 180, width: "49.5%" },
-  mediaGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 2,
-    width: "100%",
-  },
   meta: { color: colors.textMuted, fontSize: 13 },
   postMetadata: {
     alignItems: "center",
@@ -1142,7 +1121,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  singleMedia: { height: 240, width: "100%" },
   visibility: {
     alignItems: "center",
     flexDirection: "row",

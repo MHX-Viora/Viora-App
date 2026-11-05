@@ -10,6 +10,7 @@ type Props = Omit<ImageProps, "style" | "contentFit"> & {
   style?: StyleProp<ViewStyle>;
   naturalSize?: boolean;
   maxHeight?: number;
+  letterboxBackground?: boolean;
 };
 
 /** Key the loading state to the source so recycled cells never retain old dimensions/errors. */
@@ -17,20 +18,21 @@ export const AdaptiveMediaImage = memo(function AdaptiveMediaImage(props: Props)
   return <MediaLayers key={JSON.stringify(props.source)} {...props} />;
 });
 
-function MediaLayers({ source, style, naturalSize = false, maxHeight,
+function MediaLayers({ source, style, naturalSize = false, maxHeight, letterboxBackground = true,
   accessibilityLabel = "Ảnh", onLoad, onError, ...imageProps }: Props) {
   const { theme } = useTheme();
+  const backgroundColor = StyleSheet.flatten(style)?.backgroundColor ?? theme.colors.secondaryBackground;
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [ratio, setRatio] = useState(1);
   const missingSource = !source || (typeof source === "string" && !source.trim()) ||
     (typeof source === "object" && "uri" in source && !source.uri?.trim());
   const [status, setStatus] = useState<"loading" | "ready" | "error">(missingSource ? "error" : "loading");
-  const letterbox = status === "ready" && hasLetterbox(size.width, size.height, ratio);
+  const letterbox = letterboxBackground && status === "ready" && hasLetterbox(size.width, size.height, ratio);
 
   return <View
     onLayout={({ nativeEvent: { layout } }) => setSize(current =>
       current.width === layout.width && current.height === layout.height ? current : layout)}
-    style={[styles.frame, { backgroundColor: theme.colors.secondaryBackground }, style,
+    style={[styles.frame, { backgroundColor }, style,
       naturalSize && { height: mediaHeight(size.width || 240, ratio, maxHeight) }]}
   >
     {letterbox ? <>
@@ -56,7 +58,7 @@ function MediaLayers({ source, style, naturalSize = false, maxHeight,
       onError={event => { setStatus("error"); onError?.(event); }}
     />}
     {status === "loading" ? <View pointerEvents="none" accessibilityLabel="Đang tải ảnh"
-      style={[styles.placeholder, { backgroundColor: theme.colors.secondaryBackground }]}>
+      style={[styles.placeholder, { backgroundColor }]}>
       <Ionicons name="image-outline" size={28} color={theme.colors.textMuted} />
     </View> : null}
   </View>;

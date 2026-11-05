@@ -17,6 +17,7 @@ export type FeedPost = {
   publishedAt: string;
   body: string;
   images: string[];
+  imagePreviews?: string[];
   isReacted: boolean;
   isSaved: boolean;
   reactionType: number;
